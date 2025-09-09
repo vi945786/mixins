@@ -1,0 +1,2 @@
+Main-Class: test.Main
+Mixin-Classes-File: MixinClasses

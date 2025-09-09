@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+}
+
+group = 'vi'
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    testJarImplementation.extendsFrom implementation
+    testJarRuntimeOnly.extendsFrom runtimeOnly
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ["src/main/java"]
+        }
+        resources {
+            srcDirs = ["src/main/resources"]
+        }
+    }
+
+    testJar {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+
+        java {
+            srcDirs = ["src/testJar/java"]
+        }
+        resources {
+            srcDirs = ["src/testJar/resources"]
+        }
+    }
+}
+
+dependencies {
+    implementation("org.ow2.asm:asm:9.6")
+    implementation("org.ow2.asm:asm-util:9.6")
+    implementation("org.ow2.asm:asm-tree:9.6")
+    implementation("org.ow2.asm:asm-commons:9.6")
+}
+
+tasks.register('buildTestJar', Jar) {
+    from sourceSets.testJar.output
+    archiveBaseName = 'testJar'
+
+    manifest {
+        from('src/testJar/resources/META-INF/MANIFEST.MF')
+    }
+}
+
+jar {
+    manifest {
+        from('src/main/resources/META-INF/MANIFEST.MF')
+    }
+
+    from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
