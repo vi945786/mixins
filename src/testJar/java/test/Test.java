@@ -11,4 +11,17 @@ public final class Test {
     public int getNumber() {
         return getNumberInternal();
     }
+
+    public class Inner {
+
+        public class DoubleInner {
+
+            private final Boolean doubleInner = Boolean.TRUE;
+
+            public void printA() {
+                System.out.println("A");
+                var a = changed;
+            }
+        }
+    }
 }

@@ -1,14 +1,8 @@
 package vi.mixin.bytecode;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
-
 import java.io.*;
 import java.lang.instrument.*;
 import java.security.ProtectionDomain;
-import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -18,33 +12,20 @@ public class Agent {
 
     static {
         if("true".equals(System.getProperty("mixin.stage.main"))) {
-            agent = PropertySaver.get(Instrumentation.class);
+            try {
+                agent = (Instrumentation) Class.forName(Agent.class.getName(), false, ClassLoader.getSystemClassLoader()).getField("agent").get(null);
+            } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
     public static void premain(String agentArgs, Instrumentation inst) throws IOException, ClassNotFoundException, UnmodifiableClassException {
         agent = inst;
-        PropertySaver.set(Instrumentation.class, agent);
 
         Class.forName(MixinClassHelper.class.getName()); //static init
-        injectLauncherHelper();
         AddToBootloaderSearch.add();
         System.setProperty("mixin.stage.main", "true");
-    }
-
-    private static void injectLauncherHelper() throws ClassNotFoundException, UnmodifiableClassException {
-        ClassReader targetClassReader = new ClassReader(Agent.getBytecode(MixinClassHelper.findClass("sun.launcher.LauncherHelper")));
-        ClassWriter targetClassWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        ClassNode targetClassNode = new ClassNode();
-        targetClassReader.accept(targetClassNode, 0);
-
-        MethodNode loadMainClass = targetClassNode.methods.stream().filter(node -> node.name.equals("loadMainClass")).findAny().orElseThrow();
-        AbstractInsnNode getClassLoaderNode = Arrays.stream(loadMainClass.instructions.toArray()).filter(node -> node instanceof MethodInsnNode methodInsnNode && methodInsnNode.name.equals("getSystemClassLoader")).findAny().orElseThrow();
-        loadMainClass.instructions.insert(getClassLoaderNode, new InsnNode(Opcodes.ACONST_NULL));
-        loadMainClass.instructions.remove(getClassLoaderNode);
-
-        targetClassNode.accept(targetClassWriter);
-        agent.redefineClasses(new ClassDefinition(MixinClassHelper.findClass("sun.launcher.LauncherHelper"), targetClassWriter.toByteArray()));
     }
 
     public static byte[] getBytecode(Class<?> c) {

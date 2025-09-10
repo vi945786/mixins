@@ -1,6 +1,9 @@
 package vi.mixin.bytecode.Transformers;
 
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import vi.mixin.api.MixinFormatException;
+import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.Shadow;
 import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.FieldEditor;
@@ -8,31 +11,65 @@ import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.FieldTransformer;
 import vi.mixin.api.transformers.MethodTransformer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class ShadowTransformer implements FieldTransformer<Shadow>, MethodTransformer<Shadow> {
+
+    private static void validate(ClassEditor mixinClassEditor, FieldEditor mixinFieldEditor, Shadow mixinAnnotation, ClassEditor targetClassEditor) {
+        String name = "@Shadow " + mixinClassEditor.getName() + "." + mixinFieldEditor.getName();
+        FieldEditor target = targetClassEditor.getFieldEditor(mixinAnnotation.value());
+        if(target == null) throw new MixinFormatException(name, "target doesn't exist");
+        if((target.getAccess() & ACC_STATIC) != (mixinFieldEditor.getAccess() & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((target.getAccess() & ACC_STATIC) != 0 ? "" : "not") + " static");
+        Type type = Type.getType(mixinFieldEditor.getDesc());
+        if(!type.equals(Type.getType(target.getDesc())) && !type.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types are: " + target.getDesc() + ", " + Type.getType(Object.class));
+    }
 
     @Override
     public void transform(ClassEditor mixinClassEditor, FieldEditor mixinFieldEditor, Shadow mixinAnnotation, ClassEditor targetClassEditor) {
+        validate(mixinClassEditor, mixinFieldEditor, mixinAnnotation, targetClassEditor);
         FieldEditor targetFieldEditor = targetClassEditor.getFieldEditor(mixinAnnotation.value());
         targetFieldEditor.makePublic();
 
-        for(MethodEditor method : mixinClassEditor.getMethodEditors()) {
-            for(int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.FIELD_INSN, -1, mixinClassEditor.getName(), targetFieldEditor.getName(), null)) {
-                AbstractInsnNode insnNode = method.getBytecodeEditor().getBytecode().get(index);
-                List<AbstractInsnNode> insnNodes = new ArrayList<>();
-                insnNodes.add(new FieldInsnNode(insnNode.getOpcode(), targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));
+        for(ClassEditor classEditor : mixinClassEditor.getAllClassesInHierarchy()) {
+            for (MethodEditor method : classEditor.getMethodEditors()) {
+                for (int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.FIELD_INSN, -1, mixinClassEditor.getName(), mixinFieldEditor.getName(), null)) {
+                    AbstractInsnNode insnNode = method.getBytecodeEditor().getBytecode().get(index);
+                    method.getBytecodeEditor().add(index, new FieldInsnNode(insnNode.getOpcode(), targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));
+                    method.getBytecodeEditor().removeNode(index);
 
-                method.getBytecodeEditor().add(index, insnNodes);
-                method.getBytecodeEditor().removeNode(index);
+                    while(index > 0 && method.getBytecodeEditor().getBytecode().get(index - 1) instanceof FieldInsnNode fieldInsnNode && fieldInsnNode.name.startsWith("this$")) {
+                        ClassEditor typeClassEditor = classEditor;
+                        while(!typeClassEditor.getName().equals(fieldInsnNode.owner)) typeClassEditor = typeClassEditor.getOuterClass();
+
+                        String type = typeClassEditor.getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
+                        String outerType = typeClassEditor.getOuterClass().getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
+                        method.getBytecodeEditor().add(index - 1, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, "L" + outerType + ";"));
+                        method.getBytecodeEditor().removeNode(index - 1);
+                        index--;
+                    }
+                }
             }
         }
         mixinClassEditor.removeField(mixinFieldEditor);
     }
 
+    private static void validate(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, Shadow mixinAnnotation, ClassEditor targetClassEditor) {
+        String name = "@Shadow " + mixinClassEditor.getName() + "." + mixinMethodEditor.getName() + mixinMethodEditor.getDesc();
+        MethodEditor target = targetClassEditor.getMethodEditor(mixinAnnotation.value());
+        if(target == null) throw new MixinFormatException(name, "target doesn't exist");
+        if(target.getName().equals("<init>")) throw new MixinFormatException(name, "shadowing a constructor is not allowed. use @New");
+        Type returnType = Type.getReturnType(mixinMethodEditor.getDesc());
+        if (!returnType.equals(Type.getReturnType(target.getDesc())) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + Type.getReturnType(target.getDesc()) + ", " + Type.getType(Object.class));
+        if((target.getAccess() & ACC_STATIC) != (mixinMethodEditor.getAccess() & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((target.getAccess() & ACC_STATIC) != 0 ? "" : "not") + " static");
+        Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodEditor.getDesc());
+        Type[] targetArgumentTypes = Type.getArgumentTypes(target.getDesc());
+        if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
+        for (int i = 0; i < targetArgumentTypes.length; i++) {
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+        }
+    }
+
     @Override
     public void transform(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, Shadow mixinAnnotation, ClassEditor targetClassEditor) {
+        validate(mixinClassEditor, mixinMethodEditor, mixinAnnotation, targetClassEditor);
         MethodEditor targetMethodEditor = targetClassEditor.getMethodEditor(mixinAnnotation.value());
         targetMethodEditor.makePublic();
 
@@ -43,13 +80,23 @@ public class ShadowTransformer implements FieldTransformer<Shadow>, MethodTransf
         else if(targetMethodEditor.getName().equals("<init>")) invokeOpcode = INVOKESPECIAL;
         else if((targetMethodEditor.getAccess() & ACC_INTERFACE) != 0) invokeOpcode = INVOKEINTERFACE;
 
-        for(MethodEditor method : mixinClassEditor.getMethodEditors()) {
-            for(int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.METHOD_INSN, -1, mixinClassEditor.getName(), targetMethodEditor.getName(), null)) {
-                List<AbstractInsnNode> insnNodes = new ArrayList<>();
-                insnNodes.add(new MethodInsnNode(invokeOpcode, targetClassEditor.getName(), targetMethodEditor.getName(), targetMethodEditor.getDesc()));
+        for(ClassEditor classEditor : mixinClassEditor.getAllClassesInHierarchy()) {
+            for (MethodEditor method : classEditor.getMethodEditors()) {
+                for (int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.METHOD_INSN, -1, mixinClassEditor.getName(), mixinMethodEditor.getName(), null)) {
+                    method.getBytecodeEditor().add(index, new MethodInsnNode(invokeOpcode, targetClassEditor.getName(), targetMethodEditor.getName(), targetMethodEditor.getDesc()));
+                    method.getBytecodeEditor().removeNode(index);
 
-                method.getBytecodeEditor().add(index, insnNodes);
-                method.getBytecodeEditor().removeNode(index);
+                    while(index > 0 && method.getBytecodeEditor().getBytecode().get(index - 1) instanceof FieldInsnNode fieldInsnNode && fieldInsnNode.name.startsWith("this$")) {
+                        ClassEditor typeClassEditor = classEditor;
+                        while(!typeClassEditor.getName().equals(fieldInsnNode.owner)) typeClassEditor = typeClassEditor.getOuterClass();
+
+                        String type = typeClassEditor.getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
+                        String outerType = typeClassEditor.getOuterClass().getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
+                        method.getBytecodeEditor().add(index - 1, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, "L" + outerType + ";"));
+                        method.getBytecodeEditor().removeNode(index - 1);
+                        index--;
+                    }
+                }
             }
         }
         mixinClassEditor.removeMethod(mixinMethodEditor);

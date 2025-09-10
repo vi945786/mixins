@@ -4,9 +4,7 @@ import vi.mixin.api.transformers.MixinTransformer;
 import vi.mixin.bytecode.AddToBootloaderSearch;
 import vi.mixin.bytecode.Mixiner;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.instrument.UnmodifiableClassException;
 
 public class MixinManager {
 
@@ -22,10 +20,6 @@ public class MixinManager {
      * any classes loaded through reflection or URLClassLoaders must be registered here
      */
     public static void addJarToClasspath(String jar) {
-        try {
-            AddToBootloaderSearch.addJar(jar);
-        } catch (IOException | UnmodifiableClassException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        AddToBootloaderSearch.addJar(jar);
     }
 }

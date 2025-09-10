@@ -1,10 +1,13 @@
 package test;
 
 public class Main {
+
     public static void main(String[] args) {
         System.out.println(); //Hello, World!\n
 
         TestAccessor test = (TestAccessor) (Object) new Test();
+        Test.Inner.DoubleInner doubleInner = new Test().new Inner().new DoubleInner();
+        doubleInner.printA();
 
         System.out.println(test.getChanged());
         test.setChanged(Boolean.TRUE);

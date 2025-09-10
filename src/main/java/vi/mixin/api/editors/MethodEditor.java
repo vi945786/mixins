@@ -3,10 +3,12 @@ package vi.mixin.api.editors;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MethodEditor {
     final MethodNode methodNode;
+    private final List<AnnotationEditor> annotationEditors;
     private final List<String> exceptions;
     private final BytecodeEditor bytecodeEditor;
     private final String desc;
@@ -15,6 +17,7 @@ public class MethodEditor {
 
     public MethodEditor(MethodNode methodNode) {
         this.methodNode = methodNode;
+        annotationEditors = methodNode.invisibleAnnotations == null ? new ArrayList<>() : methodNode.invisibleAnnotations.stream().map(AnnotationEditor::new).toList();
         bytecodeEditor = new BytecodeEditor(methodNode.instructions);
         exceptions = List.copyOf(methodNode.exceptions);
         desc = methodNode.desc;
@@ -58,6 +61,14 @@ public class MethodEditor {
     public MethodEditor setSignature(String signature) {
         methodNode.signature = signature;
         return this;
+    }
+
+    public List<AnnotationEditor> getAnnotationEditors() {
+        return List.copyOf(annotationEditors);
+    }
+
+    public List<AnnotationEditor> getAnnotationEditors(String desc) {
+        return List.copyOf(annotationEditors.stream().filter(annotationEditor -> annotationEditor.getDesc().equals(desc)).toList());
     }
 
     public MethodEditor makeNonAbstract() {

@@ -8,4 +8,6 @@ test.PrintStreamMixin
 //Test
 test.TestAccessor
 test.TestMixin
+test.TestMixin$TestInnerMixin$TestDoubleInnerMixin
+test.TestMixin$TestInnerMixin
 test.TestSubClassMixin

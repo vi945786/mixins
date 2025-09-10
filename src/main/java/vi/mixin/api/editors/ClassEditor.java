@@ -3,23 +3,63 @@ package vi.mixin.api.editors;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.util.List;
+import java.util.*;
 
 public class ClassEditor {
     final ClassNode classNode;
     private final List<String> interfaces;
+    private final ClassEditor outerClass;
+    private final List<ClassEditor> innerClasses;
+    private final List<AnnotationEditor> annotationEditors;
     private final List<MethodEditor> methodEditors;
     private final List<FieldEditor> fieldEditors;
     private final int access;
     private final String superName;
 
-    public ClassEditor(ClassNode classNode) {
+    public ClassEditor(ClassNode classNode, ClassEditor outerClass, List<ClassEditor> innerClasses) {
         this.classNode = classNode;
+        this.outerClass = outerClass;
+        this.innerClasses = innerClasses;
+        annotationEditors = classNode.invisibleAnnotations == null ? new ArrayList<>() : classNode.invisibleAnnotations.stream().map(AnnotationEditor::new).toList();
         methodEditors = classNode.methods.stream().map(MethodEditor::new).toList();
         fieldEditors = classNode.fields.stream().map(FieldEditor::new).toList();
         interfaces = List.copyOf(classNode.interfaces);
         access = classNode.access;
         superName = classNode.superName;
+    }
+
+    /**
+     * only works for mixin classes
+     */
+    public Set<ClassEditor> getAllClassesInHierarchy() {
+    return getAllClassesInHierarchy(new HashSet<>());
+}
+
+    private Set<ClassEditor> getAllClassesInHierarchy(Set<ClassEditor> visited) {
+        if (visited.contains(this)) return Collections.emptySet();
+
+        visited.add(this);
+        Set<ClassEditor> classEditors = new HashSet<>();
+        classEditors.add(this);
+
+        if (outerClass != null) classEditors.addAll(outerClass.getAllClassesInHierarchy(visited));
+        innerClasses.forEach(inner -> classEditors.addAll(inner.getAllClassesInHierarchy(visited)));
+
+        return classEditors;
+    }
+
+    /**
+     * only works for mixin classes
+     */
+    public ClassEditor getOuterClass() {
+        return outerClass;
+    }
+
+    /**
+     * only works for mixin classes
+     */
+    public List<ClassEditor> getInnerClasses() {
+        return List.copyOf(innerClasses);
     }
 
     public ClassEditor makePublic() {
@@ -58,6 +98,14 @@ public class ClassEditor {
     public ClassEditor removeField(FieldEditor editor) {
         classNode.fields.remove(editor.fieldNode);
         return this;
+    }
+
+    public List<AnnotationEditor> getAnnotationEditors() {
+        return List.copyOf(annotationEditors);
+    }
+
+    public List<AnnotationEditor> getAnnotationEditors(String desc) {
+        return List.copyOf(annotationEditors.stream().filter(annotationEditor -> annotationEditor.getDesc().equals(desc)).toList());
     }
 
     public List<MethodEditor> getMethodEditors() {

@@ -32,6 +32,6 @@ public class TempFileDeleter {
         command[3] = TempFileDeleter.class.getName();
         System.arraycopy(filePaths, 0, command, 4, filePaths.length);
 
-        new ProcessBuilder(command).inheritIO().start();
+        new ProcessBuilder(command).start();
     }
 }
