@@ -3,7 +3,6 @@ package vi.mixin.bytecode.Transformers;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
-import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.Shadow;
 import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.FieldEditor;
@@ -30,19 +29,19 @@ public class ShadowTransformer implements FieldTransformer<Shadow>, MethodTransf
 
         for(ClassEditor classEditor : mixinClassEditor.getAllClassesInHierarchy()) {
             for (MethodEditor method : classEditor.getMethodEditors()) {
-                for (int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.FIELD_INSN, -1, mixinClassEditor.getName(), mixinFieldEditor.getName(), null)) {
+                for (int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.FIELD_INSN, null, mixinClassEditor.getName(), mixinFieldEditor.getName(), null)) {
                     AbstractInsnNode insnNode = method.getBytecodeEditor().getBytecode().get(index);
                     method.getBytecodeEditor().add(index, new FieldInsnNode(insnNode.getOpcode(), targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));
-                    method.getBytecodeEditor().removeNode(index);
+                    method.getBytecodeEditor().remove(index);
 
                     while(index > 0 && method.getBytecodeEditor().getBytecode().get(index - 1) instanceof FieldInsnNode fieldInsnNode && fieldInsnNode.name.startsWith("this$")) {
                         ClassEditor typeClassEditor = classEditor;
                         while(!typeClassEditor.getName().equals(fieldInsnNode.owner)) typeClassEditor = typeClassEditor.getOuterClass();
 
-                        String type = typeClassEditor.getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
-                        String outerType = typeClassEditor.getOuterClass().getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
+                        String type = Type.getType(typeClassEditor.getTargetClass()).getInternalName();
+                        String outerType = Type.getType(typeClassEditor.getOuterClass().getTargetClass()).getInternalName();
                         method.getBytecodeEditor().add(index - 1, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, "L" + outerType + ";"));
-                        method.getBytecodeEditor().removeNode(index - 1);
+                        method.getBytecodeEditor().remove(index - 1);
                         index--;
                     }
                 }
@@ -82,18 +81,18 @@ public class ShadowTransformer implements FieldTransformer<Shadow>, MethodTransf
 
         for(ClassEditor classEditor : mixinClassEditor.getAllClassesInHierarchy()) {
             for (MethodEditor method : classEditor.getMethodEditors()) {
-                for (int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.METHOD_INSN, -1, mixinClassEditor.getName(), mixinMethodEditor.getName(), null)) {
+                for (int index : method.getBytecodeEditor().getInsnNodesIndexes(AbstractInsnNode.METHOD_INSN, null, mixinClassEditor.getName(), mixinMethodEditor.getName(), null)) {
                     method.getBytecodeEditor().add(index, new MethodInsnNode(invokeOpcode, targetClassEditor.getName(), targetMethodEditor.getName(), targetMethodEditor.getDesc()));
-                    method.getBytecodeEditor().removeNode(index);
+                    method.getBytecodeEditor().remove(index);
 
                     while(index > 0 && method.getBytecodeEditor().getBytecode().get(index - 1) instanceof FieldInsnNode fieldInsnNode && fieldInsnNode.name.startsWith("this$")) {
                         ClassEditor typeClassEditor = classEditor;
                         while(!typeClassEditor.getName().equals(fieldInsnNode.owner)) typeClassEditor = typeClassEditor.getOuterClass();
 
-                        String type = typeClassEditor.getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
-                        String outerType = typeClassEditor.getOuterClass().getAnnotationEditors(Type.getType(Mixin.class).getDescriptor()).getFirst().<Mixin>getAnnotation().value().getName().replace(".", "/");
+                        String type = Type.getType(typeClassEditor.getTargetClass()).getInternalName();
+                        String outerType = Type.getType(typeClassEditor.getOuterClass().getTargetClass()).getInternalName();
                         method.getBytecodeEditor().add(index - 1, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, "L" + outerType + ";"));
-                        method.getBytecodeEditor().removeNode(index - 1);
+                        method.getBytecodeEditor().remove(index - 1);
                         index--;
                     }
                 }

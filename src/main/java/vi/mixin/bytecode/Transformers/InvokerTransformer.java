@@ -17,6 +17,7 @@ public class InvokerTransformer implements MethodTransformer<Invoker> {
         String name = "@Invoker " + mixinClassEditor.getName() + "." + mixinMethodEditor.getName() + mixinMethodEditor.getDesc();
         MethodEditor target = targetClassEditor.getMethodEditor(mixinAnnotation.value());
         if(target == null) throw new MixinFormatException(name, "target doesn't exist");
+        if(target.getName().equals("<init>")) throw new MixinFormatException(name, "invoking a constructor is not allowed. use @New");
         if((target.getAccess() & ACC_STATIC) != (mixinMethodEditor.getAccess() & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((target.getAccess() & ACC_STATIC) != 0 ? "" : "not") + " static");
         Type returnType = Type.getReturnType(mixinMethodEditor.getDesc());
         if(!returnType.equals(Type.getReturnType(target.getDesc())) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + Type.getReturnType(target.getDesc()) + ", " + Type.getType(Object.class));

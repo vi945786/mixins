@@ -49,6 +49,10 @@ public class FieldEditor {
         return access;
     }
 
+    public int setAccess(int access) {
+        return fieldNode.access = access;
+    }
+
     /**
      * if the default value isn't primitive, Class or String it is not a default value.
      * it is set in the <init> or <clinit> method

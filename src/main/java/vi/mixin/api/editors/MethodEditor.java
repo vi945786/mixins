@@ -93,6 +93,10 @@ public class MethodEditor {
         return access;
     }
 
+    public int setAccess(int access) {
+        return methodNode.access = access;
+    }
+
     public String getDesc() {
         return desc;
     }

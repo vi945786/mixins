@@ -1,6 +1,6 @@
 package vi.mixin.api;
 
-import vi.mixin.api.transformers.MixinTransformer;
+import vi.mixin.api.transformers.Transformer;
 import vi.mixin.bytecode.AddToBootloaderSearch;
 import vi.mixin.bytecode.Mixiner;
 
@@ -12,7 +12,7 @@ public class MixinManager {
         if(!System.getProperty("java.vm.vendor").equals("JetBrains s.r.o.")) throw new IllegalStateException("Illegal java distribution. Install a distribution of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
     }
 
-    public static void addTransformer(MixinTransformer transformer, Class<? extends Annotation> annotation) {
+    public static void addTransformer(Transformer transformer, Class<? extends Annotation> annotation) {
         Mixiner.addMixinTransformer(transformer, annotation);
     }
 

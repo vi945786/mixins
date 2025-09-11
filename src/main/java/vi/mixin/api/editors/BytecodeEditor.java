@@ -11,6 +11,7 @@ import static org.objectweb.asm.tree.AbstractInsnNode.*;
 public class BytecodeEditor {
 
     private final int[] added;
+    private final boolean[] removed;
     private final InsnList original;
     private final InsnList modified;
 
@@ -29,7 +30,8 @@ public class BytecodeEditor {
     public BytecodeEditor(InsnList list) {
         this.modified = list;
         original = cloneInsnList(modified);
-        added = new int[original.size()];
+        added = new int[original.size() +1];
+        removed = new boolean[original.size()];
     }
 
     public List<AbstractInsnNode> getBytecode() {
@@ -83,25 +85,25 @@ public class BytecodeEditor {
 
 
 
-    public List<Integer> getInsnNodesIndexes(int type, int opcode, Object... values) {
-        return getInsnNodesIndexes(type, List.of(opcode), List.of(), values);
+    public List<Integer> getInsnNodesIndexes(int type, Integer opcode, Object... values) {
+        return getInsnNodesIndexes(type, opcode == null ? null : List.of(opcode), List.of(), values);
     }
 
-    public List<Integer> getInsnNodesIndexes(int type, int opcode, List<Integer> ordinals, Object... values) {
-        return getInsnNodesIndexes(type, List.of(opcode), ordinals, values);
+    public List<Integer> getInsnNodesIndexes(int type, Integer opcode, List<Integer> ordinals, Object... values) {
+        return getInsnNodesIndexes(type, opcode == null ? null : List.of(opcode), ordinals, values);
     }
 
-    public List<Integer> getInsnNodesIndexes(int type, List<Integer> opcode, List<Integer> ordinals, Object... values) {
+    public List<Integer> getInsnNodesIndexes(int type, List<Integer> opcodes, List<Integer> ordinals, Object... values) {
         List<Integer> indexes = new ArrayList<>();
         for(int i = 0; i < original.size(); i++) {
             AbstractInsnNode insnNode = original.get(i);
-            if((insnNode.getType() != type && type != -1) || (opcode.contains(insnNode.getOpcode()) || opcode.isEmpty())) continue;
+            if((insnNode.getType() != type && type != -1) || (opcodes != null && !opcodes.contains(insnNode.getOpcode()))) continue;
 
             if(equals(insnNode, values)) indexes.add(i);
         }
 
-        ordinals = ordinals.stream().sorted(Comparator.reverseOrder()).toList();
         if(ordinals.isEmpty()) return indexes;
+        ordinals = ordinals.stream().sorted(Comparator.reverseOrder()).toList();
         for (int i = 0; i < indexes.size(); i++) {
             if(!ordinals.contains(i)) indexes.remove(i);
         }
@@ -165,9 +167,20 @@ public class BytecodeEditor {
         return Arrays.equals(actual, expArr);
     }
 
-    public void removeNode(int index) {
-        modified.remove(modified.get(added[index] + index));
+    private int getUpdatedIndex(int index) {
+        int newIndex = index;
+        for (int i = 0; i <= index; i++) {
+            newIndex += added[i];
+        }
+
+        return newIndex;
+    }
+
+    public void remove(int index) {
+        if(removed[index]) return;
+        modified.remove(modified.get(getUpdatedIndex(index)));
         added[index]--;
+        removed[index] = true;
     }
 
     /**
@@ -181,14 +194,17 @@ public class BytecodeEditor {
      * inserts before index
      */
     public void add(int index, List<AbstractInsnNode> add) {
-        if (index == original.size()) {
+        if (index == original.size() || getUpdatedIndex(index) >= modified.size() || getUpdatedIndex(index) == -1) {
             for(AbstractInsnNode node : add) {
                 modified.add(node);
             }
         } else if(0 <= index && index < original.size()) {
+            AbstractInsnNode addNode = modified.get(getUpdatedIndex(index));
             for (AbstractInsnNode node : add) {
-                modified.insertBefore(modified.get(added[index]++ + index), node);
+                if(removed[index]) modified.insert(addNode, cloneInsnNode(node));
+                else modified.insertBefore(addNode, cloneInsnNode(node));
             }
         }
+        added[index] += add.size();
     }
 }

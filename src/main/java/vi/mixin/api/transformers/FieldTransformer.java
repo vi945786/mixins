@@ -5,7 +5,7 @@ import vi.mixin.api.editors.FieldEditor;
 
 import java.lang.annotation.Annotation;
 
-public non-sealed interface FieldTransformer<T extends Annotation> extends MixinTransformer {
+public non-sealed interface FieldTransformer<T extends Annotation> extends Transformer {
 
     void transform(ClassEditor mixinClassEditor, FieldEditor mixinFieldEditor, T mixinAnnotation, ClassEditor targetClassEditor);
 

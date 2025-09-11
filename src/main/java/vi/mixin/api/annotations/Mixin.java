@@ -8,5 +8,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
 public @interface Mixin {
-    Class<?> value();
+    Class<?> value() default void.class;
+    String name() default "";
 }

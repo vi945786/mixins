@@ -2,6 +2,7 @@ package vi.mixin.api.editors;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
+import vi.mixin.bytecode.Mixiner;
 
 import java.util.*;
 
@@ -100,6 +101,10 @@ public class ClassEditor {
         return this;
     }
 
+    public Class<?> getTargetClass() {
+        return Mixiner.getTargetClass(this);
+    }
+
     public List<AnnotationEditor> getAnnotationEditors() {
         return List.copyOf(annotationEditors);
     }
@@ -135,6 +140,10 @@ public class ClassEditor {
 
     public int getAccess() {
         return access;
+    }
+
+    public int setAccess(int access) {
+        return classNode.access = access;
     }
 
     /**

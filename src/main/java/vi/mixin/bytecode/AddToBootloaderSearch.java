@@ -51,7 +51,7 @@ public class AddToBootloaderSearch {
                 addJar(agentJar);
                 cp += agentJar + ";";
             }
-            TempFileDeleter.spawn(cp.substring(0, cp.length() -1), temps.toArray(String[]::new));
+            TempFileDeleter.spawn(cp.substring(0, cp.length() -1), temps);
         }
     }
 
