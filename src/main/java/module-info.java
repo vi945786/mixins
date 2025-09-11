@@ -1,7 +1,7 @@
 module mixin.main {
     requires java.instrument;
     requires jdk.unsupported;
-    requires org.objectweb.asm.util;
+    requires org.objectweb.asm.tree;
     requires java.management;
     requires jdk.attach;
 

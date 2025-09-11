@@ -2,6 +2,7 @@ package vi.mixin.bytecode;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.*;
@@ -30,9 +31,6 @@ import java.util.stream.Stream;
 import static vi.mixin.bytecode.Agent.agent;
 
 public class Mixiner {
-
-    private static final String mixinDesc = "L" + Mixin.class.getName().replace(".", "/") + ";";
-    private static final String extendsDesc = "L" + Extends.class.getName().replace(".", "/") + ";";
 
     private static final Map<String, ClassTransformer<?>> classTransformers = new HashMap<>();
     private static final Map<String, FieldTransformer<?>> fieldTransformers = new HashMap<>();
@@ -100,10 +98,12 @@ public class Mixiner {
 
     public static Class<?> getTargetClass(ClassEditor mixinClassEditor) {
         for (AnnotationEditor annotationEditor : mixinClassEditor.getAnnotationEditors()) {
-            if(annotationEditor.getDesc().equals(mixinDesc)) {
+            if(annotationEditor.getDesc().equals(Type.getType(Mixin.class).getDescriptor())) {
                 Mixin annotation = annotationEditor.getAnnotation();
                 Class<?> targetClass = annotation.value();
                 if(targetClass != void.class) return targetClass;
+                targetClass = MixinClassHelper.findClass(annotation.name());
+                if(targetClass == null || !agent.isModifiableClass(targetClass)) throw new MixinFormatException(mixinClassEditor.getName(), "invalid @Mixin target");
                 return MixinClassHelper.findClass(annotation.name());
             }
         }
@@ -143,7 +143,7 @@ public class Mixiner {
 
         Map<ClassNode, Class<?>> mixinClassNodes = new HashMap<>();
         for(Map.Entry<ClassEditor, ClassNode> entry : classEditorClassNodeMap.entrySet().stream().sorted(Comparator.comparing(a -> a.getKey().getName())).toList()) {
-            Class<?> targetClass = addClass(entry.getKey(), entry.getValue());
+            Class<?> targetClass = addClass(entry.getKey());
 
             mixinClassNodes.put(entry.getValue(), targetClass);
         }
@@ -174,16 +174,16 @@ public class Mixiner {
         }
     }
 
-    public static Class<?> addClass(ClassEditor mixinClassEditor, ClassNode mixinClassNode) throws ClassNotFoundException, UnmodifiableClassException {
+    public static Class<?> addClass(ClassEditor mixinClassEditor) throws ClassNotFoundException, UnmodifiableClassException {
         if(usedMixinClasses.contains(mixinClassEditor.getName())) throw new IllegalArgumentException("Mixin class " + mixinClassEditor.getName() + " used twice");
         usedMixinClasses.add(mixinClassEditor.getName());
 
         Class<?> targetClass = getTargetClass(mixinClassEditor);
-        mixin(targetClass, mixinClassEditor, mixinClassNode);
+        mixin(targetClass, mixinClassEditor);
         return targetClass;
     }
 
-    private static void mixin(Class<?> targetClass, ClassEditor mixinClassEditor, ClassNode mixinClassNode) throws UnmodifiableClassException, ClassNotFoundException {
+    private static void mixin(Class<?> targetClass, ClassEditor mixinClassEditor) throws UnmodifiableClassException, ClassNotFoundException {
         ClassWriter targetClassWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         if(!classEditors.containsKey(targetClass.getName())) {
             byte[] targetBytecode = Agent.getBytecode(targetClass);
