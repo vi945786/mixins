@@ -1,7 +1,6 @@
 package vi.mixin.bytecode.Transformers;
 
 import vi.mixin.api.MixinFormatException;
-import vi.mixin.api.annotations.Transformer;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.transformers.ClassTransformer;
