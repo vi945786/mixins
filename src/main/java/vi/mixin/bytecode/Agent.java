@@ -11,7 +11,8 @@ public class Agent {
     public static Instrumentation agent;
 
     static {
-        if(!System.getProperty("java.vm.vendor").equals("JetBrains s.r.o.")) throw new UnsupportedOperationException("Illegal java distribution. Install a distribution of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
+        if(!System.getProperty("java.vm.vendor").equals("JetBrains s.r.o."))
+            throw new UnsupportedOperationException("Illegal java distribution. Install a distribution of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
 
         if("true".equals(System.getProperty("mixin.stage.main"))) {
             try {

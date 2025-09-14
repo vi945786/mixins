@@ -53,17 +53,13 @@ public class MixinClassHelper {
     public static Class<?> findClass(String name) {
         name = name.replace("/", ".");
         try {
-            try {
-                return Class.forName(name, false, null);
-            } catch (ClassNotFoundException ignored) {}
+            return Class.forName(name, true, null);
+        } catch (ClassNotFoundException ignored) {}
 
-            for(ClassLoader loader : classLoaders) {
-                try {
-                    return (Class<?>) forName0.invoke(null, name, false, loader, null);
-                } catch (InvocationTargetException ignored) {}
-            }
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+        for(ClassLoader loader : classLoaders) {
+            try {
+                return Class.forName(name, true, loader);
+            } catch (ClassNotFoundException ignored) {}
         }
         return null;
     }

@@ -9,6 +9,7 @@ repositories {
 dependencies {
     implementation("org.ow2.asm:asm:9.6")
     implementation("org.ow2.asm:asm-tree:9.6")
+    implementation("org.ow2.asm:asm-util:9.6")
     implementation("com.eclipsesource.minimal-json:minimal-json:0.9.5")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")

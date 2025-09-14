@@ -1,11 +1,8 @@
 {
-  "transformers": [
-    {
-      "transformer": "vi.mixin.test.MixinClass",
-      "annotation": "vi.mixin.api.annotations.Mixin"
-    }
-  ],
   "mixins": [
-    "vi.mixin.test.MixinClass"
+    "vi.mixin.test.TargetGetterAccessor",
+    "vi.mixin.test.TargetInvokerAccessor",
+    "vi.mixin.test.TargetNewAccessor",
+    "vi.mixin.test.TargetSetterAccessor"
   ]
 }

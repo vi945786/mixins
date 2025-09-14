@@ -178,6 +178,7 @@ public class RegisterJars {
                     }
                 }
             }
+            if(bytecodes.isEmpty()) return;
             Mixiner.addClasses(bytecodes);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load jar or mixin classes from jar: " + jar, e);

@@ -28,6 +28,8 @@ public class NewTransformer implements MethodTransformer<New> {
         for (int i = 0; i < targetArgumentTypes.length; i++) {
             if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
         }
+        if((mixinClassEditor.getAccess() & ACC_INTERFACE) != 0 && targetClassEditor.getMethodEditors().stream().anyMatch(method -> method.getName().equals(mixinMethodEditor.getName())
+                && method.getDesc().split("\\)")[0].equals(mixinMethodEditor.getDesc().split("\\)")[0]))) throw new MixinFormatException(name, "method with this name and desc already exists in the target class.");
     }
 
     @Override
@@ -43,7 +45,7 @@ public class NewTransformer implements MethodTransformer<New> {
             bytecodeEditor.remove(i);
         }
 
-        bytecodeEditor.add(0, new TypeInsnNode(NEW, "L" + targetClassEditor.getName() + ";"));
+        bytecodeEditor.add(0, new TypeInsnNode(NEW, targetClassEditor.getName()));
         bytecodeEditor.add(0, new InsnNode(DUP));
 
         List<AbstractInsnNode> abstractInsnNodes = new ArrayList<>();
@@ -52,6 +54,5 @@ public class NewTransformer implements MethodTransformer<New> {
 
         bytecodeEditor.add(0, new MethodInsnNode(INVOKESPECIAL, targetClassEditor.getName(), targetMethodEditor.getName(), targetMethodEditor.getDesc()));
         bytecodeEditor.add(0,new InsnNode(ARETURN));
-
     }
 }
