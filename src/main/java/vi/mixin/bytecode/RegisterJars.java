@@ -1,15 +1,17 @@
 package vi.mixin.bytecode;
 
-import com.sun.tools.attach.AttachNotSupportedException;
-import com.sun.tools.attach.VirtualMachine;
-import sun.misc.Unsafe;
+import com.eclipsesource.json.Json;
+import com.eclipsesource.json.JsonArray;
+import com.eclipsesource.json.JsonObject;
+import com.eclipsesource.json.JsonValue;
+import vi.mixin.api.MixinFormatException;
+import vi.mixin.api.transformers.Transformer;
 import vi.mixin.util.TempFileDeleter;
 
 import java.io.*;
-import java.lang.instrument.UnmodifiableClassException;
+import java.lang.annotation.Annotation;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -26,12 +28,19 @@ import static vi.mixin.bytecode.Agent.agent;
 public class RegisterJars {
 
     private static final List<String> classesEntryNames = new ArrayList<>();
+    private static final List<MixinTransformer> transformersEntries = new ArrayList<>();
     public static void add() throws IOException {
         if(System.getProperty("mixin.classes") != null) classesEntryNames.addAll(List.of(System.getProperty("mixin.classes").split(File.pathSeparator)));
+        if(System.getProperty("mixin.transformers") != null) transformersEntries.addAll(Arrays.stream(System.getProperty("mixin.transformers").split(File.pathSeparator)).map(transformer -> {
+            String[] split = transformer.split("=");
+            return new MixinTransformer(split[0], split[1]);
+        }).toList());
         if(System.getProperty("mixin.files") != null) {
             for (String file : System.getProperty("mixin.files").split(File.pathSeparator)) {
                 try {
-                    classesEntryNames.addAll(getMixinClassesFromFile(Files.readAllLines(Path.of(file))));
+                    MixinFile mixinFile = getMixinFile(Files.newBufferedReader(Path.of(file)));
+                    transformersEntries.addAll(mixinFile.transformers);
+                    classesEntryNames.addAll(mixinFile.mixinClasses);
                 } catch (IOException e) {
                     throw new RuntimeException("failed to load mixin file " + file, e);
                 }
@@ -144,21 +153,27 @@ public class RegisterJars {
                     bytecodes.add(inputStream.readAllBytes());
                 }
             }
+            for(MixinTransformer name : transformersEntries) {
+                JarEntry entry = jarFile.getJarEntry(nameToEntry(name.transformer));
+                if(entry == null) continue;
+
+                registerTransformer(name);
+            }
 
             Manifest manifest = jarFile.getManifest();
             if (manifest != null) {
                 String fileName = manifest.getMainAttributes().getValue("Mixin-Classes-File");
                 if (fileName != null && !fileName.isEmpty()) {
 
-                    List<String> mixinClasses;
                     try (InputStream in = jarFile.getInputStream(jarFile.getEntry(fileName));
-                         BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-                        mixinClasses = getMixinClassesFromFile(br.lines().toList());
-                    }
+                         Reader reader = new InputStreamReader(in)) {
+                        MixinFile mixinFile = getMixinFile(reader);
+                        registerTransformers(mixinFile.transformers);
 
-                    for (String mixinClass : mixinClasses) {
-                        try (InputStream inputStream = jarFile.getInputStream(jarFile.getEntry(nameToEntry(mixinClass)))) {
-                            bytecodes.add(inputStream.readAllBytes());
+                        for (String mixinClass : mixinFile.mixinClasses) {
+                            try (InputStream inputStream = jarFile.getInputStream(jarFile.getEntry(nameToEntry(mixinClass)))) {
+                                bytecodes.add(inputStream.readAllBytes());
+                            }
                         }
                     }
                 }
@@ -169,14 +184,54 @@ public class RegisterJars {
         }
     }
 
-    private static List<String> getMixinClassesFromFile(List<String> lines) {
-        List<String> classes = new ArrayList<>();
-        for (String line : lines) {
-            line = line.trim();
-            if (!line.isEmpty() & !line.startsWith("//")) classes.add(line);
+    private record MixinFile(List<String> mixinClasses, List<MixinTransformer> transformers) {}
+    private record MixinTransformer(String transformer, String annotation) {}
+
+    private static void registerTransformer(MixinTransformer transformer) {
+        registerTransformers(List.of(transformer));
+    }
+
+    private static void registerTransformers(List<MixinTransformer> transformers) {
+        transformers.forEach(mixinTransformer -> {
+            Class<?> transformer = MixinClassHelper.findClass(mixinTransformer.transformer);
+            Class<?> annotation = MixinClassHelper.findClass(mixinTransformer.annotation);
+
+            if(transformer == null) throw new MixinFormatException(mixinTransformer.transformer, "transformer class not found");
+            if(!Transformer.class.isAssignableFrom(transformer)) throw new MixinFormatException(mixinTransformer.transformer, "transformer does not implement vi.mixin.api.transformers.Transformer");
+            if(annotation == null) throw new MixinFormatException(mixinTransformer.annotation, "annotation class not found");
+            if(!annotation.isAnnotation()) throw new MixinFormatException(mixinTransformer.annotation, "annotation is not an annotation");
+
+            try {
+                Mixiner.addMixinTransformer((Transformer) transformer.getConstructor().newInstance(), (Class<? extends Annotation>) annotation);
+
+            } catch (NoSuchMethodException e) {
+                throw new MixinFormatException(mixinTransformer.transformer, "transformer does not have a public no-args constructor");
+            } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private static MixinFile getMixinFile(Reader reader) throws IOException {
+        JsonValue value = Json.parse(reader);
+        List<MixinTransformer> transformers = new ArrayList<>();
+        List<String> mixins = new ArrayList<>();
+        if(!(value instanceof JsonObject mixinFile)) throw new MixinFormatException("mixin file", "invalid mixin file");
+        if(mixinFile.get("transformers") instanceof JsonArray fileTransfomers) {
+            for(JsonValue transformerEntry : fileTransfomers.values())  {
+                if(!(transformerEntry instanceof JsonObject jsonObject) || jsonObject.get("transformer") == null || jsonObject.get("annotation") == null ||
+                        !jsonObject.get("transformer").isString() || !jsonObject.get("annotation").isString()) throw new MixinFormatException("mixin file", "transformer entry is invalid");
+                transformers.add(new MixinTransformer(jsonObject.get("transformer").asString(), jsonObject.get("annotation").asString()));
+            }
+        }
+        if(mixinFile.get("mixins") instanceof JsonArray MixinClasses) {
+            for(JsonValue jsonValue : MixinClasses.values())  {
+                if(!jsonValue.isString()) throw new MixinFormatException("mixin file", "mixins entry is invalid");
+                mixins.add(jsonValue.asString());
+            }
         }
 
-        return classes;
+        return new MixinFile(mixins, transformers);
     }
 
     private static String nameToEntry(String name) {

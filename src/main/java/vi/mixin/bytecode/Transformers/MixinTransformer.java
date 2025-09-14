@@ -30,6 +30,7 @@ public class MixinTransformer implements ClassTransformer<Mixin> {
 
     @Override
     public void transform(ClassEditor mixinClassEditor, Mixin mixinAnnotation, ClassEditor targetClassEditor) {
+        validate(mixinClassEditor, mixinAnnotation, targetClassEditor);
         if ((mixinClassEditor.getAccess() & Opcodes.ACC_INTERFACE) != 0) {
             targetClassEditor.addInterface(mixinClassEditor.getName());
         }

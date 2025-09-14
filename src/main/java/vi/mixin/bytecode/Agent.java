@@ -1,10 +1,5 @@
 package vi.mixin.bytecode;
 
-import com.sun.jdi.Bootstrap;
-import com.sun.jdi.connect.Connector;
-import com.sun.jdi.connect.IllegalConnectorArgumentsException;
-import com.sun.jdi.connect.ListeningConnector;
-
 import java.io.*;
 import java.lang.instrument.*;
 import java.security.ProtectionDomain;
@@ -16,6 +11,8 @@ public class Agent {
     public static Instrumentation agent;
 
     static {
+        if(!System.getProperty("java.vm.vendor").equals("JetBrains s.r.o.")) throw new UnsupportedOperationException("Illegal java distribution. Install a distribution of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
+
         if("true".equals(System.getProperty("mixin.stage.main"))) {
             try {
                 agent = (Instrumentation) Class.forName(Agent.class.getName(), false, ClassLoader.getSystemClassLoader()).getField("agent").get(null);

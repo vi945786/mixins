@@ -10,6 +10,7 @@ import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.injection.Returner;
 import vi.mixin.api.injection.ValueReturner;
 import vi.mixin.api.transformers.MethodTransformer;
+import vi.mixin.api.transformers.TransformerHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,11 +45,11 @@ public class InjectTransformer implements MethodTransformer<Inject> {
         List<Integer> indexes = targetMethodEditor.getBytecodeEditor().getAtTargetIndexes(mixinAnnotation.at());
 
         Type returnType = Type.getReturnType(targetMethodEditor.getDesc());
-        int staticOffset = (targetMethodEditor.getAccess() & ACC_STATIC) == 0 ? 1 : 0;
+        boolean isStatic = (targetMethodEditor.getAccess() & ACC_STATIC) != 0;
         String returner = returnType.getSort() == 0 ? "vi/mixin/api/injection/Returner" : "vi/mixin/api/injection/ValueReturner";
         mixinMethodEditor.makeStatic().makePublic();
         String desc = mixinMethodEditor.getDesc();
-        if(staticOffset == 1) desc = "(L" + targetClassEditor.getName() + ";" + mixinMethodEditor.getDesc().substring(1);
+        if(!isStatic) desc = "(L" + targetClassEditor.getName() + ";" + mixinMethodEditor.getDesc().substring(1);
         mixinMethodEditor.setDesc(desc);
 
 
@@ -60,22 +61,14 @@ public class InjectTransformer implements MethodTransformer<Inject> {
             insnNodes.add(new MethodInsnNode(INVOKESPECIAL, returner, "<init>", "()V"));
             insnNodes.add(new InsnNode(DUP));
 
-            if(staticOffset == 1) {
+            if(!isStatic) {
                 insnNodes.add(new VarInsnNode(ALOAD, 0));
                 insnNodes.add(new InsnNode(SWAP));
             }
-            Type[] arguments = Type.getArgumentTypes(targetMethodEditor.getDesc());
+            int[] loadOpcodes = TransformerHelper.getLoadOpcodes(Type.getArgumentTypes(targetMethodEditor.getDesc()));
 
-            for (int i = 0; i < arguments.length; i++) {
-                Type argument = arguments[i];
-                int argumentOpcode = switch (argument.getSort()) {
-                    case Type.BOOLEAN, Type.BYTE, Type.SHORT, Type.INT -> ILOAD;
-                    case Type.FLOAT -> FLOAD;
-                    case Type.LONG -> LLOAD;
-                    case Type.DOUBLE -> DLOAD;
-                    default -> ALOAD;
-                };
-                insnNodes.add(new VarInsnNode(argumentOpcode, i+staticOffset));
+            for (int i = 0; i < loadOpcodes.length; i++) {
+                insnNodes.add(new VarInsnNode(loadOpcodes[i], i + (isStatic ? 0 : 1)));
                 insnNodes.add(new InsnNode(SWAP));
             }
 
@@ -96,14 +89,7 @@ public class InjectTransformer implements MethodTransformer<Inject> {
                 insnNodes.add(new MethodInsnNode(INVOKEVIRTUAL, returner, methodName, methodDesc));
             }
 
-            int returnOpcode = switch (returnType.getSort()) {
-                case Type.VOID -> RETURN;
-                case Type.BOOLEAN, Type.BYTE, Type.SHORT, Type.INT -> IRETURN;
-                case Type.FLOAT -> FRETURN;
-                case Type.LONG -> LRETURN;
-                case Type.DOUBLE -> DRETURN;
-                default -> ARETURN;
-            };
+            int returnOpcode = TransformerHelper.getReturnOpcode(returnType);
             insnNodes.add(new InsnNode(returnOpcode));
             insnNodes.add(skipReturn);
             if(returnType.getSort() != 0) insnNodes.add(new InsnNode(POP));

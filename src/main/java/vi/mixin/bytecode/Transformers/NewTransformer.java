@@ -1,16 +1,17 @@
 package vi.mixin.bytecode.Transformers;
 
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.editors.BytecodeEditor;
 import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.MethodTransformer;
+import vi.mixin.api.transformers.TransformerHelper;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class NewTransformer implements MethodTransformer<New> {
 
@@ -45,18 +46,9 @@ public class NewTransformer implements MethodTransformer<New> {
         bytecodeEditor.add(0, new TypeInsnNode(NEW, "L" + targetClassEditor.getName() + ";"));
         bytecodeEditor.add(0, new InsnNode(DUP));
 
-        Type[] arguments = Type.getArgumentTypes(targetMethodEditor.getDesc());
-        for (int i = 0; i < arguments.length; i++) {
-            Type argument = arguments[i];
-            int argumentOpcode = switch (argument.getSort()) {
-                case Type.BOOLEAN, Type.BYTE, Type.SHORT, Type.INT -> ILOAD;
-                case Type.FLOAT -> FLOAD;
-                case Type.LONG -> LLOAD;
-                case Type.DOUBLE -> DLOAD;
-                default -> ALOAD;
-            };
-            bytecodeEditor.add(0, new VarInsnNode(argumentOpcode, i));
-        }
+        List<AbstractInsnNode> abstractInsnNodes = new ArrayList<>();
+        TransformerHelper.addLoadOpcodesOfMethod(abstractInsnNodes, Type.getArgumentTypes(targetMethodEditor.getDesc()), true);
+        bytecodeEditor.add(0, abstractInsnNodes);
 
         bytecodeEditor.add(0, new MethodInsnNode(INVOKESPECIAL, targetClassEditor.getName(), targetMethodEditor.getName(), targetMethodEditor.getDesc()));
         bytecodeEditor.add(0,new InsnNode(ARETURN));

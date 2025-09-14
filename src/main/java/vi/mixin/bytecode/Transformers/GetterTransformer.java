@@ -8,6 +8,7 @@ import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.MethodTransformer;
+import vi.mixin.api.transformers.TransformerHelper;
 
 public class GetterTransformer implements MethodTransformer<Getter> {
 
@@ -33,14 +34,8 @@ public class GetterTransformer implements MethodTransformer<Getter> {
         targetClassEditor.addMethod(new MethodEditor(instanceMethod));
 
         boolean isStatic = (targetFieldEditor.getAccess() & ACC_STATIC) != 0;
-        Type returnType = Type.getReturnType(instanceMethod.desc);
-        int returnOpcode = switch (returnType.getSort()) {
-            case Type.BOOLEAN, Type.BYTE, Type.SHORT, Type.INT -> IRETURN;
-            case Type.FLOAT -> FRETURN;
-            case Type.LONG -> LRETURN;
-            case Type.DOUBLE -> DRETURN;
-            default -> ARETURN;
-        };
+        int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(instanceMethod.desc));
+
         instanceMethod.instructions.clear();
         if (!isStatic) instanceMethod.instructions.add(new VarInsnNode(ALOAD, 0));
         instanceMethod.instructions.add(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));

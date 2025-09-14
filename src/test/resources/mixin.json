@@ -1,0 +1,11 @@
+{
+  "transformers": [
+    {
+      "transformer": "vi.mixin.test.MixinClass",
+      "annotation": "vi.mixin.api.annotations.Mixin"
+    }
+  ],
+  "mixins": [
+    "vi.mixin.test.MixinClass"
+  ]
+}

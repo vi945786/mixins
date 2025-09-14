@@ -8,6 +8,10 @@ import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.MethodTransformer;
+import vi.mixin.api.transformers.TransformerHelper;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SetterTransformer implements MethodTransformer<Setter> {
 
@@ -33,19 +37,16 @@ public class SetterTransformer implements MethodTransformer<Setter> {
         MethodNode instanceMethod = new MethodNode(mixinMethodEditor.getAccess() & ~ACC_ABSTRACT, mixinMethodEditor.getName(), mixinMethodEditor.getDesc(), mixinMethodEditor.getSignature(), mixinMethodEditor.getExceptions().toArray(String[]::new));
         targetClassEditor.addMethod(new MethodEditor(instanceMethod));
 
-        Type agrumentType = Type.getArgumentTypes(instanceMethod.desc)[0];
-        int staticOffset = (targetFieldEditor.getAccess() & ACC_STATIC) == 0 ? 1 : 0;
-        int argumentOpcode = switch (agrumentType.getSort()) {
-            case Type.BOOLEAN, Type.BYTE, Type.SHORT, Type.INT -> ILOAD;
-            case Type.FLOAT -> FLOAD;
-            case Type.LONG -> LLOAD;
-            case Type.DOUBLE -> DLOAD;
-            default -> ALOAD;
-        };
+        boolean isStatic = (targetFieldEditor.getAccess() & ACC_STATIC) != 0;
+
         instanceMethod.instructions.clear();
-        if (staticOffset == 1) instanceMethod.instructions.add(new VarInsnNode(ALOAD, 0));
-        instanceMethod.instructions.add(new VarInsnNode(argumentOpcode, staticOffset));
-        instanceMethod.instructions.add(new FieldInsnNode(staticOffset == 1 ? PUTFIELD : PUTSTATIC, targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));
+        if (isStatic) instanceMethod.instructions.add(new VarInsnNode(ALOAD, 0));
+
+        List<AbstractInsnNode> insnNodes = new ArrayList<>();
+        TransformerHelper.addLoadOpcodesOfMethod(insnNodes, Type.getArgumentTypes(instanceMethod.desc), isStatic);
+        for(AbstractInsnNode abstractInsnNode : insnNodes) instanceMethod.instructions.add(abstractInsnNode);
+
+        instanceMethod.instructions.add(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));
         instanceMethod.instructions.add(new InsnNode(RETURN));
     }
 }
