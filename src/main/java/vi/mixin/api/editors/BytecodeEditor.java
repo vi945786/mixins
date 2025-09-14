@@ -102,7 +102,7 @@ public class BytecodeEditor {
             if(equals(insnNode, values)) indexes.add(i);
         }
 
-        if(ordinals.isEmpty()) return indexes;
+        if(ordinals == null || ordinals.isEmpty()) return indexes;
         ordinals = ordinals.stream().sorted(Comparator.reverseOrder()).toList();
         for (int i = 0; i < indexes.size(); i++) {
             if(!ordinals.contains(i)) indexes.remove(i);

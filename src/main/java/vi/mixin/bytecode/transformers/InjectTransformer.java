@@ -35,7 +35,7 @@ public class InjectTransformer implements MethodTransformer<Inject> {
         if (!mixinArgumentTypes[targetArgumentTypes.length].equals(returnerType)) throw new MixinFormatException(name, "valid types for argument number " + (targetArgumentTypes.length+1) + " are: " + returnerType);
 
         if((mixinClassEditor.getAccess() & ACC_INTERFACE) != 0) throw new MixinFormatException(name, "defining class is an interface");
-        if(!mixinClassEditor.getAnnotationEditors(Type.getType(Extends.class).getDescriptor()).isEmpty()) throw new MixinFormatException(name, "defining class has @Extends annotation");
+        if(mixinClassEditor.getAnnotationEditor(Type.getDescriptor(Extends.class)) != null) throw new MixinFormatException(name, "defining class has @Extends annotation");
     }
 
     @Override

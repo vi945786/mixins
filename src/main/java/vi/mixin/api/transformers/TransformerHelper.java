@@ -3,10 +3,14 @@ package vi.mixin.api.transformers;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import vi.mixin.api.editors.ClassEditor;
+import vi.mixin.api.editors.MethodEditor;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public final class TransformerHelper implements Opcodes {
 
@@ -41,5 +45,12 @@ public final class TransformerHelper implements Opcodes {
         for (int i = 0; i < loadOpcodes.length; i++) {
             insnNodes.add(new VarInsnNode(loadOpcodes[i], i + (isStatic ? 0 : 1)));
         }
+    }
+
+    public static MethodEditor getMethodEditor(ClassEditor classEditor, MethodInsnNode methodInsnNode) {
+        return classEditor.getAllClassesInHierarchy().stream()
+                .filter(editor -> editor.getName().equals(methodInsnNode.owner))
+                .map(editor -> editor.getMethodEditor(methodInsnNode.name + methodInsnNode.desc))
+                .filter(Objects::nonNull).findFirst().orElse(null);
     }
 }

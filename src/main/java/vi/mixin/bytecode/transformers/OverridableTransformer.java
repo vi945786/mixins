@@ -24,7 +24,7 @@ public class OverridableTransformer implements MethodTransformer<Overridable> {
         for (int i = 0; i < targetArgumentTypes.length; i++) {
             if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
         }
-        if(mixinClassEditor.getAnnotationEditors(Type.getType(Extends.class).getDescriptor()).isEmpty()) throw new MixinFormatException(name, "defining class doesn't have @Extends annotation");
+        if(mixinClassEditor.getAnnotationEditor(Type.getDescriptor(Extends.class)) == null) throw new MixinFormatException(name, "defining class doesn't have @Extends annotation");
     }
 
     @Override

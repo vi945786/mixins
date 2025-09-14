@@ -16,7 +16,7 @@ import java.util.List;
 public class MixinTransformer implements ClassTransformer<Mixin> {
 
     private static void validate(ClassEditor mixinClassEditor, Mixin mixinAnnotation, ClassEditor targetClassEditor) {
-        boolean isExtend = !mixinClassEditor.getAnnotationEditors(Type.getType(Extends.class).getDescriptor()).isEmpty();
+        boolean isExtend = mixinClassEditor.getAnnotationEditor(Type.getDescriptor(Extends.class)) != null;
         boolean isInterface = (mixinClassEditor.getAccess() & Opcodes.ACC_INTERFACE) != 0;
 
         for (MethodEditor methodEditor : mixinClassEditor.getMethodEditors()) {
@@ -43,7 +43,7 @@ public class MixinTransformer implements ClassTransformer<Mixin> {
             });
         }
 
-        if(mixinClassEditor.getAnnotationEditors(Type.getType(Extends.class).getDescriptor()).isEmpty()) {
+        if(mixinClassEditor.getAnnotationEditor(Type.getDescriptor(Extends.class)) == null) {
             mixinClassEditor.getMethodEditors().stream().filter(methodEditor -> methodEditor.getName().equals("<init>")).forEach(methodEditor -> {
                 List<AbstractInsnNode> bytecode = methodEditor.getBytecodeEditor().getBytecode();
                 for (int i = 0; i < bytecode.size(); i++) {

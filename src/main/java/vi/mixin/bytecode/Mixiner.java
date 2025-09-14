@@ -196,7 +196,7 @@ public class Mixiner {
         }
 
         for (MethodEditor methodEditor : mixinClassEditor.getMethodEditors()) {
-            for (AnnotationEditor annotationNode : methodEditor.getAnnotationEditors()) {
+            for (AnnotationEditor annotationNode : methodEditor.getAnnotationEditor()) {
                 methodTransformers.getOrDefault(annotationNode.getDesc(), dummy).transform(mixinClassEditor, mixinClassEditor.getMethodEditor(methodEditor.getName() + methodEditor.getDesc()), annotationNode.getAnnotation(), targetClassEditor);
             }
         }

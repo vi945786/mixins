@@ -1,5 +1,8 @@
 {
   "mixins": [
+    "vi.mixin.test.FinalBaseExtender",
+    "vi.mixin.test.SealedBaseExtender",
+    "vi.mixin.test.BaseNewExtender",
     "vi.mixin.test.TargetGetterAccessor",
     "vi.mixin.test.TargetInvokerAccessor",
     "vi.mixin.test.TargetNewAccessor",

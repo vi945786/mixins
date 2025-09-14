@@ -21,10 +21,6 @@
       "annotation": "vi.mixin.api.annotations.Mixin"
     },
     {
-      "transformer": "vi.mixin.bytecode.transformers.MutableTransformer",
-      "annotation": "vi.mixin.api.annotations.fields.Mutable"
-    },
-    {
       "transformer": "vi.mixin.bytecode.transformers.NewTransformer",
       "annotation": "vi.mixin.api.annotations.methods.New"
     },

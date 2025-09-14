@@ -26,6 +26,7 @@ public class ShadowTransformer implements FieldTransformer<Shadow>, MethodTransf
         validate(mixinClassEditor, mixinFieldEditor, mixinAnnotation, targetClassEditor);
         FieldEditor targetFieldEditor = targetClassEditor.getFieldEditor(mixinAnnotation.value());
         targetFieldEditor.makePublic();
+        if((mixinFieldEditor.getAccess() & ACC_FINAL) == 0) targetFieldEditor.makeNonFinal();
 
         for(ClassEditor classEditor : mixinClassEditor.getAllClassesInHierarchy()) {
             for (MethodEditor method : classEditor.getMethodEditors()) {

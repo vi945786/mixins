@@ -63,12 +63,12 @@ public class MethodEditor {
         return this;
     }
 
-    public List<AnnotationEditor> getAnnotationEditors() {
+    public List<AnnotationEditor> getAnnotationEditor() {
         return List.copyOf(annotationEditors);
     }
 
-    public List<AnnotationEditor> getAnnotationEditors(String desc) {
-        return List.copyOf(annotationEditors.stream().filter(annotationEditor -> annotationEditor.getDesc().equals(desc)).toList());
+    public AnnotationEditor getAnnotationEditor(String desc) {
+        return annotationEditors.stream().filter(annotationEditor -> annotationEditor.getDesc().equals(desc)).findFirst().orElse(null);
     }
 
     public MethodEditor makeNonAbstract() {
