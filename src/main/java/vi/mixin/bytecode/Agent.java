@@ -27,7 +27,7 @@ public class Agent {
         agent = inst;
         System.setProperty("mixin.stage", "premain");
 
-        Class.forName(MixinClassHelper.class.getName()); //static init
+        MixinClassHelper.loadClass(MixinClassHelper.class.getName()); //static init
         RegisterJars.add();
         System.setProperty("mixin.stage", "main");
     }
