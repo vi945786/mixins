@@ -6,6 +6,7 @@
     "vi.mixin.test.TargetGetterAccessor",
     "vi.mixin.test.TargetInvokerAccessor",
     "vi.mixin.test.TargetNewAccessor",
+    "vi.mixin.test.OverridableAnnotationTestExtender",
     "vi.mixin.test.TargetSetterAccessor"
   ]
 }
