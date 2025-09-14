@@ -14,7 +14,7 @@ public class Agent {
         if(!System.getProperty("java.vm.vendor").equals("JetBrains s.r.o."))
             throw new UnsupportedOperationException("Illegal java distribution. Install a distribution of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
 
-        if("true".equals(System.getProperty("mixin.stage.main"))) {
+        if(System.getProperty("mixin.stage") != null) {
             try {
                 agent = (Instrumentation) Class.forName(Agent.class.getName(), false, ClassLoader.getSystemClassLoader()).getField("agent").get(null);
             } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
@@ -25,10 +25,11 @@ public class Agent {
 
     public static void premain(String agentArgs, Instrumentation inst) throws IOException, ClassNotFoundException {
         agent = inst;
+        System.setProperty("mixin.stage", "premain");
 
         Class.forName(MixinClassHelper.class.getName()); //static init
         RegisterJars.add();
-        System.setProperty("mixin.stage.main", "true");
+        System.setProperty("mixin.stage", "main");
     }
 
     public static byte[] getBytecode(Class<?> c) {

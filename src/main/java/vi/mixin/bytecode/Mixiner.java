@@ -4,8 +4,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceClassVisitor;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.*;
 import vi.mixin.api.MixinFormatException;
@@ -17,18 +15,14 @@ import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.*;
-import vi.mixin.bytecode.Transformers.*;
-import vi.mixin.bytecode.Transformers.MixinTransformer;
+import vi.mixin.bytecode.transformers.*;
+import vi.mixin.bytecode.transformers.MixinTransformer;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.UnmodifiableClassException;
 import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.ProtectionDomain;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -48,16 +42,16 @@ public class Mixiner {
     private static final Set<String> usedMixinClasses;
 
     static {
-        addMixinTransformer(new ExtendsTransformer(), Extends.class);
-        addMixinTransformer(new GetterTransformer(), Getter.class);
-        addMixinTransformer(new InjectTransformer(), Inject.class);
-        addMixinTransformer(new InvokerTransformer(), Invoker.class);
-        addMixinTransformer(new MixinTransformer(), Mixin.class);
-        addMixinTransformer(new MutableTransformer(), Mutable.class);
-        addMixinTransformer(new NewTransformer(), New.class);
-        addMixinTransformer(new OverridableTransformer(), Overridable.class);
-        addMixinTransformer(new SetterTransformer(), Setter.class);
-        addMixinTransformer(new ShadowTransformer(), Shadow.class);
+//        addMixinTransformer(new ExtendsTransformer(), Extends.class);
+//        addMixinTransformer(new GetterTransformer(), Getter.class);
+//        addMixinTransformer(new InjectTransformer(), Inject.class);
+//        addMixinTransformer(new InvokerTransformer(), Invoker.class);
+//        addMixinTransformer(new MixinTransformer(), Mixin.class);
+//        addMixinTransformer(new MutableTransformer(), Mutable.class);
+//        addMixinTransformer(new NewTransformer(), New.class);
+//        addMixinTransformer(new OverridableTransformer(), Overridable.class);
+//        addMixinTransformer(new SetterTransformer(), Setter.class);
+//        addMixinTransformer(new ShadowTransformer(), Shadow.class);
 
         if("true".equals(System.getProperty("mixin.stage.main"))) {
             try {

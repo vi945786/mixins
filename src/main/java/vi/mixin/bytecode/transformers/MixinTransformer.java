@@ -1,4 +1,4 @@
-package vi.mixin.bytecode.Transformers;
+package vi.mixin.bytecode.transformers;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;

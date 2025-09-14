@@ -1,4 +1,4 @@
-package vi.mixin.bytecode.Transformers;
+package vi.mixin.bytecode.transformers;
 
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.classes.Extends;

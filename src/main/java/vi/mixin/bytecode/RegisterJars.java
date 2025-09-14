@@ -30,22 +30,21 @@ public class RegisterJars {
     private static final List<String> classesEntryNames = new ArrayList<>();
     private static final List<MixinTransformer> transformersEntries = new ArrayList<>();
     public static void add() throws IOException {
-        if(System.getProperty("mixin.classes") != null) classesEntryNames.addAll(List.of(System.getProperty("mixin.classes").split(File.pathSeparator)));
-        if(System.getProperty("mixin.transformers") != null) transformersEntries.addAll(Arrays.stream(System.getProperty("mixin.transformers").split(File.pathSeparator)).map(transformer -> {
-            String[] split = transformer.split("=");
-            return new MixinTransformer(split[0], split[1]);
-        }).toList());
-        if(System.getProperty("mixin.files") != null) {
-            for (String file : System.getProperty("mixin.files").split(File.pathSeparator)) {
-                try {
-                    MixinFile mixinFile = getMixinFile(Files.newBufferedReader(Path.of(file)));
-                    transformersEntries.addAll(mixinFile.transformers);
-                    classesEntryNames.addAll(mixinFile.mixinClasses);
-                } catch (IOException e) {
-                    throw new RuntimeException("failed to load mixin file " + file, e);
-                }
-            }
+        //load these classes before appending to bootstrap
+        RegisterJars.class.getDeclaredClasses();
+
+        List<String> agentJars = ManagementFactory.getRuntimeMXBean().getInputArguments().stream().filter(arg -> arg.startsWith("-javaagent:"))
+                    .map(arg -> arg.substring("-javaagent:".length()))
+                    .map(arg -> arg.split("=")[0])
+                    .toList();
+
+        String agentJarClasspath = "";
+        for(String agentJar : agentJars) {
+            addJar(agentJar);
+            agentJarClasspath += agentJar + File.pathSeparator;
         }
+
+        doRunArgs();
 
         String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
         Path tempDir = Files.createTempDirectory("mixin-" + pid + "-");
@@ -68,17 +67,26 @@ public class RegisterJars {
                 }
             }
         } finally {
-            List<String> agentJars = ManagementFactory.getRuntimeMXBean().getInputArguments().stream().filter(arg -> arg.startsWith("-javaagent:"))
-                    .map(arg -> arg.substring("-javaagent:".length()))
-                    .map(arg -> arg.split("=")[0])
-                    .toList();
+            TempFileDeleter.spawn(agentJarClasspath.substring(0, agentJarClasspath.length() -1), tempDir.toString());
+        }
+    }
 
-            String cp = "";
-            for(String agentJar : agentJars) {
-                addJar(agentJar);
-                cp += agentJar + File.pathSeparator;
+    private static void doRunArgs() {
+        if(System.getProperty("mixin.classes") != null) classesEntryNames.addAll(List.of(System.getProperty("mixin.classes").split(File.pathSeparator)));
+        if(System.getProperty("mixin.transformers") != null) transformersEntries.addAll(Arrays.stream(System.getProperty("mixin.transformers").split(File.pathSeparator)).map(transformer -> {
+            String[] split = transformer.split("=");
+            return new MixinTransformer(split[0], split[1]);
+        }).toList());
+        if(System.getProperty("mixin.files") != null) {
+            for (String file : System.getProperty("mixin.files").split(File.pathSeparator)) {
+                try {
+                    MixinFile mixinFile = getMixinFile(Files.newBufferedReader(Path.of(file)));
+                    transformersEntries.addAll(mixinFile.transformers);
+                    classesEntryNames.addAll(mixinFile.mixinClasses);
+                } catch (IOException e) {
+                    throw new RuntimeException("failed to load mixin file " + file, e);
+                }
             }
-            TempFileDeleter.spawn(cp.substring(0, cp.length() -1), tempDir.toString());
         }
     }
 
@@ -86,9 +94,8 @@ public class RegisterJars {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try (JarOutputStream jos = new JarOutputStream(byteArrayOutputStream)) {
             jos.setLevel(Deflater.NO_COMPRESSION);
-            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            Files.walk(dir).filter(Files::isRegularFile).forEach(file -> {
+                try {
                     String entryName = dir.relativize(file).toString();
 
                     try (InputStream in = Files.newInputStream(file)) {
@@ -96,7 +103,8 @@ public class RegisterJars {
                         in.transferTo(jos);
                         jos.closeEntry();
                     }
-                    return FileVisitResult.CONTINUE;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             });
         }
@@ -162,7 +170,7 @@ public class RegisterJars {
 
             Manifest manifest = jarFile.getManifest();
             if (manifest != null) {
-                String fileName = manifest.getMainAttributes().getValue("Mixin-Classes-File");
+                String fileName = manifest.getMainAttributes().getValue("Mixin-File");
                 if (fileName != null && !fileName.isEmpty()) {
 
                     try (InputStream in = jarFile.getInputStream(jarFile.getEntry(fileName));

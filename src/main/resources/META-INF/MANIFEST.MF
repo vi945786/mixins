@@ -1,3 +1,4 @@
 Premain-Class: vi.mixin.bytecode.Agent
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
+Mixin-File: mixin.json
