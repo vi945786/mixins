@@ -5,7 +5,6 @@ import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.Overridable;
 import vi.mixin.api.editors.ClassEditor;
-import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.MethodTransformer;
 
