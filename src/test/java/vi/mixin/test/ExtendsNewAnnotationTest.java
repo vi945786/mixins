@@ -3,7 +3,6 @@ package vi.mixin.test;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import vi.mixin.api.annotations.Mixin;
-import vi.mixin.api.annotations.Shadow;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.New;
 
