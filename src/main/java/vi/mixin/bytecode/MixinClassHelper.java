@@ -42,11 +42,19 @@ public class MixinClassHelper {
         }
     }
 
+    public static Class<?> loadClass(String name) {
+        try {
+            return Class.forName(findClass(name).getName(), true, findClass(name).getClassLoader());
+        } catch (ClassNotFoundException | NullPointerException e) {
+            return null;
+        }
+    }
+
     public static Class<?> findClass(String name) {
         name = name.replace("/", ".");
         try {
             try {
-                return Class.forName(name);
+                return Class.forName(name, false, null);
             } catch (ClassNotFoundException ignored) {}
 
             for(ClassLoader loader : classLoaders) {

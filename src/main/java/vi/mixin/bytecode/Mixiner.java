@@ -103,7 +103,7 @@ public class Mixiner {
                 Class<?> targetClass = annotation.value();
                 if(targetClass != void.class) return targetClass;
                 targetClass = MixinClassHelper.findClass(annotation.name());
-                if(targetClass == null || !agent.isModifiableClass(targetClass)) throw new MixinFormatException(mixinClassEditor.getName(), "invalid @Mixin target");
+                if(targetClass == null) throw new MixinFormatException(mixinClassEditor.getName(), "invalid @Mixin target");
                 return MixinClassHelper.findClass(annotation.name());
             }
         }
@@ -111,7 +111,7 @@ public class Mixiner {
         throw new MixinFormatException(mixinClassEditor.getName(), "doesn't have a @Mixin annotation");
     }
 
-    public static void addClasses(List<byte[]> bytecodes) throws UnmodifiableClassException, ClassNotFoundException {
+    public static void addClasses(List<byte[]> bytecodes) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
         Map<String, ClassEditor> outerClassNodeMap = new HashMap<>();
         Map<ClassEditor, List<ClassEditor>> classEditorInnerClassMap = new HashMap<>();
@@ -174,7 +174,7 @@ public class Mixiner {
         }
     }
 
-    public static Class<?> addClass(ClassEditor mixinClassEditor) throws ClassNotFoundException, UnmodifiableClassException {
+    public static Class<?> addClass(ClassEditor mixinClassEditor) {
         if(usedMixinClasses.contains(mixinClassEditor.getName())) throw new IllegalArgumentException("Mixin class " + mixinClassEditor.getName() + " used twice");
         usedMixinClasses.add(mixinClassEditor.getName());
 
@@ -183,7 +183,7 @@ public class Mixiner {
         return targetClass;
     }
 
-    private static void mixin(Class<?> targetClass, ClassEditor mixinClassEditor) throws UnmodifiableClassException, ClassNotFoundException {
+    private static void mixin(Class<?> targetClass, ClassEditor mixinClassEditor) {
         ClassWriter targetClassWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         if(!classEditors.containsKey(targetClass.getName())) {
             byte[] targetBytecode = Agent.getBytecode(targetClass);
@@ -217,7 +217,11 @@ public class Mixiner {
 //        pw.flush();
 
         targetClassNode.accept(targetClassWriter);
-        agent.redefineClasses(new ClassDefinition(targetClass, targetClassWriter.toByteArray()));
+        try {
+            agent.redefineClasses(new ClassDefinition(targetClass, targetClassWriter.toByteArray()));
+        } catch (UnmodifiableClassException | ClassNotFoundException e) {
+            throw new MixinFormatException(mixinClassEditor.getName(), "invalid @Mixin target");
+        }
 
 //        PrintWriter pw = new PrintWriter(System.out);
 //        mixinClassNode.accept(new TraceClassVisitor(null, new Textifier(), pw));

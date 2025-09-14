@@ -1,5 +1,10 @@
 package vi.mixin.bytecode;
 
+import com.sun.jdi.Bootstrap;
+import com.sun.jdi.connect.Connector;
+import com.sun.jdi.connect.IllegalConnectorArgumentsException;
+import com.sun.jdi.connect.ListeningConnector;
+
 import java.io.*;
 import java.lang.instrument.*;
 import java.security.ProtectionDomain;
@@ -20,11 +25,11 @@ public class Agent {
         }
     }
 
-    public static void premain(String agentArgs, Instrumentation inst) throws IOException, ClassNotFoundException, UnmodifiableClassException {
+    public static void premain(String agentArgs, Instrumentation inst) throws IOException, ClassNotFoundException {
         agent = inst;
 
         Class.forName(MixinClassHelper.class.getName()); //static init
-        AddToBootloaderSearch.add();
+        RegisterJars.add();
         System.setProperty("mixin.stage.main", "true");
     }
 

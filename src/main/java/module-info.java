@@ -3,6 +3,7 @@ module mixin.main {
     requires jdk.unsupported;
     requires org.objectweb.asm.tree;
     requires java.management;
+    requires jdk.jdi;
     requires jdk.attach;
 
     exports vi.mixin.api;

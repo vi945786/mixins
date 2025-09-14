@@ -1,7 +1,7 @@
 package vi.mixin.api;
 
 import vi.mixin.api.transformers.Transformer;
-import vi.mixin.bytecode.AddToBootloaderSearch;
+import vi.mixin.bytecode.RegisterJars;
 import vi.mixin.bytecode.Mixiner;
 
 import java.lang.annotation.Annotation;
@@ -20,6 +20,6 @@ public class MixinManager {
      * any classes loaded through reflection or URLClassLoaders must be registered here
      */
     public static void addJarToClasspath(String jar) {
-        AddToBootloaderSearch.addJar(jar);
+        RegisterJars.addJar(jar);
     }
 }
