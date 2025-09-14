@@ -15,7 +15,7 @@ public class OverridableTransformer implements MethodTransformer<Overridable> {
         MethodEditor target = targetClassEditor.getMethodEditor(mixinAnnotation.value());
         if(target == null) throw new MixinFormatException(name, "target doesn't exist");
         if(target.getName().equals("<init>")) throw new MixinFormatException(name, "overriding a constructor is not allowed. use @New");
-        if((mixinMethodEditor.getAccess() & ACC_STATIC) == 1) throw new MixinFormatException(name, "should be not static");
+        if((mixinMethodEditor.getAccess() & ACC_STATIC) != 0) throw new MixinFormatException(name, "should be not static");
         Type returnType = Type.getReturnType(mixinMethodEditor.getDesc());
         if(!returnType.equals(Type.getReturnType(target.getDesc())) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + Type.getReturnType(target.getDesc()) + ", " + Type.getType(Object.class));
         Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodEditor.getDesc());
