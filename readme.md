@@ -406,8 +406,7 @@ Register your transformer in the mixin JSON file:
 {
 	"transformers": [
 		{ "transformer": "your.package.LogCallTransformer", "annotation": "your.package.LogCall" }
-	],
-	"mixins": [ ... ]
+	]
 }
 ```
 
