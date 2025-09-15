@@ -93,7 +93,10 @@ public class MixinTransformer implements ClassTransformer<Mixin> {
             MethodEditor targetClinit = targetClassEditor.getMethodEditor("<clinit>()V");
             if(targetClinit == null) targetClassEditor.addMethod(mixinClinit);
             else {
-                targetClinit.getBytecodeEditor().add(0, mixinClinit.getBytecodeEditor().getBytecode());
+                for (int i = 0; i < targetClinit.getBytecodeEditor().getBytecode().size(); i++) {
+                    if(targetClinit.getBytecodeEditor().get(i).getOpcode() == RETURN)
+                        targetClinit.getBytecodeEditor().add(i, mixinClinit.getBytecodeEditor().getBytecode());
+                }
             }
         }
 
