@@ -6,6 +6,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import vi.mixin.api.editors.ClassEditor;
+import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 
 import java.util.Arrays;
@@ -52,5 +53,27 @@ public final class TransformerHelper implements Opcodes {
                 .filter(editor -> editor.getName().equals(methodInsnNode.owner))
                 .map(editor -> editor.getMethodEditor(methodInsnNode.name + methodInsnNode.desc))
                 .filter(Objects::nonNull).findFirst().orElse(null);
+    }
+
+    public static String getOuterClassInstanceFieldName(ClassEditor classEditor) {
+        if(classEditor.getOuterClass() == null && classEditor.getRealClass() == null) return null;
+
+        FieldEditor fieldEditor = classEditor.getFieldEditors().stream().filter(fieldNode -> fieldNode.getName().startsWith("this$") && (fieldNode.getAccess() & ACC_SYNTHETIC) != 0).findFirst().orElse(null);
+        if(fieldEditor != null) return fieldEditor.getName();
+
+        Class<?> c = classEditor.getRealClass();
+        if(classEditor.getRealClass() == null) c = classEditor.getTargetClass();
+
+        int i = 0;
+        while(c != null) {
+            if((c.getModifiers() & ACC_STATIC) != 0) break;
+            c = c.getDeclaringClass();
+            i++;
+        }
+        String name = "this$" + (i -1);
+
+        while(classEditor.getFieldEditor(name) != null) name += "$";
+
+        return name;
     }
 }

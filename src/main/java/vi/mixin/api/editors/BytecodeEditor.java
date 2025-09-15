@@ -57,23 +57,22 @@ public class BytecodeEditor {
              case INVOKE -> {
                  int splitOwner = target.indexOf(';');
                  int splitName = target.indexOf('(');
-                 String owner = target.substring(1, splitOwner);
-                 String name = target.substring(splitOwner, splitName);
+                 String owner = target.substring(0, splitOwner);
+                 String name = target.substring(splitOwner+1, splitName);
                  String desc = target.substring(splitName);
                  yield getInsnNodesIndexes(METHOD_INSN, List.of(INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC, INVOKEINTERFACE), ordinal, owner, name, desc);
              }
              case FIELD -> {
                  int splitOwner = target.indexOf(';');
-                 int splitName = target.indexOf('(');
-                 String owner = target.substring(1, splitOwner);
-                 String name = target.substring(splitOwner, splitName);
+                 String owner = target.substring(0, splitOwner);
+                 String name = target.substring(splitOwner+1);
                  yield getInsnNodesIndexes(FIELD_INSN, opcode, ordinal, owner, name, null);
              }
              case NEW -> {
                  if(target.contains(")")) {
                      int splitOwner = target.indexOf(')');
                      String owner = target.substring(splitOwner+1);
-                     String desc = target.substring(0, splitOwner+1);
+                     String desc = target.substring(0, splitOwner+1) + "V";
                      yield getInsnNodesIndexes(METHOD_INSN, opcode, ordinal, owner, "<init>", desc);
                  } else {
                      yield getInsnNodesIndexes(METHOD_INSN, opcode, ordinal, target, "<init>", null);
@@ -103,11 +102,12 @@ public class BytecodeEditor {
         }
 
         if(ordinals == null || ordinals.isEmpty()) return indexes;
-        ordinals = ordinals.stream().sorted(Comparator.reverseOrder()).toList();
+        List<Integer> newIndexes = new ArrayList<>();
         for (int i = 0; i < indexes.size(); i++) {
-            if(!ordinals.contains(i)) indexes.remove(i);
+            if(ordinals.contains(i)) newIndexes.add(indexes.get(i));
         }
-        return indexes;
+
+        return newIndexes;
     }
 
 
@@ -181,6 +181,20 @@ public class BytecodeEditor {
         modified.remove(modified.get(getUpdatedIndex(index)));
         added[index]--;
         removed[index] = true;
+    }
+
+    /**
+     * append
+     */
+    public void add(AbstractInsnNode... add) {
+        add(Arrays.asList(add));
+    }
+
+    /**
+     * append
+     */
+    public void add(List<AbstractInsnNode> add) {
+        add(original.size(), add);
     }
 
     /**

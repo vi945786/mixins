@@ -31,11 +31,13 @@ public class SetterAnnotationTest {
     }
 }
 
+
 @Mixin(SetterAnnotationTest.Target.class)
 interface TargetSetterAccessor {
     @Setter("value")
     void setValue(int v);
 
     @Setter("staticValue")
-    static void setStaticValue(int v) {}
+    static void setStaticValue(int v) {
+    }
 }

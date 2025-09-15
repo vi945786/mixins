@@ -4,9 +4,17 @@
     "vi.mixin.test.SealedBaseExtender",
     "vi.mixin.test.BaseNewExtender",
     "vi.mixin.test.TargetGetterAccessor",
+    "vi.mixin.test.InjectTestMixin",
     "vi.mixin.test.TargetInvokerAccessor",
+    "vi.mixin.test.OuterFieldMixin",
+    "vi.mixin.test.OuterFieldMixin$InnerFieldMixin",
+    "vi.mixin.test.OuterMethodCallMixin",
+    "vi.mixin.test.OuterMethodCallMixin$InnerMethodCallMixin",
     "vi.mixin.test.TargetNewAccessor",
     "vi.mixin.test.OverridableAnnotationTestExtender",
-    "vi.mixin.test.TargetSetterAccessor"
+    "vi.mixin.test.TargetSetterAccessor",
+    "vi.mixin.test.ShadowTestMixin",
+    "vi.mixin.test.OuterShadowMixin",
+    "vi.mixin.test.OuterShadowMixin$InnerShadowMixin"
   ]
 }

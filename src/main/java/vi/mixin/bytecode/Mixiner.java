@@ -4,6 +4,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceClassVisitor;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.editors.AnnotationEditor;
@@ -12,6 +14,7 @@ import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.*;
 
+import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
@@ -36,17 +39,6 @@ public class Mixiner {
     private static final Set<String> usedMixinClasses;
 
     static {
-//        addMixinTransformer(new ExtendsTransformer(), Extends.class);
-//        addMixinTransformer(new GetterTransformer(), Getter.class);
-//        addMixinTransformer(new InjectTransformer(), Inject.class);
-//        addMixinTransformer(new InvokerTransformer(), Invoker.class);
-//        addMixinTransformer(new MixinTransformer(), Mixin.class);
-//        addMixinTransformer(new MutableTransformer(), Mutable.class);
-//        addMixinTransformer(new NewTransformer(), New.class);
-//        addMixinTransformer(new OverridableTransformer(), Overridable.class);
-//        addMixinTransformer(new SetterTransformer(), Setter.class);
-//        addMixinTransformer(new ShadowTransformer(), Shadow.class);
-
         if("true".equals(System.getProperty("mixin.stage.main"))) {
             try {
                 Field classEditorsField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("classEditors");
@@ -69,6 +61,14 @@ public class Mixiner {
             classEditorNodes = new HashMap<>();
             usedMixinClasses = new HashSet<>();
         }
+    }
+
+    public static boolean hasTransformer(Class<? extends Annotation> annotation) {
+        return hasTransformer(Type.getDescriptor(annotation));
+    }
+
+    public static boolean hasTransformer(String desc) {
+        return classTransformers.containsKey(desc) || fieldTransformers.containsKey(desc) || methodTransformers.containsKey(desc);
     }
 
     public static void addMixinTransformer(Transformer transformer, Class<? extends Annotation> annotation) {
@@ -124,14 +124,14 @@ public class Mixiner {
         while(!outerClassMap.isEmpty()) {
             new HashSet<>(outerClassMap.entrySet()).stream().filter(entry -> outerClassNodeMap.containsKey(entry.getValue())).forEach(entry -> {
                 List<ClassEditor> inners = new ArrayList<>();
-                ClassEditor classEditor = new ClassEditor(entry.getKey(), outerClassNodeMap.get(entry.getValue()), inners);
+                ClassEditor classEditor = new ClassEditor(entry.getKey(), null, outerClassNodeMap.get(entry.getValue()), inners);
                 classEditorClassNodeMap.put(classEditor, entry.getKey());
                 classEditorInnerClassMap.get(outerClassNodeMap.get(entry.getValue())).add(classEditor);
                 classEditorInnerClassMap.put(classEditor, inners);
                 outerClassNodeMap.put(entry.getKey().name, classEditor);
                 outerClassMap.remove(entry.getKey());
             });
-            if(outerClassMapLen == outerClassMap.size()) throw new MixinFormatException(outerClassMap.keySet().stream().toList().getFirst().name, "outer class in not a mixin class");
+            if(outerClassMapLen == outerClassMap.size()) throw new MixinFormatException(outerClassMap.keySet().stream().toList().getFirst().name, "outer class is not a mixin class");
             outerClassMapLen = outerClassMap.size();
         }
 
@@ -139,9 +139,9 @@ public class Mixiner {
         for(Map.Entry<ClassEditor, ClassNode> entry : classEditorClassNodeMap.entrySet().stream().sorted(Comparator.comparing(a -> a.getKey().getName())).toList()) {
             Class<?> targetClass = addClass(entry.getKey(), entry.getValue());
 
-//            PrintWriter pw = new PrintWriter(System.out);
-//            entry.getValue().accept(new TraceClassVisitor(null, new Textifier(), pw));
-//            pw.flush();
+            PrintWriter pw = new PrintWriter(System.out);
+            entry.getValue().accept(new TraceClassVisitor(null, new Textifier(), pw));
+            pw.flush();
 
             mixinClassNodes.put(entry.getValue(), targetClass);
         }
@@ -150,6 +150,14 @@ public class Mixiner {
         for (Map.Entry<ClassNode, Class<?>> entry : mixinClassNodes.entrySet()) {
             Class<?> mixinClass = MixinClassHelper.findClass(entry.getKey().name);
             agent.redefineModule(entry.getValue().getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(entry.getValue().getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+
+            try {
+                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+                entry.getKey().accept(writer);
+                agent.redefineClasses(new ClassDefinition(mixinClass, writer.toByteArray()));
+            } catch (ClassNotFoundException | UnmodifiableClassException e) {
+                throw new RuntimeException(e);
+            }
 
             mixinClasses.put(mixinClass, entry.getValue());
         }
@@ -185,7 +193,7 @@ public class Mixiner {
             ClassReader targetClassReader = new ClassReader(targetBytecode);
             ClassNode targetClassNode = new ClassNode();
             targetClassReader.accept(targetClassNode, 0);
-            classEditors.put(targetClass.getName(), new ClassEditor(targetClassNode, null, List.of()));
+            classEditors.put(targetClass.getName(), new ClassEditor(targetClassNode, targetClass, null, List.of()));
             classEditorNodes.put(classEditors.get(targetClass.getName()), targetClassNode);
         }
         ClassEditor targetClassEditor = classEditors.get(targetClass.getName());
@@ -196,7 +204,7 @@ public class Mixiner {
         }
 
         for (MethodEditor methodEditor : mixinClassEditor.getMethodEditors()) {
-            for (AnnotationEditor annotationNode : methodEditor.getAnnotationEditor()) {
+            for (AnnotationEditor annotationNode : methodEditor.getAnnotationEditors()) {
                 methodTransformers.getOrDefault(annotationNode.getDesc(), dummy).transform(mixinClassEditor, mixinClassEditor.getMethodEditor(methodEditor.getName() + methodEditor.getDesc()), annotationNode.getAnnotation(), targetClassEditor);
             }
         }
@@ -207,9 +215,9 @@ public class Mixiner {
             }
         }
 
-//        PrintWriter pw = new PrintWriter(System.out);
-//        targetClassNode.accept(new TraceClassVisitor(null, new Textifier(), pw));
-//        pw.flush();
+        PrintWriter pw = new PrintWriter(System.out);
+        targetClassNode.accept(new TraceClassVisitor(null, new Textifier(), pw));
+        pw.flush();
 
         targetClassNode.accept(targetClassWriter);
         try {

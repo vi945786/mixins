@@ -26,7 +26,7 @@ public class ExtendsTransformer implements ClassTransformer<Extends> {
                 for(AbstractInsnNode node : editor.getBytecodeEditor().getBytecode()) {
                     if (!(node instanceof MethodInsnNode methodInsnNode)) continue;
                     MethodEditor nodeMethodEditor = getMethodEditor(mixinClassEditor, methodInsnNode);
-                    if(nodeMethodEditor != null && nodeMethodEditor.getAnnotationEditor(Type.getDescriptor(New.class)) != null) {
+                    if(nodeMethodEditor != null && nodeMethodEditor.getAnnotationEditors(Type.getDescriptor(New.class)) != null) {
                         foundCall = true;
                         break;
                     }
@@ -49,7 +49,7 @@ public class ExtendsTransformer implements ClassTransformer<Extends> {
             for (int i = 0; i < editor.getBytecodeEditor().getBytecode().size(); i++) {
                 if (!(editor.getBytecodeEditor().get(i) instanceof MethodInsnNode methodInsnNode)) continue;
                 MethodEditor nodeMethodEditor = getMethodEditor(mixinClassEditor, methodInsnNode);
-                if(nodeMethodEditor == null || nodeMethodEditor.getAnnotationEditor(Type.getDescriptor(New.class)) == null) continue;
+                if(nodeMethodEditor == null || nodeMethodEditor.getAnnotationEditors(Type.getDescriptor(New.class)) == null) continue;
 
                 String newDesc = methodInsnNode.desc;
                 newDesc = newDesc.split("\\)")[0] + ")V";

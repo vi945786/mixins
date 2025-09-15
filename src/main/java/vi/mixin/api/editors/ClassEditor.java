@@ -16,8 +16,9 @@ public class ClassEditor {
     private final List<FieldEditor> fieldEditors;
     private final int access;
     private final String superName;
+    private final Class<?> c;
 
-    public ClassEditor(ClassNode classNode, ClassEditor outerClass, List<ClassEditor> innerClasses) {
+    public ClassEditor(ClassNode classNode, Class<?> c, ClassEditor outerClass, List<ClassEditor> innerClasses) {
         this.classNode = classNode;
         this.outerClass = outerClass;
         this.innerClasses = innerClasses;
@@ -27,6 +28,7 @@ public class ClassEditor {
         interfaces = List.copyOf(classNode.interfaces);
         access = classNode.access;
         superName = classNode.superName;
+        this.c = c;
     }
 
     /**
@@ -47,6 +49,13 @@ public class ClassEditor {
         innerClasses.forEach(inner -> classEditors.addAll(inner.getAllClassesInHierarchy(visited)));
 
         return classEditors;
+    }
+
+    /**
+     * only works for target classes
+     */
+    public Class<?> getRealClass() {
+        return c;
     }
 
     /**
@@ -115,6 +124,10 @@ public class ClassEditor {
 
     public List<MethodEditor> getMethodEditors() {
         return List.copyOf(methodEditors);
+    }
+
+    public List<MethodEditor> getMethodEditors(String name) {
+        return methodEditors.stream().filter(method -> method.getName().equals(name)).toList();
     }
 
     public MethodEditor getMethodEditor(String nameAndDesc) {

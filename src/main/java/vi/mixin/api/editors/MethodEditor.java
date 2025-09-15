@@ -63,11 +63,11 @@ public class MethodEditor {
         return this;
     }
 
-    public List<AnnotationEditor> getAnnotationEditor() {
+    public List<AnnotationEditor> getAnnotationEditors() {
         return List.copyOf(annotationEditors);
     }
 
-    public AnnotationEditor getAnnotationEditor(String desc) {
+    public AnnotationEditor getAnnotationEditors(String desc) {
         return annotationEditors.stream().filter(annotationEditor -> annotationEditor.getDesc().equals(desc)).findFirst().orElse(null);
     }
 

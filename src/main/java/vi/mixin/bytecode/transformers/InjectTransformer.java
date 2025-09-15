@@ -49,9 +49,8 @@ public class InjectTransformer implements MethodTransformer<Inject> {
         String returner = returnType.getSort() == 0 ? "vi/mixin/api/injection/Returner" : "vi/mixin/api/injection/ValueReturner";
         mixinMethodEditor.makeStatic().makePublic();
         String desc = mixinMethodEditor.getDesc();
-        if(!isStatic) desc = "(L" + targetClassEditor.getName() + ";" + mixinMethodEditor.getDesc().substring(1);
+        if((mixinMethodEditor.getAccess() & ACC_STATIC) == 0) desc = "(L" + targetClassEditor.getName() + ";" + mixinMethodEditor.getDesc().substring(1);
         mixinMethodEditor.setDesc(desc);
-
 
         for(int index : indexes) {
             List<AbstractInsnNode> insnNodes = new ArrayList<>();

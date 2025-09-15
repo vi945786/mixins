@@ -40,7 +40,7 @@ public class NewTransformer implements MethodTransformer<New> {
                     for (AbstractInsnNode node : methodEditor.getBytecodeEditor().getBytecode()) {
                         if (!(node instanceof MethodInsnNode methodInsnNode)) continue;
                         MethodEditor nodeMethodEditor = getMethodEditor(mixinClassEditor, methodInsnNode);
-                        if (nodeMethodEditor != null && nodeMethodEditor.getAnnotationEditor(Type.getDescriptor(New.class)) != null) throw new MixinFormatException(name, "@New calls in @Extends classes are only allowed in constructors");
+                        if (nodeMethodEditor != null && nodeMethodEditor.getAnnotationEditors(Type.getDescriptor(New.class)) != null) throw new MixinFormatException(name, "@New calls in @Extends classes are only allowed in constructors");
                     }
                 }
             }

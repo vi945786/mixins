@@ -64,7 +64,7 @@ public class FieldEditor {
     /**
      * only applies to generic types
      */
-    public Object getSignature() {
+    public String getSignature() {
         return fieldNode.signature;
     }
 }
