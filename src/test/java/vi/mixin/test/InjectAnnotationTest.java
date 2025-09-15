@@ -30,7 +30,7 @@ public class InjectAnnotationTest {
     public void testInjectLog() {
         InjectTest t = new InjectTest();
         t.log("hello");
-        assertEquals("hello[logged]", t.sb.toString());
+        assertEquals("[logged]", t.sb.toString());
     }
 
     @Test
@@ -44,6 +44,16 @@ public class InjectAnnotationTest {
         InjectTest.staticLog("hi");
         assertEquals("hi[static]", InjectTest.staticSb.toString());
     }
+
+    @Test
+    public void testInjectEarlyReturn() {
+
+    }
+
+    @Test
+    public void testInjectEarlyValueReturn() {
+
+    }
 }
 
 @Mixin(InjectAnnotationTest.InjectTest.class)
@@ -53,9 +63,10 @@ class InjectTestMixin {
         ret.setReturnValue(a - b);
     }
 
-    @Inject(method = "log(Ljava/lang/String;)V", at = @At(At.Location.RETURN))
+    @Inject(method = "log(Ljava/lang/String;)V", at = @At(At.Location.HEAD))
     private void injectLog(String msg, Returner ret) {
         ((InjectAnnotationTest.InjectTest) (Object) this).sb.append("[logged]");
+        ret.doReturn();
     }
 
     @Inject(method = "staticSum(II)I", at = @At(At.Location.HEAD))

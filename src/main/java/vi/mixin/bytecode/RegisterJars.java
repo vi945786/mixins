@@ -71,11 +71,6 @@ public class RegisterJars {
     }
 
     private static void doRunArgs() {
-        if(System.getProperty("mixin.classes") != null) classesEntryNames.addAll(List.of(System.getProperty("mixin.classes").split(File.pathSeparator)));
-        if(System.getProperty("mixin.transformers") != null) transformersEntries.addAll(Arrays.stream(System.getProperty("mixin.transformers").split(File.pathSeparator)).map(transformer -> {
-            String[] split = transformer.split("=");
-            return new MixinTransformer(split[0], split[1]);
-        }).toList());
         if(System.getProperty("mixin.files") != null) {
             for (String file : System.getProperty("mixin.files").split(File.pathSeparator)) {
                 try {

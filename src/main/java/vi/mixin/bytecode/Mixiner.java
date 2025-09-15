@@ -4,8 +4,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceClassVisitor;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.editors.AnnotationEditor;
@@ -14,7 +12,6 @@ import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.*;
 
-import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
@@ -139,10 +136,6 @@ public class Mixiner {
         for(Map.Entry<ClassEditor, ClassNode> entry : classEditorClassNodeMap.entrySet().stream().sorted(Comparator.comparing(a -> a.getKey().getName())).toList()) {
             Class<?> targetClass = addClass(entry.getKey(), entry.getValue());
 
-            PrintWriter pw = new PrintWriter(System.out);
-            entry.getValue().accept(new TraceClassVisitor(null, new Textifier(), pw));
-            pw.flush();
-
             mixinClassNodes.put(entry.getValue(), targetClass);
         }
 
@@ -214,10 +207,6 @@ public class Mixiner {
                 fieldTransformers.getOrDefault(annotationNode.getDesc(), dummy).transform(mixinClassEditor, mixinClassEditor.getFieldEditor(fieldEditor.getName()), annotationNode.getAnnotation(), targetClassEditor);
             }
         }
-
-        PrintWriter pw = new PrintWriter(System.out);
-        targetClassNode.accept(new TraceClassVisitor(null, new Textifier(), pw));
-        pw.flush();
 
         targetClassNode.accept(targetClassWriter);
         try {
