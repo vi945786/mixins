@@ -21,12 +21,6 @@ public class BytecodeEditor {
         return mv.instructions;
     }
 
-    public AbstractInsnNode cloneInsnNode(AbstractInsnNode original) {
-        MethodNode mv = new MethodNode();
-        original.accept(mv);
-        return mv.instructions.get(0);
-    }
-
     public BytecodeEditor(InsnList list) {
         this.modified = list;
         original = cloneInsnList(modified);
@@ -215,8 +209,8 @@ public class BytecodeEditor {
         } else if(0 <= index && index < original.size()) {
             AbstractInsnNode addNode = modified.get(getUpdatedIndex(index));
             for (AbstractInsnNode node : add) {
-                if(removed[index]) modified.insert(addNode, cloneInsnNode(node));
-                else modified.insertBefore(addNode, cloneInsnNode(node));
+                if(removed[index]) modified.insert(addNode, node);
+                else modified.insertBefore(addNode, node);
             }
         }
         added[index] += add.size();
