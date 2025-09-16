@@ -2,9 +2,7 @@ package vi.mixin.api.transformers;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 import vi.mixin.api.editors.ClassEditor;
 import vi.mixin.api.editors.FieldEditor;
 import vi.mixin.api.editors.MethodEditor;
@@ -75,5 +73,27 @@ public final class TransformerHelper implements Opcodes {
         while(classEditor.getFieldEditor(name) != null) name += "$";
 
         return name;
+    }
+
+    /**
+     * required for @Shadow to work on this method
+     * @return return the new desc of the method
+     */
+    public static String makeMethodFakeInstance(MethodEditor methodEditor, String targetClassName) {
+        String desc = methodEditor.getDesc();
+        if ((methodEditor.getAccess() & ACC_STATIC) == 0) desc = addArgToStart(methodEditor, "L" + targetClassName + ";");
+        methodEditor.makeStatic();
+
+        return desc;
+    }
+
+    /**
+     * @return return the new desc of the method
+     */
+    public static String addArgToStart(MethodEditor methodEditor, String type) {
+        String desc = "(" + type + methodEditor.getDesc().substring(1);
+        methodEditor.setDesc(desc);
+
+        return desc;
     }
 }

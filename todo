@@ -1,0 +1,42 @@
+STORE/LOAD injection point
+    use target for the type //check the local variable table for the type
+
+CONSTANT injection point
+    use target for the constant
+    "null" for null
+    "type;value" for the rest
+
+make @Inject support method names without desc
+make @Shadow, @New, @Getter, @Setter, @Invoker, Overridable support not taking a value based on the element's name/desc
+add @At offset
+
+@Redirect - method, @At
+    calls the annotated method instead of the original
+    for static the same args and return
+    for non-static the same args and return but add the type of the instance (or object)
+    for constructors same args but return the constructed type
+
+@ModifyArg - method, @At (only valid with INVOKE)
+    calls the annotated method with the arg
+    1 parameter: the type of the arg or object
+    returns the type of the arg or object
+
+@ModifyArgs - method, @At (only valid with INVOKE)
+    calls the annotated method with the args object loaded with the args
+    1 parameter: the args object
+    returns void
+
+@ModifyValue - method, @At
+    HEAD for modifying args or STORE/LOAD for modifying locals/args //check the local variable table for the type
+    TAIL/RETURN for getting and changing the return value
+    CONSTANT for changing constants
+
+    1 parameter: the type of the value to change
+    returns the new value
+
+@Local - type (optional), ordinal (optional)
+    //check the local variable table for the type
+    on a parameter after the last parameter (can have as many as you want)
+    should work on @Inject, @Redirect, @ModifyArg, @ModifyArgs, @ModifyValue
+
+anonymous classes inside mixin classes

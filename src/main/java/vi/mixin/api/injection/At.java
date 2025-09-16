@@ -1,5 +1,12 @@
 package vi.mixin.api.injection;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({})
+@Retention(RetentionPolicy.CLASS)
 public @interface At {
 
     /**
@@ -15,7 +22,7 @@ public @interface At {
     int opcode() default -1;
 
     /**
-     * Used for {@link Location#INVOKE}, {@link Location#FIELD}, {@link Location#NEW}
+     * Used for {@link Location#INVOKE}, {@link Location#FIELD}
      */
     String target() default "";
 
@@ -25,7 +32,6 @@ public @interface At {
         TAIL,
         INVOKE,
         FIELD,
-        NEW,
         JUMP
     }
 }

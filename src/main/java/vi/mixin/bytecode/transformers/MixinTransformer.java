@@ -79,10 +79,8 @@ public class MixinTransformer implements ClassTransformer<Mixin> {
             if(methodEditor.getAnnotationEditors().stream().map(AnnotationEditor::getDesc).anyMatch(Mixiner::hasTransformer) || methodEditor.getName().startsWith("<")) return;
 
             //make methods acts like instance methods of target
-            String desc = methodEditor.getDesc();
-            if ((methodEditor.getAccess() & ACC_STATIC) == 0) desc = "(L" + targetClassEditor.getName() + ";" + methodEditor.getDesc().substring(1);
-            methodEditor.setDesc(desc);
-            methodEditor.makeStatic().makePublic();
+            String desc = TransformerHelper.makeMethodFakeInstance(methodEditor, targetClassEditor.getName());
+            methodEditor.makePublic();
 
             //add invokers in target class
             if(mixinClassEditor.getAnnotationEditor(Type.getDescriptor(Extends.class)) == null) {

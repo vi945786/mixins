@@ -62,16 +62,6 @@ public class BytecodeEditor {
                  String name = target.substring(splitOwner+1);
                  yield getInsnNodesIndexes(FIELD_INSN, opcode, ordinal, owner, name, null);
              }
-             case NEW -> {
-                 if(target.contains(")")) {
-                     int splitOwner = target.indexOf(')');
-                     String owner = target.substring(splitOwner+1);
-                     String desc = target.substring(0, splitOwner+1) + "V";
-                     yield getInsnNodesIndexes(METHOD_INSN, opcode, ordinal, owner, "<init>", desc);
-                 } else {
-                     yield getInsnNodesIndexes(METHOD_INSN, opcode, ordinal, target, "<init>", null);
-                 }
-             }
              case JUMP -> getInsnNodesIndexes(JUMP_INSN, opcode, ordinal, (Object) null);
          };
     }
