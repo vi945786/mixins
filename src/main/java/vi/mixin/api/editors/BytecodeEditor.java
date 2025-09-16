@@ -66,8 +66,6 @@ public class BytecodeEditor {
          };
     }
 
-
-
     public List<Integer> getInsnNodesIndexes(int type, Integer opcode, Object... values) {
         return getInsnNodesIndexes(type, opcode == null ? null : List.of(opcode), List.of(), values);
     }
@@ -98,7 +96,7 @@ public class BytecodeEditor {
     public static boolean equals(AbstractInsnNode node, Object... values) {
         return switch (node) {
             case null -> false;
-            case InsnNode insnNode -> true;
+            case InsnNode n -> true;
             case IntInsnNode n -> match(n.operand, values, 0);
             case VarInsnNode n -> match(n.var, values, 0);
             case TypeInsnNode n -> match(n.desc, values, 0);
