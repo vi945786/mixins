@@ -34,7 +34,7 @@ public class SetterAnnotationTest {
 
 @Mixin(SetterAnnotationTest.Target.class)
 interface TargetSetterAccessor {
-    @Setter("value")
+    @Setter
     void setValue(int v);
 
     @Setter("staticValue")

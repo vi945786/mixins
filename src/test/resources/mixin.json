@@ -11,8 +11,10 @@
     "vi.mixin.test.OuterMethodCallMixin",
     "vi.mixin.test.OuterMethodCallMixin$InnerMethodCallMixin",
     "vi.mixin.test.TargetNewAccessor",
+    "vi.mixin.test.TargetNewMixin",
     "vi.mixin.test.OverridableAnnotationTestExtender",
     "vi.mixin.test.TargetSetterAccessor",
+    "vi.mixin.test.ShadowTestExtender",
     "vi.mixin.test.ShadowTestMixin",
     "vi.mixin.test.OuterShadowMixin",
     "vi.mixin.test.OuterShadowMixin$InnerShadowMixin"

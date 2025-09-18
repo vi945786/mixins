@@ -1,12 +1,17 @@
 package vi.mixin.api.transformers;
 
-import vi.mixin.api.editors.ClassEditor;
-import vi.mixin.api.editors.MethodEditor;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
+import vi.mixin.api.MixinFormatException;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 
-public non-sealed interface MethodTransformer<T extends Annotation> extends Transformer {
+public non-sealed interface MethodTransformer<ME extends MethodEditor, FE extends FieldEditor, A extends Annotation> extends InnerElementTransformer<ME, FE, A> {
 
-    void transform(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, T mixinAnnotation, ClassEditor targetClassEditor);
-
+    default TargetType getTargetMethodType() {
+        return TargetType.METHOD;
+    }
 }

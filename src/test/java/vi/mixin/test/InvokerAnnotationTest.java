@@ -17,7 +17,7 @@ public class InvokerAnnotationTest {
     @Test
     public void testInvokerAnnotation() {
         Target target = new Target();
-        int result = ((TargetInvokerAccessor) target).callAdd(3);
+        int result = ((TargetInvokerAccessor) target).add(3);
         assertEquals(8, result);
     }
 
@@ -30,8 +30,8 @@ public class InvokerAnnotationTest {
 
 @Mixin(InvokerAnnotationTest.Target.class)
 interface TargetInvokerAccessor {
-    @Invoker("add(I)I")
-    int callAdd(int x);
+    @Invoker()
+    int add(int x);
 
     @Invoker("addStatic(I)I")
     static int callAddStatic(int x) { return 0; }

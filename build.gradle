@@ -11,6 +11,8 @@ dependencies {
     implementation("org.ow2.asm:asm-tree:9.6")
     implementation("com.eclipsesource.minimal-json:minimal-json:0.9.5")
 
+    implementation("org.ow2.asm:asm-util:9.6")
+
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
 }
@@ -26,6 +28,8 @@ test {
         "-Dmixin.files=${wd}\\src\\test\\resources\\mixin.json"
     ]
 
+    classpath = classpath - sourceSets.main.output
+
     useJUnitPlatform()
 }
 
@@ -34,7 +38,8 @@ jar {
         from('src/main/resources/META-INF/MANIFEST.MF')
     }
 
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'module-info.class'
+    duplicatesStrategy = DuplicatesStrategy.FAIL
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }

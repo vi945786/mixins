@@ -44,37 +44,27 @@ public class InjectAnnotationTest {
         InjectTest.staticLog("hi");
         assertEquals("hi[static]", InjectTest.staticSb.toString());
     }
-
-    @Test
-    public void testInjectEarlyReturn() {
-
-    }
-
-    @Test
-    public void testInjectEarlyValueReturn() {
-
-    }
 }
 
 @Mixin(InjectAnnotationTest.InjectTest.class)
 class InjectTestMixin {
-    @Inject(method = "sum(II)I", at = @At(At.Location.HEAD))
+    @Inject(value = "sum", at = @At(At.Location.HEAD))
     private void injectSum(int a, int b, ValueReturner<Integer> ret) {
         ret.setReturnValue(a - b);
     }
 
-    @Inject(method = "log(Ljava/lang/String;)V", at = @At(At.Location.HEAD))
+    @Inject(value = "log(Ljava/lang/String;)V", at = @At(At.Location.HEAD))
     private void injectLog(String msg, Returner ret) {
         ((InjectAnnotationTest.InjectTest) (Object) this).sb.append("[logged]");
         ret.doReturn();
     }
 
-    @Inject(method = "staticSum(II)I", at = @At(At.Location.HEAD))
+    @Inject(value = "staticSum(II)I", at = @At(At.Location.HEAD))
     private static void injectStaticSum(int a, int b, ValueReturner<Integer> ret) {
         ret.setReturnValue(a * b * 2);
     }
 
-    @Inject(method = "staticLog(Ljava/lang/String;)V", at = @At(At.Location.RETURN))
+    @Inject(value = "staticLog(Ljava/lang/String;)V", at = @At(At.Location.RETURN))
     private static void injectStaticLog(String msg, Returner ret) {
         InjectAnnotationTest.InjectTest.staticSb.append("[static]");
     }

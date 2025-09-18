@@ -4,51 +4,56 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.Getter;
-import vi.mixin.api.editors.BytecodeEditor;
-import vi.mixin.api.editors.ClassEditor;
-import vi.mixin.api.editors.FieldEditor;
-import vi.mixin.api.editors.MethodEditor;
-import vi.mixin.api.transformers.MethodTransformer;
+import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.transformers.accessortype.AccessorFieldEditor;
+import vi.mixin.api.transformers.accessortype.AccessorMethodTransformer;
 
-public class GetterTransformer implements MethodTransformer<Getter> {
+public class GetterTransformer implements AccessorMethodTransformer<Getter> {
 
-    private static void validate(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, Getter mixinAnnotation, ClassEditor targetClassEditor) {
-        String name = "@Getter " + mixinClassEditor.getName() + "." + mixinMethodEditor.getName() + mixinMethodEditor.getDesc();
-        FieldEditor target = targetClassEditor.getFieldEditor(mixinAnnotation.value());
-        if(target == null) throw new MixinFormatException(name, "target doesn't exist");
-        if((target.getAccess() & ACC_STATIC) != (mixinMethodEditor.getAccess() & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((target.getAccess() & ACC_STATIC) != 0 ? "" : "not") + " static");
-        Type returnType = Type.getReturnType(mixinMethodEditor.getDesc());
-        if(!returnType.equals(Type.getType(target.getDesc())) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + target.getDesc() + ", " + Type.getType(Object.class));
-        if(Type.getArgumentTypes(mixinMethodEditor.getDesc()).length != 0) throw new MixinFormatException(name, "takes arguments");
-        if((mixinClassEditor.getAccess() & ACC_INTERFACE) == 0) throw new MixinFormatException(name, "defining class is not an interface");
-        if((target.getAccess() & ACC_STATIC) == 0 && targetClassEditor.getMethodEditors().stream().anyMatch(method -> method.getName().equals(mixinMethodEditor.getName())
-                && method.getDesc().split("\\)")[0].equals(mixinMethodEditor.getDesc().split("\\)")[0]))) throw new MixinFormatException(name, "method with this name and desc already exists in the target class.");
+    public boolean isFieldTarget(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Getter annotation) {
+        if(annotation.value().isEmpty()) {
+            if(!mixinMethodNodeClone.name.startsWith("get")) return false;
+            return targetFieldNodeClone.name.equals(mixinMethodNodeClone.name.substring(3, 4).toLowerCase() + mixinMethodNodeClone.name.substring(4));
+        }
+        return targetFieldNodeClone.name.equals(annotation.value());
+    }
+
+    public TargetType getTargetMethodType() {
+        return TargetType.FIELD;
+    }
+
+    private static void validate(AccessorFieldEditor fieldEditor, Getter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = fieldEditor.getMixinMethodNodeClone();
+
+        String name = "@Getter " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
+
+        if(fieldEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
+
+        if((targetFieldNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetFieldNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
+        Type returnType = Type.getReturnType(mixinMethodNode.desc);
+        if(!returnType.equals(Type.getType(targetFieldNode.desc)) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + targetFieldNode.desc + ", " + Type.getType(Object.class));
+        if(Type.getArgumentTypes(mixinMethodNode.desc).length != 0) throw new MixinFormatException(name, "takes arguments");
     }
 
     @Override
-    public void transform(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, Getter mixinAnnotation, ClassEditor targetClassEditor) {
-        validate(mixinClassEditor, mixinMethodEditor, mixinAnnotation, targetClassEditor);
-        FieldEditor targetFieldEditor = targetClassEditor.getFieldEditor(mixinAnnotation.value());
-        targetFieldEditor.makePublic();
+    public void transform(AccessorFieldEditor fieldEditor, Getter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(fieldEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode mixinMethodNode = fieldEditor.getMixinMethodNodeClone();
+        FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
 
-        boolean isStatic = (targetFieldEditor.getAccess() & ACC_STATIC) != 0;
+        boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
 
-        MethodEditor editor = mixinMethodEditor;
-        if(!isStatic) {
-            editor = new MethodEditor(new MethodNode(mixinMethodEditor.getAccess() & ~ACC_ABSTRACT, mixinMethodEditor.getName(), mixinMethodEditor.getDesc(), mixinMethodEditor.getSignature(), mixinMethodEditor.getExceptions().toArray(String[]::new)));
-            targetClassEditor.addMethod(editor);
-        }
+        int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(mixinMethodNode.desc));
 
-        int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(editor.getDesc()));
+        fieldEditor.makeTargetPublic(0);
 
-        BytecodeEditor bytecodeEditor = editor.getBytecodeEditor();
-        for (int i = 0; i < bytecodeEditor.getBytecode().size(); i++) {
-            bytecodeEditor.remove(i);
-        }
+        InsnList insnList = new InsnList();
+        if (!isStatic) insnList.add(new VarInsnNode(ALOAD, 0));
+        insnList.add(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
+        insnList.add(new InsnNode(returnOpcode));
 
-        if (!isStatic) bytecodeEditor.add(0, new VarInsnNode(ALOAD, 0));
-        bytecodeEditor.add(0, new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassEditor.getName(), targetFieldEditor.getName(), targetFieldEditor.getDesc()));
-        bytecodeEditor.add(0, new InsnNode(returnOpcode));
+        fieldEditor.setMixinBytecode(insnList);
     }
 }

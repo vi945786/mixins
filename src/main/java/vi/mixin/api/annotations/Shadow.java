@@ -8,5 +8,5 @@ import java.lang.annotation.Target;
 @Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.CLASS)
 public @interface Shadow {
-    String value();
+    String value() default "";
 }

@@ -353,62 +353,115 @@ Use this if you load classes instead of reflection or custom class loaders (such
 
 ---
 
+## Transformer API Reference
+
+This section documents the main public API interfaces and abstract classes in `vi.mixin.api.transformers` and its subpackages. These are the core building blocks for custom bytecode manipulation in mixin. Implementation details are intentionally omitted; only the API surface is described.
+
+For a fuller developer-oriented reference with examples and editor contracts see: `docs/transformers_api.md`.
+
+### Overview
+
+The transformer API is organized into several layers:
+- **Transformers**: Interfaces for class, method, and field transformation.
+- **Editors**: Abstract classes for editing bytecode structures (methods, fields, classes).
+- **Helpers**: Utility methods for working with ASM and mixin internals.
+- **Target Editors**: Abstract API for editing target class structures.
+- **Extender/Accessor Types**: Specialized transformer interfaces for extending or accessing target classes.
+
+---
+
+### Core Interfaces
+
+#### `Transformer`
+- Sealed interface, base for all transformer types.
+- Extends ASM `Opcodes`.
+- Permits: `ClassTransformer`, `InnerElementTransformer`.
+
+#### `ClassTransformer`
+- Non-sealed interface for class-level transformation.
+- Type parameters: annotation, method/field transformer/editor types.
+- Methods:
+  - `create` for method/field editors.
+  - `getMethodTransformerType`, `getFieldTransformerType`.
+  - `transform` for applying transformations.
+
+#### `InnerElementTransformer`
+- Sealed interface for method/field transformation.
+- Permits: `MethodTransformer`, `FieldTransformer`.
+- Methods for matching targets and transforming elements.
+- Enum: `TargetType` (METHOD, FIELD).
+
+#### `MethodTransformer` / `FieldTransformer`
+- Non-sealed interfaces for method/field transformation.
+- Extend `InnerElementTransformer`.
+- Provide default target type methods.
+
+---
+
+### Editor Abstract Classes
+
+#### `MethodEditor` / `FieldEditor`
+- Abstract classes for editing methods/fields.
+- Hold references to mixin and target nodes.
+- Methods for cloning nodes, getting number of targets, and accessing target clones.
+
+#### `ClassNodeHierarchy`
+- Utility for representing class hierarchies.
+- Methods for traversing and collecting class nodes.
+
+---
+
+### Target Editor API
+
+#### `TargetClassEditor`
+- Edits target class structure.
+- Holds original and modified class nodes.
+- Methods for making public, non-final, adding interfaces, and accessing original nodes.
+
+#### `TargetMethodEditor` / `TargetFieldEditor`
+- Edits target method/field structure.
+- Methods for making public, non-final, non-abstract, non-synthetic, and cloning nodes.
+
+#### `TargetInsnListEditor`
+- Edits instruction lists with opcode state tracking.
+- Methods for adding, inserting, removing instructions, and cloning instruction lists.
+
+---
+
+### Extender Types
+
+#### `ExtenderClassTransformer`, `ExtenderMethodTransformer`, `ExtenderFieldTransformer`
+- Specialized transformer interfaces for extender mixins.
+- Methods for creating extender editors and validating mixin/extender constraints.
+
+#### `ExtenderMethodEditor` / `ExtenderFieldEditor`
+- Editors for extender mixins.
+- Methods for changing invocation/get/set instructions, deleting, and making targets public/non-final.
+
+---
+
+### Accessor Types
+
+#### `AccessorMethodTransformer`
+- Interface for accessor method transformation.
+
+#### `AccessorMethodEditor` / `AccessorFieldEditor`
+- Editors for accessor mixins.
+- Methods for making targets public/non-final and setting mixin bytecode.
+
+---
+
+### Helper Classes
+
+#### `TransformerHelper`
+- Utility class for opcode selection, loading arguments, and target node matching.
+- Methods for getting return/load opcodes, adding load instructions, and finding target nodes.
+
+---
+
+**Note:** This section only covers the public API surface. For implementation details, refer to the source code.
+
+---
+
 For more advanced usage, see the test files in `src/test/java/vi/mixin/test/`.
 
----
-
-## Creating a Custom Transformer
-
-You can extend the mixin system by writing your own transformer. A transformer allows you to programmatically modify classes, fields, or methods at runtime using the ASM-based editor APIs provided by this library.
-
-
-### Transformer Interfaces
-
-Transformers are the core extension mechanism for the mixin system. They allow you to programmatically modify classes, fields, or methods at runtime based on custom annotations you define. There are three main types:
-
-- **ClassTransformer<T extends Annotation>**: Invoked for each mixin class annotated with your custom annotation.
-- **FieldTransformer<T extends Annotation>**: Invoked for each field in a mixin class annotated with your custom annotation.
-- **MethodTransformer<T extends Annotation>**: Invoked for each method in a mixin class annotated with your custom annotation.
-
-Each transformer interface is parameterized by the annotation type it responds to. The transformer's `transform(...)` method will be called for every matching annotation found in the mixin classes.
-
-
-### Editor and Helper Classes
-
----
-
-> **Important:**
-> 
-> Editor classes (such as `ClassEditor`, `FieldEditor`, and `MethodEditor`) always reflect the original, unmodified state of the element. If you need to access or use any changes you make, you must store those modified values yourself. This behavior ensures transformer don't affect each other, but means you are responsible for tracking modifications if you need them later in your transformer logic.
-
-### Example: Simple Method Transformer
-
-Suppose you want to create a transformer that logs every time a method with a custom annotation is called:
-
-```java
-@Retention(RetentionPolicy.CLASS)
-@Target(ElementType.METHOD)
-public @interface LogCall {}
-
-public class LogCallTransformer implements MethodTransformer<LogCall> {
-		@Override
-		public void transform(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, LogCall annotation, ClassEditor targetClassEditor) {
-				BytecodeEditor bytecode = mixinMethodEditor.getBytecodeEditor();
-				// Insert a print statement at the start of the method
-				// (see BytecodeEditor and ASM docs for details)
-		}
-}
-```
-
-Register your transformer in the mixin JSON file:
-
-```json
-{
-	"transformers": [
-		{ "transformer": "your.package.LogCallTransformer", "annotation": "your.package.LogCall" }
-	]
-}
-```
-
-
-For more advanced examples, see the built-in transformers and test files.

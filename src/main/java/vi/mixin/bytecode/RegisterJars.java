@@ -11,16 +11,19 @@ import vi.mixin.util.TempFileDeleter;
 import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.management.ManagementFactory;
+import java.lang.module.Configuration;
+import java.lang.module.ModuleFinder;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.stream.StreamSupport;
 import java.util.zip.Deflater;
+import java.util.zip.ZipOutputStream;
 
 import static vi.mixin.bytecode.Agent.agent;
 
@@ -86,11 +89,11 @@ public class RegisterJars {
 
     private static String generateJarFromDir(Path dir, Path tempDir) throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try (JarOutputStream jos = new JarOutputStream(byteArrayOutputStream)) {
+        try (ZipOutputStream jos = new ZipOutputStream(byteArrayOutputStream)) {
             jos.setLevel(Deflater.NO_COMPRESSION);
             Files.walk(dir).filter(Files::isRegularFile).forEach(file -> {
                 try {
-                    String entryName = dir.relativize(file).toString();
+                    String entryName = dir.relativize(file).toString().replace(File.separatorChar, '/');
 
                     try (InputStream in = Files.newInputStream(file)) {
                         jos.putNextEntry(new JarEntry(entryName));
@@ -102,8 +105,10 @@ public class RegisterJars {
                 }
             });
         }
-        Path jarPath = tempDir.resolve(tempDir + File.separator + dir.toString().replace(":", ".").replace(dir.getFileSystem().getSeparator(), ".").replace("..", ".") + ".jar");
-        byteArrayOutputStream.writeTo(Files.newOutputStream(jarPath));
+        Path jarPath = tempDir.resolve(tempDir + File.separator + dir.toString().replace(":", "-").replace(dir.getFileSystem().getSeparator(), "-").replace("--", "-") + ".jar");
+        try (OutputStream os = Files.newOutputStream(jarPath)) {
+            byteArrayOutputStream.writeTo(os);
+        }
         return jarPath.toString();
     }
 
@@ -238,6 +243,6 @@ public class RegisterJars {
     }
 
     private static String nameToEntry(String name) {
-        return name.replace(".", "\\") + ".class";
+        return name.replace(".", "/") + ".class";
     }
 }

@@ -1,11 +1,12 @@
 package vi.mixin.test;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.annotations.Mixin;
+import vi.mixin.api.annotations.methods.New;
 
-public class NewAnnotationTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class NewAnnotationMixinTest {
 
     public static class Target {
         private final int value;
@@ -15,13 +16,13 @@ public class NewAnnotationTest {
 
     @Test
     public void testNewAnnotation() {
-        Target t = TargetNewAccessor.createTarget(123);
+        Target t = TargetNewMixin.createTarget(123);
         assertEquals(123, t.getValue());
     }
 }
 
-@Mixin(NewAnnotationTest.Target.class)
-interface TargetNewAccessor {
-    @New("I")
-    static NewAnnotationTest.Target createTarget(int value) { return null; }
+@Mixin(NewAnnotationMixinTest.Target.class)
+class TargetNewMixin {
+    @New
+    static NewAnnotationMixinTest.Target createTarget(int value) { return null; }
 }

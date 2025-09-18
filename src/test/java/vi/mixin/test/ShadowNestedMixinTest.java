@@ -28,8 +28,6 @@ public class ShadowNestedMixinTest {
 
     @Test
     void testInnerShadowsInOuter() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        Arrays.stream(Outer.Inner.class.getDeclaredFields()).forEach(System.out::println);
-
         Method m = OuterShadowMixin.class.getDeclaredMethod("testInnerShadowsInOuter", ShadowNestedMixinTest.Outer.class);
         m.setAccessible(true);
         m.invoke(null, new ShadowNestedMixinTest.Outer());

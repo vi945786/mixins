@@ -29,7 +29,7 @@ public class GetterAnnotationTest {
 
 @Mixin(GetterAnnotationTest.Target.class)
 interface TargetGetterAccessor {
-    @Getter("value")
+    @Getter
     int getValue();
 
     @Getter("staticValue")

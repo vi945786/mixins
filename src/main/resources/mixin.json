@@ -1,27 +1,19 @@
 {
   "transformers": [
     {
-      "transformer": "vi.mixin.bytecode.transformers.ExtendsTransformer",
+      "transformer": "vi.mixin.api.transformers.extendertype.ExtenderClassTransformer",
       "annotation": "vi.mixin.api.annotations.classes.Extends"
-    },
-    {
-      "transformer": "vi.mixin.bytecode.transformers.GetterTransformer",
-      "annotation": "vi.mixin.api.annotations.methods.Getter"
     },
     {
       "transformer": "vi.mixin.bytecode.transformers.InjectTransformer",
       "annotation": "vi.mixin.api.annotations.methods.Inject"
     },
     {
-      "transformer": "vi.mixin.bytecode.transformers.InvokerTransformer",
-      "annotation": "vi.mixin.api.annotations.methods.Invoker"
+      "transformer": "vi.mixin.bytecode.transformers.NewTransformer$NewMixinTransformer",
+      "annotation": "vi.mixin.api.annotations.methods.New"
     },
     {
-      "transformer": "vi.mixin.bytecode.transformers.MixinTransformer",
-      "annotation": "vi.mixin.api.annotations.Mixin"
-    },
-    {
-      "transformer": "vi.mixin.bytecode.transformers.NewTransformer",
+      "transformer": "vi.mixin.bytecode.transformers.NewTransformer$NewAccessorTransformer",
       "annotation": "vi.mixin.api.annotations.methods.New"
     },
     {
@@ -29,12 +21,24 @@
       "annotation": "vi.mixin.api.annotations.methods.Overridable"
     },
     {
+      "transformer": "vi.mixin.bytecode.transformers.ShadowTransformer$ShadowMixinTransformer",
+      "annotation": "vi.mixin.api.annotations.Shadow"
+    },
+    {
+      "transformer": "vi.mixin.bytecode.transformers.ShadowTransformer$ShadowExtenderTransformer",
+      "annotation": "vi.mixin.api.annotations.Shadow"
+    },
+    {
+      "transformer": "vi.mixin.bytecode.transformers.GetterTransformer",
+      "annotation": "vi.mixin.api.annotations.methods.Getter"
+    },
+    {
       "transformer": "vi.mixin.bytecode.transformers.SetterTransformer",
       "annotation": "vi.mixin.api.annotations.methods.Setter"
     },
     {
-      "transformer": "vi.mixin.bytecode.transformers.ShadowTransformer",
-      "annotation": "vi.mixin.api.annotations.Shadow"
+      "transformer": "vi.mixin.bytecode.transformers.InvokerTransformer",
+      "annotation": "vi.mixin.api.annotations.methods.Invoker"
     }
   ]
 }

@@ -2,21 +2,25 @@ package vi.mixin.bytecode;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.Mixin;
-import vi.mixin.api.editors.AnnotationEditor;
-import vi.mixin.api.editors.ClassEditor;
-import vi.mixin.api.editors.FieldEditor;
-import vi.mixin.api.editors.MethodEditor;
 import vi.mixin.api.transformers.*;
+import vi.mixin.api.transformers.accessortype.AccessorClassTransformer;
+import vi.mixin.api.transformers.mixintype.MixinClassTransformer;
+import vi.mixin.api.transformers.targeteditors.TargetClassEditor;
+import vi.mixin.api.transformers.targeteditors.TargetFieldEditor;
+import vi.mixin.api.transformers.targeteditors.TargetMethodEditor;
 
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.UnmodifiableClassException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,134 +30,141 @@ import static vi.mixin.bytecode.Agent.agent;
 
 public class Mixiner {
 
-    private static final Map<String, ClassTransformer<?>> classTransformers = new HashMap<>();
-    private static final Map<String, FieldTransformer<?>> fieldTransformers = new HashMap<>();
-    private static final Map<String, MethodTransformer<?>> methodTransformers = new HashMap<>();
-    private static final Dummy dummy = new Dummy();
+    private static final Map<String, List<Transformer>> transformers;
 
-    private static final Map<String, ClassEditor> classEditors;
-    private static final Map<ClassEditor, ClassNode> classEditorNodes;
+    private static final Map<String, ClassNode> originalTargetClassNodes;
     private static final Set<String> usedMixinClasses;
 
     static {
-        if("true".equals(System.getProperty("mixin.stage.main"))) {
+        if("main".equals(System.getProperty("mixin.stage"))) {
             try {
-                Field classEditorsField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("classEditors");
-                classEditorsField.setAccessible(true);
-                classEditors = (Map<String, ClassEditor>) classEditorsField.get(null);
+                Field transformersField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("transformers");
+                transformersField.setAccessible(true);
+                transformers = (Map<String, List<Transformer>>) transformersField.get(null);
 
-                Field classEditorNodesField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("classEditorNodes");
-                classEditorNodesField.setAccessible(true);
-                classEditorNodes = (Map<ClassEditor, ClassNode>) classEditorNodesField.get(null);
+                Field originalTargetClassNodesField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("originalTargetClassNodes");
+                originalTargetClassNodesField.setAccessible(true);
+                originalTargetClassNodes = (Map<String, ClassNode>) originalTargetClassNodesField.get(null);
 
                 Field usedMixinClassesField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("usedMixinClasses");
                 usedMixinClassesField.setAccessible(true);
                 usedMixinClasses = (Set<String>) usedMixinClassesField.get(null);
-
             } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            classEditors = new HashMap<>();
-            classEditorNodes = new HashMap<>();
+            transformers = new HashMap<>();
+            originalTargetClassNodes = new HashMap<>();
             usedMixinClasses = new HashSet<>();
         }
     }
 
-    public static boolean hasTransformer(Class<? extends Annotation> annotation) {
-        return hasTransformer(Type.getDescriptor(annotation));
-    }
-
-    public static boolean hasTransformer(String desc) {
-        return classTransformers.containsKey(desc) || fieldTransformers.containsKey(desc) || methodTransformers.containsKey(desc);
-    }
-
     public static void addMixinTransformer(Transformer transformer, Class<? extends Annotation> annotation) {
         String annotationDesc = "L" + annotation.getName().replace(".", "/") + ";";
-        if(transformer instanceof ClassTransformer<?> classTransformer) {
-            if(classTransformers.containsKey(annotationDesc))
-                throw new IllegalArgumentException(annotation.getName() + " is already a registered annotation for a ClassTransformer");
-            classTransformers.put(annotationDesc, classTransformer);
+        if(transformer instanceof ClassTransformer<?,?,?,?,?> && transformers.getOrDefault(annotationDesc, List.of()).stream().anyMatch(t -> t instanceof ClassTransformer<?,?,?,?,?>)) {
+            throw new MixinFormatException(annotation.getName(), "class transformer annotation was already a registered a ClassTransformer");
         }
-        if(transformer instanceof FieldTransformer<?> fieldTransformer) {
-            if(fieldTransformers.containsKey(annotationDesc))
-                throw new IllegalArgumentException(annotation.getName() + " is already a registered annotation for a FieldTransformer");
-            fieldTransformers.put(annotationDesc, fieldTransformer);
-        }
-        if(transformer instanceof MethodTransformer<?> methodTransformer) {
-            if(methodTransformers.containsKey(annotationDesc))
-                throw new IllegalArgumentException(annotation.getName() + " is already a registered annotation for a MethodTransformer");
-            methodTransformers.put(annotationDesc, methodTransformer);
-        }
+        transformers.computeIfAbsent(annotationDesc, k -> new ArrayList<>()).add(transformer);
     }
 
-    public static Class<?> getTargetClass(ClassEditor mixinClassEditor) {
-        for (AnnotationEditor annotationEditor : mixinClassEditor.getAnnotationEditors()) {
-            if(annotationEditor.getDesc().equals(Type.getType(Mixin.class).getDescriptor())) {
-                Mixin annotation = annotationEditor.getAnnotation();
+    public static Class<?> getTargetClass(ClassNode mixinClassNode) {
+        for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
+            if(annotationNode.desc.equals(Type.getType(Mixin.class).getDescriptor())) {
+                Mixin annotation = TransformerHelper.getAnnotation(annotationNode);
                 Class<?> targetClass = annotation.value();
                 if(targetClass != void.class) return targetClass;
                 targetClass = MixinClassHelper.findClass(annotation.name());
-                if(targetClass == null) throw new MixinFormatException(mixinClassEditor.getName(), "invalid @Mixin target");
+                if(targetClass == null) throw new MixinFormatException(mixinClassNode.name, "invalid @Mixin target");
                 return MixinClassHelper.findClass(annotation.name());
             }
         }
 
-        throw new MixinFormatException(mixinClassEditor.getName(), "doesn't have a @Mixin annotation");
+        throw new MixinFormatException(mixinClassNode.name, "doesn't have a @Mixin annotation");
     }
 
     public static void addClasses(List<byte[]> bytecodes) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
-        Map<String, ClassEditor> outerClassNodeMap = new HashMap<>();
-        Map<ClassEditor, List<ClassEditor>> classEditorInnerClassMap = new HashMap<>();
-        Map<ClassEditor, ClassNode> classEditorClassNodeMap = new HashMap<>();
-        bytecodes.forEach(bytecode -> {
+        Map<String, ClassNodeHierarchy> outerClassNodeMap = new HashMap<>();
+        Map<ClassNodeHierarchy, List<ClassNodeHierarchy>> classNodeChildrenClassMap = new HashMap<>();
+        for(byte[] bytecode : bytecodes) {
             ClassReader mixinClassReader = new ClassReader(bytecode);
             ClassNode mixinClassNode = new ClassNode();
             mixinClassReader.accept(mixinClassNode, 0);
             String outerName = mixinClassNode.innerClasses.stream().filter(inner -> inner.name.equals(mixinClassNode.name)).map(inner -> inner.outerName).findFirst().orElse(null);
             outerClassMap.put(mixinClassNode, outerName);
-        });
+        }
+        bytecodes = null; //allow garbage collection
 
         outerClassNodeMap.put(null, null);
-        classEditorInnerClassMap.put(null, new ArrayList<>());
+        classNodeChildrenClassMap.put(null, new ArrayList<>());
         int outerClassMapLen = outerClassMap.size();
         while(!outerClassMap.isEmpty()) {
-            new HashSet<>(outerClassMap.entrySet()).stream().filter(entry -> outerClassNodeMap.containsKey(entry.getValue())).forEach(entry -> {
-                List<ClassEditor> inners = new ArrayList<>();
-                ClassEditor classEditor = new ClassEditor(entry.getKey(), null, outerClassNodeMap.get(entry.getValue()), inners);
-                classEditorClassNodeMap.put(classEditor, entry.getKey());
-                classEditorInnerClassMap.get(outerClassNodeMap.get(entry.getValue())).add(classEditor);
-                classEditorInnerClassMap.put(classEditor, inners);
-                outerClassNodeMap.put(entry.getKey().name, classEditor);
+            for(Map.Entry<ClassNode, String> entry : new HashSet<>(outerClassMap.entrySet())) {
+                if(!outerClassNodeMap.containsKey(entry.getValue())) continue;
+
+                List<ClassNodeHierarchy> children = new ArrayList<>();
+                ClassNodeHierarchy classNodeHierarchy = new ClassNodeHierarchy(entry.getKey(), outerClassNodeMap.get(entry.getValue()), children);
+                classNodeChildrenClassMap.get(outerClassNodeMap.get(entry.getValue())).add(classNodeHierarchy);
+                classNodeChildrenClassMap.put(classNodeHierarchy, children);
+                outerClassNodeMap.put(entry.getKey().name, classNodeHierarchy);
                 outerClassMap.remove(entry.getKey());
-            });
+            }
             if(outerClassMapLen == outerClassMap.size()) throw new MixinFormatException(outerClassMap.keySet().stream().toList().getFirst().name, "outer class is not a mixin class");
             outerClassMapLen = outerClassMap.size();
         }
+         //allow garbage collection
+        outerClassNodeMap = null;
+        outerClassMap = null;
 
-        Map<ClassNode, Class<?>> mixinClassNodes = new HashMap<>();
-        for(Map.Entry<ClassEditor, ClassNode> entry : classEditorClassNodeMap.entrySet().stream().sorted(Comparator.comparing(a -> a.getKey().getName())).toList()) {
-            Class<?> targetClass = addClass(entry.getKey(), entry.getValue());
+        classNodeChildrenClassMap.remove(null);
 
-            mixinClassNodes.put(entry.getValue(), targetClass);
+        Map<ClassNode, Class<?>> mixinClassNodesToTargetClass = new HashMap<>();
+        Map<ClassNode, MixinResult> mixinClassNodesToMixinResult = new HashMap<>();
+        for(ClassNodeHierarchy classNodeHierarchy : classNodeChildrenClassMap.keySet().stream().sorted(Comparator.comparing(a -> a.getClassNode().name)).toList()) {
+            ClassNode mixinClassNode = classNodeHierarchy.getClassNode();
+            Class<?> targetClass = getTargetClass(mixinClassNode);
+
+            mixinClassNodesToTargetClass.put(mixinClassNode, targetClass);
+            mixinClassNodesToMixinResult.put(mixinClassNode, addClass(targetClass, classNodeHierarchy));
         }
 
         Map<Class<?>, Class<?>> mixinClasses = new HashMap<>();
-        for (Map.Entry<ClassNode, Class<?>> entry : mixinClassNodes.entrySet()) {
-            Class<?> mixinClass = MixinClassHelper.findClass(entry.getKey().name);
-            agent.redefineModule(entry.getValue().getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(entry.getValue().getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+        for (ClassNodeHierarchy classNodeHierarchy : classNodeChildrenClassMap.keySet()) {
+            ClassNode mixinClassNode = classNodeHierarchy.getClassNode();
+            Class<?> targetClass = mixinClassNodesToTargetClass.get(mixinClassNode);
+            MixinResult mixinResult = mixinClassNodesToMixinResult.get(mixinClassNode);
 
             try {
-                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-                entry.getKey().accept(writer);
-                agent.redefineClasses(new ClassDefinition(mixinClass, writer.toByteArray()));
-            } catch (ClassNotFoundException | UnmodifiableClassException e) {
-                throw new RuntimeException(e);
-            }
+                ClassWriter targetWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+                ClassWriter mixinWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
 
-            mixinClasses.put(mixinClass, entry.getValue());
+                mixinResult.targetClassNode.accept(targetWriter);
+                mixinClassNode.accept(mixinWriter);
+
+                new MixinerTransformer(mixinClassNode.name, mixinWriter.toByteArray());
+                agent.redefineClasses(new ClassDefinition(targetClass, targetWriter.toByteArray()));
+
+                Class<?> mixinClass = MixinClassHelper.findClass(mixinClassNode.name);
+                agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+
+                mixinClasses.put(mixinClass, targetClass);
+
+                String methodName = mixinResult.setUpMethodName;
+                if(methodName == null) continue;
+                Method method = mixinClass.getMethod(methodName);
+                if((method.getModifiers() & Opcodes.ACC_STATIC) == 0) throw new MixinFormatException(mixinClassNode.name, "the \"set up\" method must be static");
+                method.setAccessible(true);
+                method.invoke(null);
+
+            } catch (ClassNotFoundException | UnmodifiableClassException | InvocationTargetException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            } catch (NoSuchMethodException e) {
+                throw new MixinFormatException(mixinClassNode.name, "added \"set up\" method not found. make sure it takes no parameters");
+            }
         }
+         //allow garbage collection
+        mixinClassNodesToTargetClass = null;
+        mixinClassNodesToMixinResult = null;
 
         for(Map.Entry<Class<?>, Class<?>> mixinClass : mixinClasses.entrySet()) {
             for(Class<?> inner : mixinClass.getKey().getDeclaredClasses()) {
@@ -170,73 +181,178 @@ public class Mixiner {
         }
     }
 
-    public static Class<?> addClass(ClassEditor mixinClassEditor, ClassNode mixinClassNode) {
-        if(usedMixinClasses.contains(mixinClassEditor.getName())) throw new IllegalArgumentException("Mixin class " + mixinClassEditor.getName() + " used twice");
-        usedMixinClasses.add(mixinClassEditor.getName());
+    private static MixinResult addClass(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.getClassNode();
+        if(usedMixinClasses.contains(mixinClassNode.name)) throw new IllegalArgumentException("Mixin class " + mixinClassNode.name + " used twice");
+        usedMixinClasses.add(mixinClassNode.name);
 
-        Class<?> targetClass = getTargetClass(mixinClassEditor);
-        mixin(targetClass, mixinClassEditor, mixinClassNode);
-        return targetClass;
+        return mixin(targetClass, mixinClassNodeHierarchy);
     }
 
-    private static void mixin(Class<?> targetClass, ClassEditor mixinClassEditor, ClassNode mixinClassNode) {
-        ClassWriter targetClassWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        if(!classEditors.containsKey(targetClass.getName())) {
-            byte[] targetBytecode = Agent.getBytecode(targetClass);
-            ClassReader targetClassReader = new ClassReader(targetBytecode);
-            ClassNode targetClassNode = new ClassNode();
-            targetClassReader.accept(targetClassNode, 0);
-            classEditors.put(targetClass.getName(), new ClassEditor(targetClassNode, targetClass, null, List.of()));
-            classEditorNodes.put(classEditors.get(targetClass.getName()), targetClassNode);
-        }
-        ClassEditor targetClassEditor = classEditors.get(targetClass.getName());
-        ClassNode targetClassNode = classEditorNodes.get(targetClassEditor);
-
-        for (AnnotationEditor annotationEditor : mixinClassEditor.getAnnotationEditors()) {
-            classTransformers.getOrDefault(annotationEditor.getDesc(), dummy).transform(mixinClassEditor, annotationEditor.getAnnotation(), targetClassEditor);
+    private static MixinResult mixin(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
+        byte[] targetBytecode = Agent.getBytecode(targetClass);
+        ClassReader targetClassReader = new ClassReader(targetBytecode);
+        ClassNode modifyTargetClassNode = new ClassNode();
+        targetClassReader.accept(modifyTargetClassNode, 0);
+        if(!originalTargetClassNodes.containsKey(targetClass.getName())) {
+            ClassNode clone = new ClassNode();
+            modifyTargetClassNode.accept(clone);
+            originalTargetClassNodes.put(targetClass.getName(), clone);
         }
 
-        for (MethodEditor methodEditor : mixinClassEditor.getMethodEditors()) {
-            for (AnnotationEditor annotationNode : methodEditor.getAnnotationEditors()) {
-                methodTransformers.getOrDefault(annotationNode.getDesc(), dummy).transform(mixinClassEditor, mixinClassEditor.getMethodEditor(methodEditor.getName() + methodEditor.getDesc()), annotationNode.getAnnotation(), targetClassEditor);
+        ClassNode originalTargetClassNode = originalTargetClassNodes.get(targetClass.getName());
+        ClassNode modifyMixinClassNode = mixinClassNodeHierarchy.getClassNode();
+        ClassNode originalMixinClassNode = new ClassNode();
+        modifyMixinClassNode.accept(originalMixinClassNode);
+
+        Annotation mixinClassAnnotation = null;
+        ClassTransformer classTransformer = null;
+        for (AnnotationNode annotationNode : originalMixinClassNode.invisibleAnnotations) {
+            List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+            transformers = transformers.stream().filter(t -> t instanceof ClassTransformer<?,?,?,?,?>).toList();
+            if(transformers.isEmpty()) continue;
+            if(!(transformers.getFirst() instanceof ClassTransformer cTransformer)) throw new MixinFormatException(originalMixinClassNode.name, "class annotation transformer is not an instance of ClassTransformer");
+            if(classTransformer != null) throw new MixinFormatException(originalMixinClassNode.name, "mixin class has 2 class transformers");
+            classTransformer = cTransformer;
+            mixinClassAnnotation = TransformerHelper.getAnnotation(annotationNode);
+        }
+        if(classTransformer == null) {
+            if((originalMixinClassNode.access & Opcodes.ACC_INTERFACE) == 0) classTransformer = new MixinClassTransformer();
+            else classTransformer = new AccessorClassTransformer();
+        }
+        Class<? extends MethodTransformer> methodTransformerType = classTransformer.getMethodTransformerType();
+        Class<? extends FieldTransformer> fieldTransformerType = classTransformer.getFieldTransformerType();
+
+        Map<MethodNode, MethodEditor> methodNodeEditorMap = new HashMap<>();
+        Map<FieldNode, FieldEditor> fieldNodeEditorMap = new HashMap<>();
+
+        for (MethodNode methodNode : modifyMixinClassNode.methods) {
+            if(methodNode.invisibleAnnotations == null) {
+
+                methodNodeEditorMap.put(methodNode, classTransformer.create(methodNode, new TargetMethodEditor[0]));
+                continue;
+            }
+            for (AnnotationNode annotationNode : methodNode.invisibleAnnotations) {
+                List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+                transformers = transformers.stream().filter(t -> methodTransformerType.isAssignableFrom(t.getClass())).toList();
+                if(transformers.isEmpty() || !(transformers.getFirst() instanceof MethodTransformer methodTransformer)) continue;
+                if(transformers.size() != 1) throw new MixinFormatException(annotationNode.desc, "has more than one transformer registered for " + classTransformer.getClass().getName());
+
+                Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
+                ClassNode mixinClassNodeClone = new ClassNode();
+                originalMixinClassNode.accept(mixinClassNodeClone);
+                ClassNode targetClassNodeClone = new ClassNode();
+                originalTargetClassNode.accept(targetClassNodeClone);
+                switch (methodTransformer.getTargetMethodType()) {
+                    case METHOD -> {
+                        MethodEditor editor = classTransformer.create(methodNode, getTargetMethodEditors(methodTransformer, methodNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetMethodEditor[]::new));
+                        methodNodeEditorMap.put(methodNode, editor);
+                        methodTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                    }
+                    case FIELD -> {
+                        FieldEditor editor = classTransformer.create(methodNode, getFieldTargetEditors(methodTransformer, methodNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetFieldEditor[]::new));
+                        fieldNodeEditorMap.put(null, editor);
+                        methodTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                    }
+                }
             }
         }
 
-        for (FieldEditor fieldEditor : mixinClassEditor.getFieldEditors()) {
-            for (AnnotationEditor annotationNode : fieldEditor.getAnnotationEditors()) {
-                fieldTransformers.getOrDefault(annotationNode.getDesc(), dummy).transform(mixinClassEditor, mixinClassEditor.getFieldEditor(fieldEditor.getName()), annotationNode.getAnnotation(), targetClassEditor);
+        for (FieldNode fieldNode : modifyMixinClassNode.fields) {
+            if(fieldNode.invisibleAnnotations == null) {
+                fieldNodeEditorMap.put(fieldNode, classTransformer.create(fieldNode, new TargetFieldEditor[0]));
+                continue;
+            }
+            for (AnnotationNode annotationNode : fieldNode.invisibleAnnotations) {
+                List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+                transformers = transformers.stream().filter(t -> fieldTransformerType.isAssignableFrom(t.getClass())).toList();
+                if(transformers.isEmpty() || !(transformers.getFirst() instanceof FieldTransformer fieldTransformer)) continue;
+                if(transformers.size() != 1) throw new MixinFormatException(annotationNode.desc, "has more than one transformer registered for " + classTransformer.getClass().getName());
+
+                Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
+                ClassNode mixinClassNodeClone = new ClassNode();
+                originalMixinClassNode.accept(mixinClassNodeClone);
+                ClassNode targetClassNodeClone = new ClassNode();
+                originalTargetClassNode.accept(targetClassNodeClone);
+                switch (fieldTransformer.getFieldTargetType()) {
+                    case METHOD -> {
+                        MethodEditor editor = classTransformer.create(fieldNode, getTargetMethodEditors(fieldTransformer, fieldNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetMethodEditor[]::new));
+                        methodNodeEditorMap.put(null, editor);
+                        fieldTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                    }
+                    case FIELD -> {
+                        FieldEditor editor = classTransformer.create(fieldNode, getFieldTargetEditors(fieldTransformer, fieldNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetFieldEditor[]::new));
+                        fieldNodeEditorMap.put(fieldNode, editor);
+                        fieldTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                    }
+                }
             }
         }
 
-        targetClassNode.accept(targetClassWriter);
-        try {
-            ClassWriter mixinClassWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-            mixinClassNode.accept(mixinClassWriter);
-            new MixinerTransformer(mixinClassNode.name, mixinClassWriter.toByteArray());
-
-            agent.redefineClasses(new ClassDefinition(targetClass, targetClassWriter.toByteArray()));
-        } catch (UnmodifiableClassException | ClassNotFoundException e) {
-            throw new MixinFormatException(mixinClassEditor.getName(), "invalid @Mixin target");
-        }
+        return new MixinResult(modifyTargetClassNode, classTransformer.transform(mixinClassNodeHierarchy, methodNodeEditorMap, fieldNodeEditorMap, mixinClassAnnotation, new TargetClassEditor(modifyTargetClassNode, originalTargetClassNode, targetClass)));
     }
 
-    private static final class Dummy implements ClassTransformer<Annotation>, FieldTransformer<Annotation>, MethodTransformer<Annotation> {
+    private static List<TargetMethodEditor> getTargetMethodEditors(InnerElementTransformer innerElementTransformer, MethodNode methodNode, ClassNode originalTargetClassNode, ClassNode modifyTargetClassNode, Annotation annotation) {
+        Map<String, MethodNode> modifyTargetMethodNodes = new HashMap<>();
+        modifyTargetClassNode.methods.forEach(m -> modifyTargetMethodNodes.put(m.name + m.desc, m));
 
-        @Override
-        public void transform(ClassEditor mixinClassEditor, Annotation mixinAnnotation, ClassEditor targetClassEditor) {
+        return originalTargetClassNode.methods.stream().filter(m -> {
+            ClassNode cloneTarget = new ClassNode();
+            m.accept(cloneTarget);
 
-        }
+            ClassNode cloneMixin = new ClassNode();
+            methodNode.accept(cloneMixin);
 
-        @Override
-        public void transform(ClassEditor mixinClassEditor, FieldEditor mixinFieldEditor, Annotation mixinAnnotation, ClassEditor targetClassEditor) {
-
-        }
-
-        @Override
-        public void transform(ClassEditor mixinClassEditor, MethodEditor mixinMethodEditor, Annotation mixinAnnotation, ClassEditor targetClassEditor) {
-
-        }
+            return innerElementTransformer.isMethodTarget(cloneMixin.methods.getFirst(), cloneTarget.methods.getFirst(), annotation);
+        }).map(m -> new TargetMethodEditor(modifyTargetMethodNodes.get(m.name + m.desc), m)).toList();
     }
+
+    private static List<TargetFieldEditor> getFieldTargetEditors(InnerElementTransformer innerElementTransformer, FieldNode fieldNode, ClassNode targetClassNode, ClassNode modifyTargetClassNode, Annotation annotation) {
+        Map<String, FieldNode> modifyFieldNodes = new HashMap<>();
+        modifyTargetClassNode.fields.forEach(f -> modifyFieldNodes.put(f.name, f));
+
+        return targetClassNode.fields.stream().filter(m -> {
+            ClassNode clone = new ClassNode();
+            m.accept(clone);
+
+            ClassNode cloneMixin = new ClassNode();
+            fieldNode.accept(cloneMixin);
+
+            return innerElementTransformer.isFieldTarget(cloneMixin.fields.getFirst(), clone.fields.getFirst(), annotation);
+        }).map(f -> new TargetFieldEditor(modifyFieldNodes.get(f.name), f)).toList();
+    }
+
+        private static List<TargetMethodEditor> getTargetMethodEditors(InnerElementTransformer innerElementTransformer, FieldNode fieldNode, ClassNode originalTargetClassNode, ClassNode modifyTargetClassNode, Annotation annotation) {
+        Map<String, MethodNode> modifyTargetMethodNodes = new HashMap<>();
+        modifyTargetClassNode.methods.forEach(m -> modifyTargetMethodNodes.put(m.name + m.desc, m));
+
+        return originalTargetClassNode.methods.stream().filter(m -> {
+            ClassNode cloneTarget = new ClassNode();
+            m.accept(cloneTarget);
+
+            ClassNode cloneMixin = new ClassNode();
+            fieldNode.accept(cloneMixin);
+
+            return innerElementTransformer.isMethodTarget(cloneMixin.fields.getFirst(), cloneTarget.methods.getFirst(), annotation);
+        }).map(m -> new TargetMethodEditor(modifyTargetMethodNodes.get(m.name + m.desc), m)).toList();
+    }
+
+    private static List<TargetFieldEditor> getFieldTargetEditors(InnerElementTransformer innerElementTransformer, MethodNode methodNode, ClassNode targetClassNode, ClassNode modifyTargetClassNode, Annotation annotation) {
+        Map<String, FieldNode> modifyFieldNodes = new HashMap<>();
+        modifyTargetClassNode.fields.forEach(f -> modifyFieldNodes.put(f.name, f));
+
+        return targetClassNode.fields.stream().filter(m -> {
+            ClassNode clone = new ClassNode();
+            m.accept(clone);
+
+            ClassNode cloneMixin = new ClassNode();
+            methodNode.accept(cloneMixin);
+
+            return innerElementTransformer.isFieldTarget(cloneMixin.methods.getFirst(), clone.fields.getFirst(), annotation);
+        }).map(f -> new TargetFieldEditor(modifyFieldNodes.get(f.name), f)).toList();
+    }
+
+    private record MixinResult(ClassNode targetClassNode, String setUpMethodName) {}
 
     private record MixinerTransformer(String name, byte[] bytecode) implements ClassFileTransformer {
 

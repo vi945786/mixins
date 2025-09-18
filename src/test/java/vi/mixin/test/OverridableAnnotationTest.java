@@ -23,7 +23,7 @@ public class OverridableAnnotationTest {
 @Mixin(OverridableAnnotationTest.Base.class) @Extends
 class OverridableAnnotationTestExtender {
 
-    @Overridable("getValue(I)I")
+    @Overridable
     public int getValue(int x) {
         return 15;
     }

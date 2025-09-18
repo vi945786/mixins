@@ -10,6 +10,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.CLASS)
 public @interface Inject {
-    String method();
+    String value();
     At at();
 }

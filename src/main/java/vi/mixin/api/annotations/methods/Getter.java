@@ -8,6 +8,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.CLASS)
 public @interface Getter {
-    String value();
+    String value() default "";
 }
 

@@ -4,13 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.injection.At;
-import vi.mixin.api.editors.BytecodeEditor;
+import vi.mixin.api.transformers.TransformerHelper;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class BytecodeEditorAtTest {
+public class AtAnnotationTest {
 
     @Test
     public void testAtHead() {
@@ -18,7 +18,6 @@ public class BytecodeEditorAtTest {
         list.add(new InsnNode(Opcodes.NOP));
         list.add(new InsnNode(Opcodes.NOP));
         list.add(new InsnNode(Opcodes.NOP));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.HEAD; }
@@ -26,8 +25,8 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(0), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(0)), nodes);
     }
 
     @Test
@@ -37,7 +36,6 @@ public class BytecodeEditorAtTest {
         list.add(new InsnNode(Opcodes.IRETURN));
         list.add(new InsnNode(Opcodes.LRETURN));
         list.add(new InsnNode(Opcodes.NOP));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.RETURN; }
@@ -45,8 +43,8 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(1,2), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(1), list.get(2)), nodes);
     }
 
     @Test
@@ -55,7 +53,6 @@ public class BytecodeEditorAtTest {
         list.add(new InsnNode(Opcodes.NOP));
         list.add(new InsnNode(Opcodes.IRETURN));
         list.add(new InsnNode(Opcodes.LRETURN));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.TAIL; }
@@ -63,8 +60,8 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(2), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(2)), nodes);
     }
 
     @Test
@@ -74,7 +71,6 @@ public class BytecodeEditorAtTest {
         list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "Owner", "name", "(desc)", false));
         list.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "Other", "other", "(desc2)", false));
         list.add(new InsnNode(Opcodes.NOP));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.INVOKE; }
@@ -82,8 +78,8 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return "Owner;name(desc)"; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(1), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(1)), nodes);
     }
 
     @Test
@@ -92,7 +88,6 @@ public class BytecodeEditorAtTest {
         list.add(new InsnNode(Opcodes.NOP));
         list.add(new FieldInsnNode(Opcodes.GETFIELD, "Owner", "name", "I"));
         list.add(new FieldInsnNode(Opcodes.PUTFIELD, "Other", "other", "J"));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.FIELD; }
@@ -100,8 +95,8 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return "Owner;name"; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(1), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(1)), nodes);
     }
 
     @Test
@@ -112,7 +107,6 @@ public class BytecodeEditorAtTest {
         list.add(new JumpInsnNode(Opcodes.GOTO, label1));
         list.add(new JumpInsnNode(Opcodes.IFNULL, label2));
         list.add(new InsnNode(Opcodes.NOP));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.JUMP; }
@@ -120,8 +114,8 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(0), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(0)), nodes);
     }
 
     @Test
@@ -134,7 +128,6 @@ public class BytecodeEditorAtTest {
         list.add(new InsnNode(Opcodes.DRETURN));
         list.add(new InsnNode(Opcodes.ARETURN));
         list.add(new InsnNode(Opcodes.RETURN));
-        BytecodeEditor editor = new BytecodeEditor(list);
         At at = new At() {
             @Override public int[] ordinal() { return new int[]{2, 4}; }
             @Override public At.Location value() { return At.Location.RETURN; }
@@ -142,7 +135,7 @@ public class BytecodeEditorAtTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<Integer> indexes = editor.getAtTargetIndexes(at);
-        assertEquals(List.of(3,5), indexes);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        assertEquals(List.of(list.get(3), list.get(5)), nodes);
     }
 }

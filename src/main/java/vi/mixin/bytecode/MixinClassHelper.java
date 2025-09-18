@@ -53,14 +53,14 @@ public class MixinClassHelper {
     public static Class<?> findClass(String name) {
         name = name.replace("/", ".");
         try {
-            return Class.forName(name, true, null);
+            return Class.forName(name, false, null);
         } catch (ClassNotFoundException ignored) {}
 
-        for(ClassLoader loader : classLoaders) {
-            try {
-                return Class.forName(name, true, loader);
-            } catch (ClassNotFoundException ignored) {}
-        }
+//        for(ClassLoader loader : classLoaders) {
+//            try {
+//                return Class.forName(name, false, loader);
+//            } catch (ClassNotFoundException ignored) {}
+//        }
         return null;
     }
 }
