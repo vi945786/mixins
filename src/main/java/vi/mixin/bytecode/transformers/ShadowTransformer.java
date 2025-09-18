@@ -6,9 +6,6 @@ import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.Shadow;
 import vi.mixin.api.transformers.FieldEditor;
 import vi.mixin.api.transformers.MethodEditor;
-import vi.mixin.api.transformers.accessortype.AccessorFieldEditor;
-import vi.mixin.api.transformers.accessortype.AccessorMethodEditor;
-import vi.mixin.api.transformers.accessortype.AccessorMethodTransformer;
 import vi.mixin.api.transformers.extendertype.ExtenderFieldEditor;
 import vi.mixin.api.transformers.extendertype.ExtenderFieldTransformer;
 import vi.mixin.api.transformers.extendertype.ExtenderMethodEditor;
@@ -17,8 +14,6 @@ import vi.mixin.api.transformers.mixintype.MixinFieldEditor;
 import vi.mixin.api.transformers.mixintype.MixinFieldTransformer;
 import vi.mixin.api.transformers.mixintype.MixinMethodEditor;
 import vi.mixin.api.transformers.mixintype.MixinMethodTransformer;
-
-import java.lang.reflect.InvocationTargetException;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -74,6 +69,7 @@ public class ShadowTransformer {
 
             if ((mixinFieldNode.access & ACC_FINAL) == 0) fieldEditor.makeTargetNonFinal(0);
             fieldEditor.makeTargetPublic(0);
+            fieldEditor.doNotCopyToTarget();
 
             boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
             fieldEditor.changeSet(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));

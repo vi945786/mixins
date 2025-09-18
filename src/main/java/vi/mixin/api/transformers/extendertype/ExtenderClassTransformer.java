@@ -7,15 +7,12 @@ import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.transformers.ClassNodeHierarchy;
 import vi.mixin.api.transformers.ClassTransformer;
-import vi.mixin.api.transformers.MethodEditor;
 import vi.mixin.api.transformers.TransformerHelper;
 import vi.mixin.api.transformers.targeteditors.TargetClassEditor;
 import vi.mixin.api.transformers.targeteditors.TargetFieldEditor;
 import vi.mixin.api.transformers.targeteditors.TargetMethodEditor;
 
 import java.util.Map;
-
-import static vi.mixin.api.transformers.TransformerHelper.getOuterClassInstanceFieldName;
 
 public class ExtenderClassTransformer implements ClassTransformer<Extends, ExtenderMethodTransformer, ExtenderFieldTransformer, ExtenderMethodEditor, ExtenderFieldEditor> {
 

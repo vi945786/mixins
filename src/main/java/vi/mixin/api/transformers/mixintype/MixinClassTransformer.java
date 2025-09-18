@@ -185,6 +185,7 @@ public final class MixinClassTransformer implements ClassTransformer<Mixin, Mixi
                 methodEditor.getInsnListEditor().insertBefore(0, insnList);
             });
         } else {
+            targetClassEditor.getFieldEditor(targetOuterFieldNode.name).makeNonSynthetic();
             targetOuterFieldNode.access = targetOuterFieldNode.access & ~Opcodes.ACC_SYNTHETIC & ~Opcodes.ACC_PRIVATE & ~Opcodes.ACC_PROTECTED | Opcodes.ACC_PUBLIC;
         }
     }

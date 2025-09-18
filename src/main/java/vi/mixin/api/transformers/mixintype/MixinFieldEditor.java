@@ -1,6 +1,5 @@
 package vi.mixin.api.transformers.mixintype;
 
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;

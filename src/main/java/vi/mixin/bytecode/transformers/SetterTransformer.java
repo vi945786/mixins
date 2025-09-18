@@ -3,7 +3,6 @@ package vi.mixin.bytecode.transformers;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
-import vi.mixin.api.annotations.methods.Getter;
 import vi.mixin.api.annotations.methods.Setter;
 import vi.mixin.api.transformers.TransformerHelper;
 import vi.mixin.api.transformers.accessortype.AccessorFieldEditor;

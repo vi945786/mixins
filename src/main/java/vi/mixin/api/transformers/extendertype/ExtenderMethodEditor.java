@@ -6,8 +6,6 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import vi.mixin.api.transformers.MethodEditor;
-import vi.mixin.api.transformers.mixintype.MixinClassTransformer;
-import vi.mixin.api.transformers.targeteditors.TargetInsnListEditor;
 import vi.mixin.api.transformers.targeteditors.TargetMethodEditor;
 
 public class ExtenderMethodEditor extends MethodEditor {
