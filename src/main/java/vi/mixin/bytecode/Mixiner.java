@@ -226,64 +226,72 @@ public class Mixiner {
         Map<MethodNode, MethodEditor> methodNodeEditorMap = new HashMap<>();
         Map<FieldNode, FieldEditor> fieldNodeEditorMap = new HashMap<>();
 
-        for (MethodNode methodNode : modifyMixinClassNode.methods) {
-            if(methodNode.invisibleAnnotations == null) {
+        if(methodTransformerType != null) {
+            for (MethodNode methodNode : modifyMixinClassNode.methods) {
+                if (methodNode.invisibleAnnotations == null) {
 
-                methodNodeEditorMap.put(methodNode, classTransformer.create(methodNode, new TargetMethodEditor[0]));
-                continue;
-            }
-            for (AnnotationNode annotationNode : methodNode.invisibleAnnotations) {
-                List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
-                transformers = transformers.stream().filter(t -> methodTransformerType.isAssignableFrom(t.getClass())).toList();
-                if(transformers.isEmpty() || !(transformers.getFirst() instanceof MethodTransformer methodTransformer)) continue;
-                if(transformers.size() != 1) throw new MixinFormatException(annotationNode.desc, "has more than one transformer registered for " + classTransformer.getClass().getName());
+                    methodNodeEditorMap.put(methodNode, classTransformer.create(methodNode, new TargetMethodEditor[0]));
+                    continue;
+                }
+                for (AnnotationNode annotationNode : methodNode.invisibleAnnotations) {
+                    List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+                    transformers = transformers.stream().filter(t -> methodTransformerType.isAssignableFrom(t.getClass())).toList();
+                    if (transformers.isEmpty() || !(transformers.getFirst() instanceof MethodTransformer methodTransformer))
+                        continue;
+                    if (transformers.size() != 1)
+                        throw new MixinFormatException(annotationNode.desc, "has more than one transformer registered for " + classTransformer.getClass().getName());
 
-                Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
-                ClassNode mixinClassNodeClone = new ClassNode();
-                originalMixinClassNode.accept(mixinClassNodeClone);
-                ClassNode targetClassNodeClone = new ClassNode();
-                originalTargetClassNode.accept(targetClassNodeClone);
-                switch (methodTransformer.getTargetMethodType()) {
-                    case METHOD -> {
-                        MethodEditor editor = classTransformer.create(methodNode, getTargetMethodEditors(methodTransformer, methodNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetMethodEditor[]::new));
-                        methodNodeEditorMap.put(methodNode, editor);
-                        methodTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
-                    }
-                    case FIELD -> {
-                        FieldEditor editor = classTransformer.create(methodNode, getFieldTargetEditors(methodTransformer, methodNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetFieldEditor[]::new));
-                        fieldNodeEditorMap.put(null, editor);
-                        methodTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                    Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
+                    ClassNode mixinClassNodeClone = new ClassNode();
+                    originalMixinClassNode.accept(mixinClassNodeClone);
+                    ClassNode targetClassNodeClone = new ClassNode();
+                    originalTargetClassNode.accept(targetClassNodeClone);
+                    switch (methodTransformer.getTargetMethodType()) {
+                        case METHOD -> {
+                            MethodEditor editor = classTransformer.create(methodNode, getTargetMethodEditors(methodTransformer, methodNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetMethodEditor[]::new));
+                            methodNodeEditorMap.put(methodNode, editor);
+                            methodTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                        }
+                        case FIELD -> {
+                            FieldEditor editor = classTransformer.create(methodNode, getFieldTargetEditors(methodTransformer, methodNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetFieldEditor[]::new));
+                            fieldNodeEditorMap.put(null, editor);
+                            methodTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                        }
                     }
                 }
             }
         }
 
-        for (FieldNode fieldNode : modifyMixinClassNode.fields) {
-            if(fieldNode.invisibleAnnotations == null) {
-                fieldNodeEditorMap.put(fieldNode, classTransformer.create(fieldNode, new TargetFieldEditor[0]));
-                continue;
-            }
-            for (AnnotationNode annotationNode : fieldNode.invisibleAnnotations) {
-                List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
-                transformers = transformers.stream().filter(t -> fieldTransformerType.isAssignableFrom(t.getClass())).toList();
-                if(transformers.isEmpty() || !(transformers.getFirst() instanceof FieldTransformer fieldTransformer)) continue;
-                if(transformers.size() != 1) throw new MixinFormatException(annotationNode.desc, "has more than one transformer registered for " + classTransformer.getClass().getName());
+        if(fieldTransformerType != null) {
+            for (FieldNode fieldNode : modifyMixinClassNode.fields) {
+                if (fieldNode.invisibleAnnotations == null) {
+                    fieldNodeEditorMap.put(fieldNode, classTransformer.create(fieldNode, new TargetFieldEditor[0]));
+                    continue;
+                }
+                for (AnnotationNode annotationNode : fieldNode.invisibleAnnotations) {
+                    List<Transformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+                    transformers = transformers.stream().filter(t -> fieldTransformerType.isAssignableFrom(t.getClass())).toList();
+                    if (transformers.isEmpty() || !(transformers.getFirst() instanceof FieldTransformer fieldTransformer))
+                        continue;
+                    if (transformers.size() != 1)
+                        throw new MixinFormatException(annotationNode.desc, "has more than one transformer registered for " + classTransformer.getClass().getName());
 
-                Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
-                ClassNode mixinClassNodeClone = new ClassNode();
-                originalMixinClassNode.accept(mixinClassNodeClone);
-                ClassNode targetClassNodeClone = new ClassNode();
-                originalTargetClassNode.accept(targetClassNodeClone);
-                switch (fieldTransformer.getFieldTargetType()) {
-                    case METHOD -> {
-                        MethodEditor editor = classTransformer.create(fieldNode, getTargetMethodEditors(fieldTransformer, fieldNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetMethodEditor[]::new));
-                        methodNodeEditorMap.put(null, editor);
-                        fieldTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
-                    }
-                    case FIELD -> {
-                        FieldEditor editor = classTransformer.create(fieldNode, getFieldTargetEditors(fieldTransformer, fieldNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetFieldEditor[]::new));
-                        fieldNodeEditorMap.put(fieldNode, editor);
-                        fieldTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                    Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
+                    ClassNode mixinClassNodeClone = new ClassNode();
+                    originalMixinClassNode.accept(mixinClassNodeClone);
+                    ClassNode targetClassNodeClone = new ClassNode();
+                    originalTargetClassNode.accept(targetClassNodeClone);
+                    switch (fieldTransformer.getFieldTargetType()) {
+                        case METHOD -> {
+                            MethodEditor editor = classTransformer.create(fieldNode, getTargetMethodEditors(fieldTransformer, fieldNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetMethodEditor[]::new));
+                            methodNodeEditorMap.put(null, editor);
+                            fieldTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                        }
+                        case FIELD -> {
+                            FieldEditor editor = classTransformer.create(fieldNode, getFieldTargetEditors(fieldTransformer, fieldNode, originalTargetClassNode, modifyTargetClassNode, annotation).toArray(TargetFieldEditor[]::new));
+                            fieldNodeEditorMap.put(fieldNode, editor);
+                            fieldTransformer.transform(editor, annotation, mixinClassNodeClone, targetClassNodeClone);
+                        }
                     }
                 }
             }

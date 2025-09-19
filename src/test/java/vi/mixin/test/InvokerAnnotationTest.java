@@ -30,7 +30,7 @@ public class InvokerAnnotationTest {
 
 @Mixin(InvokerAnnotationTest.Target.class)
 interface TargetInvokerAccessor {
-    @Invoker()
+    @Invoker
     int add(int x);
 
     @Invoker("addStatic(I)I")

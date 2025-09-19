@@ -10,7 +10,7 @@
   -XX:+AllowEnhancedClassRedefinition -Xshare:off -javaagent:<mixin jar location>
   ```
 - **Manifest:**  
-  Specify the mixin classes file in your JAR manifest using the `Mixin-Classes-File` attribute.
+  Specify the mixin file in your JAR manifest using the `Mixin-Classes-File` attribute.
 
 ## Getting Started
 
