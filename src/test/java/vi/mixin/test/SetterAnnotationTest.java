@@ -2,6 +2,8 @@ package vi.mixin.test;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+import vi.mixin.api.annotations.methods.Inject;
 import vi.mixin.api.annotations.methods.Setter;
 import vi.mixin.api.annotations.Mixin;
 
@@ -9,10 +11,10 @@ public class SetterAnnotationTest {
 
     public static class Target {
         private int value;
-        private static int staticValue;
+        private static Integer staticValue;
         
         public int getValue() { return value; }
-        public static int getStaticValue() { return staticValue; }
+        public static Integer getStaticValue() { return staticValue; }
     }
 
 
@@ -38,6 +40,6 @@ interface TargetSetterAccessor {
     void setValue(int v);
 
     @Setter("staticValue")
-    static void setStaticValue(int v) {
+    static void setStaticValue(Object v) {
     }
 }

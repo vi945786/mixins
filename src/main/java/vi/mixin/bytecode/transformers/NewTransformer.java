@@ -4,25 +4,39 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.New;
-import vi.mixin.api.transformers.MethodEditor;
+import vi.mixin.api.classtypes.accessortype.AccessorAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.accessortype.AccessorMixinClassType;
+import vi.mixin.api.classtypes.accessortype.AccessorTargetMethodEditor;
+import vi.mixin.api.classtypes.extendertype.ExtenderAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.extendertype.ExtenderMixinClassType;
+import vi.mixin.api.classtypes.extendertype.ExtenderTargetMethodEditor;
+import vi.mixin.api.classtypes.mixintype.MixinAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
+import vi.mixin.api.classtypes.mixintype.MixinTargetMethodEditor;
+import vi.mixin.api.editors.AnnotatedMethodEditor;
+import vi.mixin.api.editors.TargetMethodEditor;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
 import vi.mixin.api.transformers.TransformerHelper;
-import vi.mixin.api.transformers.accessortype.AccessorMethodEditor;
-import vi.mixin.api.transformers.accessortype.AccessorMethodTransformer;
-import vi.mixin.api.transformers.extendertype.ExtenderMethodEditor;
-import vi.mixin.api.transformers.extendertype.ExtenderMethodTransformer;
-import vi.mixin.api.transformers.mixintype.MixinMethodEditor;
-import vi.mixin.api.transformers.mixintype.MixinMethodTransformer;
+import vi.mixin.api.transformers.TransformerSupplier;
 
-import static org.objectweb.asm.Opcodes.ACC_STATIC;
+import java.util.List;
 
-public class NewTransformer {
+public class NewTransformer implements TransformerSupplier {
 
-    private static void validate(MethodEditor methodEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
+     private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
+        if(annotation.value().isEmpty()) {
+            return targetMethodNodeClone.name.equals("<init>") && targetMethodNodeClone.desc.split("\\)")[0].equals(mixinMethodNodeClone.desc.split("\\)")[0]);
+        }
+        return targetMethodNodeClone.name.equals("<init>") && targetMethodNodeClone.desc.equals("(" + annotation.value() + ")V");
+    }
+
+    private static void validate(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
 
         String name = "@New " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(methodEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
         if((mixinMethodNode.access & ACC_STATIC) == 0) throw new MixinFormatException(name, "should be static");
         Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
@@ -35,85 +49,74 @@ public class NewTransformer {
         if(!returnType.getInternalName().equals(targetClassNodeClone.name) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + "L" + targetClassNodeClone.name + ";" + ", " + Type.getType(Object.class));
     }
 
-    private static boolean isMethodTarget(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
-        if(annotation.value().isEmpty()) {
-            return targetMethodNodeClone.name.equals("<init>") && targetMethodNodeClone.desc.split("\\)")[0].equals(mixinMethodNodeClone.desc.split("\\)")[0]);
+    private static void extenderValidate(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+
+        String name = "@New " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
+        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+
+        if((mixinMethodNode.access & ACC_STATIC) == 0) throw new MixinFormatException(name, "should be static");
+        Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
+        Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
+        if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
+        for (int i = 0; i < targetArgumentTypes.length; i++) {
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
         }
-        return targetMethodNodeClone.name.equals("<init>") && targetMethodNodeClone.desc.equals("(" + annotation.value() + ")V");
+
+        Type returnType = Type.getReturnType(mixinMethodNode.desc);
+        if(!returnType.equals(Type.VOID_TYPE)) throw new MixinFormatException(name, "valid return types are: void");
     }
 
-    public static class NewMixinTransformer implements MixinMethodTransformer<New> {
-        public boolean isMethodTarget(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
-            return NewTransformer.isMethodTarget(mixinMethodNodeClone, targetMethodNodeClone, annotation);
-        }
+    private static void mixinTransform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        mixinEditor.doNotCopyToTargetClass();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
-        @Override
-        public void transform(MixinMethodEditor methodEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            validate(methodEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-            methodEditor.doNotCopyToTarget();
-            MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        targetEditor.makePublic(0);
 
-            methodEditor.makeTargetPublic(0);
+        InsnList insnList = new InsnList();
+        insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
+        insnList.add(new InsnNode(DUP));
 
-            InsnList insnList = new InsnList();
-            insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
-            insnList.add(new InsnNode(DUP));
+        TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(targetMethodNode.desc), true);
 
-            TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(targetMethodNode.desc), true);
+        insnList.add(new MethodInsnNode(INVOKESPECIAL, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+        insnList.add(new InsnNode(ARETURN));
 
-            insnList.add(new MethodInsnNode(INVOKESPECIAL, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
-            insnList.add(new InsnNode(ARETURN));
-
-            methodEditor.setMixinBytecode(insnList);
-        }
+        mixinEditor.setBytecode(insnList);
     }
 
-    public static class NewAccessorTransformer implements AccessorMethodTransformer<New> {
-        public boolean isMethodTarget(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
-            return NewTransformer.isMethodTarget(mixinMethodNodeClone, targetMethodNodeClone, annotation);
-        }
+    private static void accessorTransform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+         MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
-        @Override
-        public void transform(AccessorMethodEditor methodEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        targetEditor.makePublic(0);
 
-            methodEditor.makeTargetPublic(0);
+        InsnList insnList = new InsnList();
+        insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
+        insnList.add(new InsnNode(DUP));
 
-            InsnList insnList = new InsnList();
-            insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
-            insnList.add(new InsnNode(DUP));
+        TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(targetMethodNode.desc), true);
 
-            TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(targetMethodNode.desc), true);
+        insnList.add(new MethodInsnNode(INVOKESPECIAL, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+        insnList.add(new InsnNode(ARETURN));
 
-            insnList.add(new MethodInsnNode(INVOKESPECIAL, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
-            insnList.add(new InsnNode(ARETURN));
-
-            methodEditor.setMixinBytecode(insnList);
-        }
+        mixinEditor.setBytecode(insnList);
     }
 
-    public static class NewExtenderTransformer implements ExtenderMethodTransformer<New> {
-        public boolean isMethodTarget(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
-            return NewTransformer.isMethodTarget(mixinMethodNodeClone, targetMethodNodeClone, annotation);
-        }
+    private static void extenderTransform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        extenderValidate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        targetEditor.makePublic(0);
+        mixinEditor.delete();
+    }
 
-        private static void validate(ExtenderMethodEditor methodEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
-
-            String name = "@New " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-            if(methodEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-            MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
-
-            if((mixinMethodNode.access & ACC_STATIC) == 0) throw new MixinFormatException(name, "should be static");
-
-            Type returnType = Type.getReturnType(mixinMethodNode.desc);
-            if(!returnType.equals(Type.VOID_TYPE)) throw new MixinFormatException(name, "valid return types are: void");
-        }
-
-        @Override
-        public void transform(ExtenderMethodEditor methodEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            methodEditor.makeTargetPublic(0);
-            methodEditor.delete();
-        }
+    @Override
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, New.class).withMethodTarget().setTargetFilter(NewTransformer::targetFilter).setTransformer(NewTransformer::mixinTransform).build(),
+                TransformerBuilder.annotatedMethodTransformerBuilder(AccessorMixinClassType.class, New.class).withMethodTarget().setTargetFilter(NewTransformer::targetFilter).setTransformer(NewTransformer::accessorTransform).build(),
+                TransformerBuilder.annotatedMethodTransformerBuilder(ExtenderMixinClassType.class, New.class).withMethodTarget().setTargetFilter(NewTransformer::targetFilter).setTransformer(NewTransformer::extenderTransform).build()
+        );
     }
 }

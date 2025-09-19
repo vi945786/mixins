@@ -4,13 +4,19 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.Getter;
+import vi.mixin.api.classtypes.accessortype.AccessorAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.accessortype.AccessorMixinClassType;
+import vi.mixin.api.classtypes.accessortype.AccessorTargetFieldEditor;
 import vi.mixin.api.transformers.TransformerHelper;
-import vi.mixin.api.transformers.accessortype.AccessorFieldEditor;
-import vi.mixin.api.transformers.accessortype.AccessorMethodTransformer;
+import vi.mixin.api.transformers.TransformerSupplier;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
 
-public class GetterTransformer implements AccessorMethodTransformer<Getter> {
+import java.util.List;
 
-    public boolean isFieldTarget(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Getter annotation) {
+public class GetterTransformer implements TransformerSupplier {
+
+    private static boolean targetFilter(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Getter annotation) {
         if(annotation.value().isEmpty()) {
             if(!mixinMethodNodeClone.name.startsWith("get")) return false;
             return targetFieldNodeClone.name.equals(mixinMethodNodeClone.name.substring(3, 4).toLowerCase() + mixinMethodNodeClone.name.substring(4));
@@ -18,17 +24,13 @@ public class GetterTransformer implements AccessorMethodTransformer<Getter> {
         return targetFieldNodeClone.name.equals(annotation.value());
     }
 
-    public TargetType getTargetMethodType() {
-        return TargetType.FIELD;
-    }
-
-    private static void validate(AccessorFieldEditor fieldEditor, Getter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = fieldEditor.getMixinMethodNodeClone();
+    private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Getter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
 
         String name = "@Getter " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
 
-        if(fieldEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
+        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
 
         if((targetFieldNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetFieldNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         Type returnType = Type.getReturnType(mixinMethodNode.desc);
@@ -36,23 +38,29 @@ public class GetterTransformer implements AccessorMethodTransformer<Getter> {
         if(Type.getArgumentTypes(mixinMethodNode.desc).length != 0) throw new MixinFormatException(name, "takes arguments");
     }
 
-    @Override
-    public void transform(AccessorFieldEditor fieldEditor, Getter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(fieldEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        MethodNode mixinMethodNode = fieldEditor.getMixinMethodNodeClone();
-        FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
+    private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Getter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
 
         boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
 
         int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(mixinMethodNode.desc));
 
-        fieldEditor.makeTargetPublic(0);
+        targetEditor.makePublic(0);
 
         InsnList insnList = new InsnList();
         if (!isStatic) insnList.add(new VarInsnNode(ALOAD, 0));
         insnList.add(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
         insnList.add(new InsnNode(returnOpcode));
 
-        fieldEditor.setMixinBytecode(insnList);
+        mixinEditor.setBytecode(insnList);
+    }
+
+    @Override
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedMethodTransformerBuilder(AccessorMixinClassType.class, Getter.class).withFieldTarget().setTargetFilter(GetterTransformer::targetFilter).setTransformer(GetterTransformer::transform).build()
+        );
     }
 }

@@ -4,21 +4,27 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.Inject;
+import vi.mixin.api.classtypes.mixintype.MixinAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
+import vi.mixin.api.classtypes.mixintype.MixinTargetMethodEditor;
 import vi.mixin.api.injection.Returner;
 import vi.mixin.api.injection.ValueReturner;
+import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
 import vi.mixin.api.transformers.TransformerHelper;
-import vi.mixin.api.transformers.mixintype.MixinMethodEditor;
-import vi.mixin.api.transformers.mixintype.MixinMethodTransformer;
-import vi.mixin.api.transformers.targeteditors.TargetInsnListEditor;
+import vi.mixin.api.transformers.TransformerSupplier;
 
-public class InjectTransformer implements MixinMethodTransformer<Inject> {
+import java.util.List;
 
-    private static void validate(MixinMethodEditor methodEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
+public class InjectTransformer implements TransformerSupplier {
+
+    private static void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
 
         String name = "@Invoker " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(methodEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
         if((targetMethodNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetMethodNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         if(!Type.getReturnType(mixinMethodNode.desc).equals(Type.VOID_TYPE)) throw new MixinFormatException(name, "should return void");
@@ -34,13 +40,12 @@ public class InjectTransformer implements MixinMethodTransformer<Inject> {
         if (!mixinArgumentTypes[targetArgumentTypes.length].equals(returnerType)) throw new MixinFormatException(name, "valid types for argument number " + (targetArgumentTypes.length+1) + " are: " + returnerType);
     }
 
-    @Override
-    public void transform(MixinMethodEditor methodEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(methodEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+    private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
-        methodEditor.makeTargetPublic(0);
+        targetEditor.makePublic(0);
 
         Type returnType = Type.getReturnType(targetMethodNode.desc);
         boolean isStatic = (targetMethodNode.access & ACC_STATIC) != 0;
@@ -63,7 +68,7 @@ public class InjectTransformer implements MixinMethodTransformer<Inject> {
             insnList.add(new InsnNode(SWAP));
         }
 
-        insnList.add(new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, methodEditor.getUpdatedDesc(targetClassNodeClone.name)));
+        insnList.add(new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc(targetClassNodeClone.name)));
 
         LabelNode skipReturn = new LabelNode();
         if(returnType.getSort() != 0) insnList.add(new InsnNode(DUP));
@@ -85,9 +90,16 @@ public class InjectTransformer implements MixinMethodTransformer<Inject> {
         insnList.add(skipReturn);
         if(returnType.getSort() != 0) insnList.add(new InsnNode(POP));
 
-        TargetInsnListEditor insnListEditor = methodEditor.getTargetInsnListEditor(0);
+        MixinClassTargetInsnListEditor insnListEditor = targetEditor.getInsnListEditor(0);
         for(int index : TransformerHelper.getAtTargetIndexes(insnListEditor.getInsnListClone(), annotation.at())) {
             insnListEditor.insertBefore(index, insnList);
         }
+    }
+
+    @Override
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, Inject.class).withMethodTarget().setTransformer(InjectTransformer::transform).build()
+        );
     }
 }

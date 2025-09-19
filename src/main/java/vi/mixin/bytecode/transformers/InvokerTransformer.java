@@ -4,20 +4,26 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.Invoker;
+import vi.mixin.api.classtypes.accessortype.AccessorAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.accessortype.AccessorMixinClassType;
+import vi.mixin.api.classtypes.accessortype.AccessorTargetMethodEditor;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
 import vi.mixin.api.transformers.TransformerHelper;
-import vi.mixin.api.transformers.accessortype.AccessorMethodEditor;
-import vi.mixin.api.transformers.accessortype.AccessorMethodTransformer;
+import vi.mixin.api.transformers.TransformerSupplier;
+
+import java.util.List;
 
 import static vi.mixin.api.transformers.TransformerHelper.addLoadOpcodesOfMethod;
 
-public class InvokerTransformer implements AccessorMethodTransformer<Invoker> {
+public class InvokerTransformer implements TransformerSupplier {
 
-    private static void validate(AccessorMethodEditor methodEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
+    private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
 
         String name = "@Invoker " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(methodEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
         if(targetMethodNode.name.equals("<init>")) throw new MixinFormatException(name, "invoking a constructor is not allowed. use @New");
         if((targetMethodNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetMethodNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
@@ -31,11 +37,12 @@ public class InvokerTransformer implements AccessorMethodTransformer<Invoker> {
         }
     }
 
-    public void transform(AccessorMethodEditor methodEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+    private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
-        methodEditor.makeTargetPublic(0);
+        targetEditor.makePublic(0);
 
         if(!targetMethodNode.name.equals(mixinMethodNode.name) /*|| (targetMethodNode.access & ACC_STATIC) != 0*/) {
             boolean isStatic = (targetMethodNode.access & ACC_STATIC) != 0;
@@ -51,7 +58,14 @@ public class InvokerTransformer implements AccessorMethodTransformer<Invoker> {
 
             insnList.add(new MethodInsnNode(invokeOpcode, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
             insnList.add(new InsnNode(returnOpcode));
-            methodEditor.setMixinBytecode(insnList);
+            mixinEditor.setBytecode(insnList);
         }
+    }
+
+    @Override
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedMethodTransformerBuilder(AccessorMixinClassType.class, Invoker.class).withMethodTarget().setTransformer(InvokerTransformer::transform).build()
+        );
     }
 }

@@ -2,6 +2,8 @@ package vi.mixin.test;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+import vi.mixin.api.annotations.methods.Inject;
 import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.annotations.Mixin;
 
@@ -9,7 +11,7 @@ public class NewAnnotationAccessorTest {
 
     public static class Target {
         private final int value;
-        private Target(int value) { this.value = value; }
+        private Target(Integer value) { this.value = value; }
         public int getValue() { return value; }
     }
 
@@ -22,6 +24,6 @@ public class NewAnnotationAccessorTest {
 
 @Mixin(NewAnnotationAccessorTest.Target.class)
 interface TargetNewAccessor {
-    @New("I")
-    static NewAnnotationAccessorTest.Target createTarget(int value) { return null; }
+    @New
+    static NewAnnotationAccessorTest.Target createTarget(Integer value) { return null; }
 }

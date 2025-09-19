@@ -54,7 +54,7 @@ class InjectTestMixin {
     }
 
     @Inject(value = "log(Ljava/lang/String;)V", at = @At(At.Location.HEAD))
-    private void injectLog(String msg, Returner ret) {
+    private void injectLog(Object msg, Returner ret) {
         ((InjectAnnotationTest.InjectTest) (Object) this).sb.append("[logged]");
         ret.doReturn();
     }

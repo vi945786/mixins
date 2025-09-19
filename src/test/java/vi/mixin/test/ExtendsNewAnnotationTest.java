@@ -10,7 +10,7 @@ public class ExtendsNewAnnotationTest {
 
     public static class Base {
         private final int a, b;
-        public Base(int a, int b) {
+        public Base(int a, Integer b) {
             this.a = a;
             this.b = b;
         }
@@ -26,8 +26,8 @@ public class ExtendsNewAnnotationTest {
 
 @Mixin(ExtendsNewAnnotationTest.Base.class) @Extends
 class BaseNewExtender {
-    @New("II")
-    public static void create(int a, int b) {}
+    @New("ILjava/lang/Integer;")
+    public static void create(int a, Object b) {}
 
     public BaseNewExtender() {
         create(4, 2);

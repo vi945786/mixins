@@ -8,10 +8,6 @@ CONSTANT injection point
 
 add @At offset
 
-mixinclass @Implement - method (abstract)
-    the same args and return
-    add a body to an abstract method that calls the annotated method with all the arguments and return the return value
-
 mixinclass @Redirect - method/field, @At (INVOKE/FIELD)
     calls the annotated method instead of the original
     for static the same args and return

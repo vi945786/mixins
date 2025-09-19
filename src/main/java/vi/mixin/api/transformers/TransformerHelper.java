@@ -3,6 +3,7 @@ package vi.mixin.api.transformers;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 import vi.mixin.api.injection.At;
 import vi.mixin.bytecode.MixinClassHelper;
 import vi.mixin.bytecode.Mixiner;
@@ -48,6 +49,30 @@ public final class TransformerHelper implements Opcodes {
         for (int i = 0; i < loadOpcodes.length; i++) {
             list.add(new VarInsnNode(loadOpcodes[i], i + (isStatic ? 0 : 1)));
         }
+    }
+
+    public static boolean doMethodDescsMatch(String search, String target) {
+        Type[] searchArgumentTypes = Type.getArgumentTypes(search);
+        Type[] targetArgumentTypes = Type.getArgumentTypes(target);
+        if(searchArgumentTypes.length != targetArgumentTypes.length) return false;
+        for (int i = 0; i < targetArgumentTypes.length; i++) {
+            if (!searchArgumentTypes[i].equals(targetArgumentTypes[i]) && !searchArgumentTypes[i].equals(Type.getType(Object.class))) return false;
+        }
+
+        if (!Type.getReturnType(search).equals(Type.getReturnType(target)) && !Type.getReturnType(search).equals(Type.getType(Object.class))) return false;
+
+        return true;
+    }
+
+    public static MethodNode getTargetMethod(ClassNode classNode, String nameAndDesc) {
+        String name = nameAndDesc.split("\\(")[0];
+        String desc = "(" + nameAndDesc.split("\\(")[1];
+
+        return classNode.methods.stream().filter(methodNode -> {
+            if(!methodNode.name.equals(name)) return false;
+
+            return doMethodDescsMatch(desc, methodNode.desc);
+        }).findAny().orElse(null);
     }
 
     public static Class<?> getTargetClass(ClassNode mixinNode) {

@@ -4,28 +4,27 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.Shadow;
-import vi.mixin.api.transformers.FieldEditor;
-import vi.mixin.api.transformers.MethodEditor;
-import vi.mixin.api.transformers.extendertype.ExtenderFieldEditor;
-import vi.mixin.api.transformers.extendertype.ExtenderFieldTransformer;
-import vi.mixin.api.transformers.extendertype.ExtenderMethodEditor;
-import vi.mixin.api.transformers.extendertype.ExtenderMethodTransformer;
-import vi.mixin.api.transformers.mixintype.MixinFieldEditor;
-import vi.mixin.api.transformers.mixintype.MixinFieldTransformer;
-import vi.mixin.api.transformers.mixintype.MixinMethodEditor;
-import vi.mixin.api.transformers.mixintype.MixinMethodTransformer;
+import vi.mixin.api.classtypes.extendertype.*;
+import vi.mixin.api.classtypes.mixintype.*;
+import vi.mixin.api.editors.AnnotatedFieldEditor;
+import vi.mixin.api.editors.AnnotatedMethodEditor;
+import vi.mixin.api.editors.TargetFieldEditor;
+import vi.mixin.api.editors.TargetMethodEditor;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
+import vi.mixin.api.transformers.TransformerSupplier;
 
-import static org.objectweb.asm.Opcodes.*;
+import java.util.List;
 
-public class ShadowTransformer {
+public class ShadowTransformer implements TransformerSupplier {
 
-    private static void validate(FieldEditor fieldEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        FieldNode mixinFieldNode = fieldEditor.getMixinFieldNodeClone();
+    private static void validateField(AnnotatedFieldEditor mixinEditor, TargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
 
         String name = "@Shadow " + mixinClassNodeClone.name + "." + mixinFieldNode.name;
-        if (fieldEditor.getNumberOfTargets() != 1)
+        if (targetEditor.getNumberOfTargets() != 1)
             throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
 
         if ((targetFieldNode.access & ACC_STATIC) != (mixinFieldNode.access & ACC_STATIC))
             throw new MixinFormatException(name, "should be " + ((targetFieldNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
@@ -34,13 +33,13 @@ public class ShadowTransformer {
             throw new MixinFormatException(name, "valid types are: " + targetFieldNode.desc + ", " + Type.getType(Object.class));
     }
 
-    private static void validate(MethodEditor methodEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
+    private static void validateMethod(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
 
         String name = "@Shadow " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if (methodEditor.getNumberOfTargets() != 1)
+        if (targetEditor.getNumberOfTargets() != 1)
             throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
         if (targetMethodNode.name.equals("<init>"))
             throw new MixinFormatException(name, "shadowing a constructor is not allowed. use @New");
@@ -59,67 +58,68 @@ public class ShadowTransformer {
         }
     }
 
-    public static class ShadowMixinTransformer implements MixinMethodTransformer<Shadow>, MixinFieldTransformer<Shadow> {
+    private static void mixinTransformField(MixinAnnotatedFieldEditor mixinEditor, MixinTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validateField(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
 
-        @Override
-        public void transform(MixinFieldEditor fieldEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            validate(fieldEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-            FieldNode mixinFieldNode = fieldEditor.getMixinFieldNodeClone();
-            FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
+        if ((mixinFieldNode.access & ACC_FINAL) == 0) targetEditor.makeNonFinal(0);
+        targetEditor.makePublic(0);
+        mixinEditor.doNotCopyToTargetClass();
 
-            if ((mixinFieldNode.access & ACC_FINAL) == 0) fieldEditor.makeTargetNonFinal(0);
-            fieldEditor.makeTargetPublic(0);
-            fieldEditor.doNotCopyToTarget();
-
-            boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
-            fieldEditor.changeSet(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
-            fieldEditor.changeGet(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
-        }
-
-        @Override
-        public void transform(MixinMethodEditor methodEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            validate(methodEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-            MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
-
-            methodEditor.delete();
-            methodEditor.doNotCopyToTarget();
-
-            int invokeOpcode = INVOKEVIRTUAL;
-            if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
-
-            methodEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
-        }
+        boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
+        mixinEditor.changeSet(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
+        mixinEditor.changeGet(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
     }
 
-    public static class ShadowExtenderTransformer implements ExtenderMethodTransformer<Shadow>, ExtenderFieldTransformer<Shadow> {
+    private static void mixinTransformMethod(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validateMethod(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
-        @Override
-        public void transform(ExtenderFieldEditor fieldEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            validate(fieldEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-            FieldNode mixinFieldNode = fieldEditor.getMixinFieldNodeClone();
-            FieldNode targetFieldNode = fieldEditor.getTargetFieldNodeClone(0);
+        mixinEditor.delete();
+        mixinEditor.doNotCopyToTargetClass();
 
-            if ((mixinFieldNode.access & ACC_FINAL) == 0) fieldEditor.makeTargetNonFinal(0);
-            fieldEditor.makeTargetPublic(0);
+        int invokeOpcode = INVOKEVIRTUAL;
+        if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
 
-            fieldEditor.delete();
-
-            boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
-            fieldEditor.changeSet(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
-            fieldEditor.changeGet(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
-        }
-
-        @Override
-        public void transform(ExtenderMethodEditor methodEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-            validate(methodEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-            MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
-
-            methodEditor.delete();
-
-            int invokeOpcode = INVOKEVIRTUAL;
-            if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
-
-            methodEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
-        }
+        mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
     }
+
+    private static void extenderTransformField(ExtenderAnnotatedFieldEditor mixinEditor, ExtenderTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validateField(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
+
+        if ((mixinFieldNode.access & ACC_FINAL) == 0) targetEditor.makeNonFinal(0);
+        targetEditor.makePublic(0);
+
+        mixinEditor.delete();
+
+        boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
+        mixinEditor.changeSet(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
+        mixinEditor.changeGet(new FieldInsnNode(isStatic ? GETSTATIC : GETFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
+    }
+
+    private static void extenderTransformMethod(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validateMethod(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+
+        mixinEditor.delete();
+
+        int invokeOpcode = INVOKEVIRTUAL;
+        if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
+
+        mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+    }
+
+    @Override
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedFieldTransformerBuilder(MixinMixinClassType.class, Shadow.class).withFieldTarget().setTransformer(ShadowTransformer::mixinTransformField).build(),
+                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, Shadow.class).withMethodTarget().setTransformer(ShadowTransformer::mixinTransformMethod).build(),
+                TransformerBuilder.annotatedFieldTransformerBuilder(ExtenderMixinClassType.class, Shadow.class).withFieldTarget().setTransformer(ShadowTransformer::extenderTransformField).build(),
+                TransformerBuilder.annotatedMethodTransformerBuilder(ExtenderMixinClassType.class, Shadow.class).withMethodTarget().setTransformer(ShadowTransformer::extenderTransformMethod).build()
+        );
+    }
+
 }

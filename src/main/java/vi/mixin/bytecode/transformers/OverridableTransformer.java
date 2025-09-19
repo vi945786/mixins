@@ -5,17 +5,30 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.methods.Overridable;
-import vi.mixin.api.transformers.extendertype.ExtenderMethodEditor;
-import vi.mixin.api.transformers.extendertype.ExtenderMethodTransformer;
+import vi.mixin.api.classtypes.extendertype.ExtenderAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.extendertype.ExtenderMixinClassType;
+import vi.mixin.api.classtypes.extendertype.ExtenderTargetMethodEditor;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
+import vi.mixin.api.transformers.TransformerSupplier;
 
-public class OverridableTransformer implements ExtenderMethodTransformer<Overridable> {
+import java.util.List;
 
-    private static void validate(ExtenderMethodEditor methodEditor, Overridable annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        MethodNode mixinMethodNode = methodEditor.getMixinMethodNodeClone();
+public class OverridableTransformer implements TransformerSupplier {
+
+    private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, Overridable annotation) {
+        if(!targetMethodNodeClone.name.equals(mixinMethodNodeClone.name)) return false;
+        if(annotation.value().isEmpty()) return targetMethodNodeClone.desc.split("\\)")[0].equals(mixinMethodNodeClone.desc.split("\\)")[0]);
+        if(annotation.value().startsWith("(")) return targetMethodNodeClone.desc.equals(annotation.value());
+        return targetMethodNodeClone.desc.split("\\)")[0].equals(annotation.value());
+    }
+
+    private static void validate(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Overridable annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
 
         String name = "@Overridable " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(methodEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = methodEditor.getTargetMethodNodeClone(0);
+        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
         if(targetMethodNode.name.equals("<init>")) throw new MixinFormatException(name, "overriding a constructor is not allowed. use @New");
         if((mixinMethodNode.access & ACC_STATIC) != 0) throw new MixinFormatException(name, "should be not static");
@@ -29,10 +42,16 @@ public class OverridableTransformer implements ExtenderMethodTransformer<Overrid
         }
     }
 
+    private static void transform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Overridable annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        targetEditor.makeNonFinal(0);
+        targetEditor.makePublic(0);
+    }
+
     @Override
-    public void transform(ExtenderMethodEditor methodEditor, Overridable annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(methodEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        methodEditor.makeTargetNonFinal(0);
-        methodEditor.makeTargetPublic(0);
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedMethodTransformerBuilder(ExtenderMixinClassType.class, Overridable.class).withMethodTarget().setTargetFilter(OverridableTransformer::targetFilter).setTransformer(OverridableTransformer::transform).build()
+        );
     }
 }

@@ -10,7 +10,7 @@
   -XX:+AllowEnhancedClassRedefinition -Xshare:off -javaagent:<mixin jar location>
   ```
 - **Manifest:**  
-  Specify the mixin file in your JAR manifest using the `Mixin-Classes-File` attribute.
+  Specify the mixin classes file in your JAR manifest using the `Mixin-Classes-File` attribute.
 
 ## Getting Started
 
@@ -81,6 +81,26 @@ Declares a class as a mixin for the specified target class.
 @Mixin(TargetClass.class)
 public class TargetMixin { ... }
 ```
+
+---
+
+### Using Object as a type fallback
+
+If the real type of a parameter, return value, or field is not accessible from your mixin (for example it's package-private or in a different classloader), you may use `Object` as a fallback in your mixin signatures. The mixin system will still match by position and descriptor at the bytecode level, so replacing an inaccessible type with `Object` allows you to compile the mixin while still operating on the correct value at runtime.
+
+Example:
+
+```java
+// real signature: private String secretMethod(com.example.PrivateType t)
+@Mixin(Target.class)
+interface Accessor {
+	@Invoker("secretMethod(Lcom/example/PrivateType;)Ljava/lang/String;")
+	Object callSecret(Object t); // use Object when PrivateType isn't visible
+}
+```
+
+Use this pattern for method parameters, return types, and field types when necessary.
+
 
 ---
 
@@ -193,6 +213,25 @@ class TargetSubclass {
 	public int methodName(int x) { ... }
 }
 ```
+
+---
+
+## Using Object as a type fallback
+
+If the real type of a parameter, return value, or field is not accessible from your mixin (for example it's package-private), you may use `Object` as a fallback in your mixin signatures. The mixin system will still match by the provided descriptor.
+
+Example:
+
+```java
+@Mixin(Target.class)
+interface TargetAccessor { 
+	// real signature: private PrivateType clone(PrivateType t)
+	@Invoker("clone(Lcom/example/PrivateType;)Lcom/example/PrivateType;") 
+	static Object clone(Object t); // use Object when PrivateType isn't visible
+}
+```
+
+Note that this it will not work for primitives.
 
 ---
 
@@ -356,8 +395,6 @@ Use this if you load classes instead of reflection or custom class loaders (such
 ## Transformer API Reference
 
 This section documents the main public API interfaces and abstract classes in `vi.mixin.api.transformers` and its subpackages. These are the core building blocks for custom bytecode manipulation in mixin. Implementation details are intentionally omitted; only the API surface is described.
-
-For a fuller developer-oriented reference with examples and editor contracts see: `docs/transformers_api.md`.
 
 ### Overview
 
