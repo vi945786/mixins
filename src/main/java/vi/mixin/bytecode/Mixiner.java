@@ -21,10 +21,6 @@ import vi.mixin.api.transformers.TransformerHelper;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
-import vi.mixin.api.transformers.built.AnnotatedFieldTargetFieldBuiltTransformer;
-import vi.mixin.api.transformers.built.AnnotatedFieldTargetMethodBuiltTransformer;
-import vi.mixin.api.transformers.built.AnnotatedMethodTargetFieldBuiltTransformer;
-import vi.mixin.api.transformers.built.AnnotatedMethodTargetMethodBuiltTransformer;
 
 import java.lang.annotation.Annotation;
 import java.lang.instrument.ClassDefinition;

@@ -4,7 +4,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.editors.AnnotatedFieldEditor;
-import vi.mixin.api.editors.AnnotatedMethodEditor;
 import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.transformers.BuiltTransformer;
 

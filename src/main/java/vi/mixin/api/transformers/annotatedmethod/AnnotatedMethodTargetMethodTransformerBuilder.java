@@ -1,10 +1,8 @@
 package vi.mixin.api.transformers.annotatedmethod;
 
-import org.objectweb.asm.Type;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.editors.AnnotatedMethodEditor;
 import vi.mixin.api.editors.TargetMethodEditor;
-import vi.mixin.api.transformers.TransformerHelper;
 import vi.mixin.api.transformers.built.AnnotatedMethodTargetMethodBuiltTransformer;
 import vi.mixin.api.classtypes.MixinClassType;
 

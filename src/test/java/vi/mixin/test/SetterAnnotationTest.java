@@ -3,7 +3,6 @@ package vi.mixin.test;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-import vi.mixin.api.annotations.methods.Inject;
 import vi.mixin.api.annotations.methods.Setter;
 import vi.mixin.api.annotations.Mixin;
 

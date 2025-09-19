@@ -2,10 +2,6 @@ package vi.mixin.api.transformers;
 
 import org.objectweb.asm.tree.ClassNode;
 import vi.mixin.api.classtypes.MixinClassType;
-import vi.mixin.api.editors.AnnotatedFieldEditor;
-import vi.mixin.api.editors.AnnotatedMethodEditor;
-import vi.mixin.api.editors.TargetFieldEditor;
-import vi.mixin.api.editors.TargetMethodEditor;
 
 import java.lang.annotation.Annotation;
 

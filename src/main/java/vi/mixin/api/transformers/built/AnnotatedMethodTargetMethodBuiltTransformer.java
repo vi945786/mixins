@@ -1,7 +1,6 @@
 package vi.mixin.api.transformers.built;
 
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.editors.AnnotatedMethodEditor;

@@ -3,7 +3,6 @@ package vi.mixin.api.transformers;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 import vi.mixin.api.injection.At;
 import vi.mixin.bytecode.MixinClassHelper;
 import vi.mixin.bytecode.Mixiner;

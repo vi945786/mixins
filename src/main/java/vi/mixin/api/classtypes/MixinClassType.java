@@ -10,7 +10,6 @@ import vi.mixin.api.editors.TargetMethodEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
-import vi.mixin.api.transformers.BuiltTransformer;
 
 import java.lang.annotation.Annotation;
 
