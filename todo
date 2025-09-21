@@ -25,5 +25,6 @@ mixinclass @ModifyValue - method, @At
 anonymous classes inside mixin classes
 
 add Vars to the readme
+add @Redirect to the readme
 @Redirect test FIELD GETSTATIC PUTSTATIC GETFIELD PUTFIELD
 @Redirect with Vars
