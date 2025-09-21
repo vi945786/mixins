@@ -15,10 +15,10 @@ import java.lang.annotation.Annotation;
 
 public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethodEditor, AF extends AnnotatedFieldEditor, TM extends TargetMethodEditor, TF extends TargetFieldEditor> extends Opcodes {
 
-    AM create(MethodNode mixinMethodNode);
-    AF create(FieldNode mixinFieldNode);
-    TM create(MixinClassTargetMethodEditor[] targetMethodEditors);
-    TF create(MixinClassTargetFieldEditor[] targetFieldEditors);
+    AM create(MethodNode mixinMethodNode, Object targetEditor);
+    AF create(FieldNode mixinFieldNode, Object targetEditor);
+    TM create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors);
+    TF create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors);
 
     String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<AM, AF, TM, TF> editors, A annotation, MixinClassTargetClassEditor targetClassEditor);
 }

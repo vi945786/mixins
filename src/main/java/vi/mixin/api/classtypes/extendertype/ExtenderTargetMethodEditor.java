@@ -5,15 +5,15 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 
 public class ExtenderTargetMethodEditor extends TargetMethodEditor {
 
-    public ExtenderTargetMethodEditor(MixinClassTargetMethodEditor[] targetMethodEditors) {
-        super(targetMethodEditors);
+    public ExtenderTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
+        super(targetMethodEditors, mixinEditor);
     }
 
-    public void makeNonFinal(int index) {
-        targetMethodEditors[index].makeNonFinal();
+    public void makeNonFinal() {
+        targetMethodEditor.makeNonFinal();
     }
 
-    public void makePublic(int index) {
-        targetMethodEditors[index].makePublic();
+    public void makePublic() {
+        targetMethodEditor.makePublic();
     }
 }

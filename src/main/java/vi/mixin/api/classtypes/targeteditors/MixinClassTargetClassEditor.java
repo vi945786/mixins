@@ -24,8 +24,8 @@ public class MixinClassTargetClassEditor {
         original.accept(this.original);
         this.c = c;
 
-        original.methods.forEach(methodNode -> originalMethodNodes.put(methodNode.name + methodNode.desc, methodNode));
-        original.fields.forEach(fieldNode -> originalFieldNodes.put(fieldNode.name, fieldNode));
+        this.original.methods.forEach(methodNode -> originalMethodNodes.put(methodNode.name + methodNode.desc, methodNode));
+        this.original.fields.forEach(fieldNode -> originalFieldNodes.put(fieldNode.name, fieldNode));
     }
 
     public ClassNode getClassNodeClone() {
@@ -65,17 +65,17 @@ public class MixinClassTargetClassEditor {
     public void addMethod(MethodNode methodNode) {
         modified.methods.add(methodNode);
 
-        MethodNode cloneMethodNode = new MixinClassTargetMethodEditor(methodNode, methodNode).getMethodNodeClone();
+        MethodNode cloneMethodNode = new MixinClassTargetMethodEditor(original.name, methodNode, methodNode).getMethodNodeClone();
         original.methods.add(cloneMethodNode);
         originalMethodNodes.put(cloneMethodNode.name + cloneMethodNode.desc, cloneMethodNode);
     }
 
     public List<MixinClassTargetMethodEditor> getMethodEditors() {
-        return modified.methods.stream().map(methodNode -> new MixinClassTargetMethodEditor(methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).toList();
+        return modified.methods.stream().map(methodNode -> new MixinClassTargetMethodEditor(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).toList();
     }
 
     public List<MixinClassTargetMethodEditor> getMethodEditors(String name) {
-        return modified.methods.stream().filter(methodNode -> methodNode.name.equals(name)).map(methodNode -> new MixinClassTargetMethodEditor(methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).toList();
+        return modified.methods.stream().filter(methodNode -> methodNode.name.equals(name)).map(methodNode -> new MixinClassTargetMethodEditor(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).toList();
     }
 
     public MixinClassTargetMethodEditor getMethodEditor(String nameAndDesc) {
@@ -93,7 +93,7 @@ public class MixinClassTargetClassEditor {
                 }
 
                 return true;
-        }).map(methodNode -> new MixinClassTargetMethodEditor(methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).findAny().orElse(null);
+        }).map(methodNode -> new MixinClassTargetMethodEditor(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).findAny().orElse(null);
     }
 
     public void addField(FieldNode fieldNode) {

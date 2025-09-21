@@ -22,9 +22,8 @@ mixinclass @ModifyValue - method, @At
     1 parameter: the type of the value to change
     returns the new value
 
-@Local - type (optional), ordinal (optional)
-    //check the local variable table for the type
-    on a parameter after the last parameter (can have as many as you want)
-    should work on @Inject, @Redirect, @ModifyArg, @ModifyArgs, @ModifyValue
-
 anonymous classes inside mixin classes
+
+add Vars to the readme
+@Redirect test FIELD GETSTATIC PUTSTATIC GETFIELD PUTFIELD
+@Redirect with Vars

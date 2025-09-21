@@ -33,17 +33,15 @@ public class NewTransformer implements TransformerSupplier {
 
     private static void validate(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         String name = "@New " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
-
         if((mixinMethodNode.access & ACC_STATIC) == 0) throw new MixinFormatException(name, "should be static");
         Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
         Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
         if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
-            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
         }
         Type returnType = Type.getReturnType(mixinMethodNode.desc);
         if(!returnType.getInternalName().equals(targetClassNodeClone.name) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + "L" + targetClassNodeClone.name + ";" + ", " + Type.getType(Object.class));
@@ -51,17 +49,15 @@ public class NewTransformer implements TransformerSupplier {
 
     private static void extenderValidate(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         String name = "@New " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
-
         if((mixinMethodNode.access & ACC_STATIC) == 0) throw new MixinFormatException(name, "should be static");
         Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
         Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
         if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
-            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
         }
 
         Type returnType = Type.getReturnType(mixinMethodNode.desc);
@@ -71,9 +67,9 @@ public class NewTransformer implements TransformerSupplier {
     private static void mixinTransform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
         mixinEditor.doNotCopyToTargetClass();
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
-        targetEditor.makePublic(0);
+        targetEditor.makePublic();
 
         InsnList insnList = new InsnList();
         insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
@@ -89,9 +85,9 @@ public class NewTransformer implements TransformerSupplier {
 
     private static void accessorTransform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-         MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
-        targetEditor.makePublic(0);
+        targetEditor.makePublic();
 
         InsnList insnList = new InsnList();
         insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
@@ -107,7 +103,7 @@ public class NewTransformer implements TransformerSupplier {
 
     private static void extenderTransform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         extenderValidate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        targetEditor.makePublic(0);
+        targetEditor.makePublic();
         mixinEditor.delete();
     }
 

@@ -1,6 +1,5 @@
 package vi.mixin.api.transformers.annotatedfield;
 
-import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.editors.AnnotatedFieldEditor;
 import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.transformers.built.AnnotatedFieldTargetFieldBuiltTransformer;
@@ -23,10 +22,10 @@ public class AnnotatedFieldTargetFieldTransformerBuilder<A extends Annotation, A
             if(value.isEmpty()) {
                 return mixinFieldNodeClone.name.equals(targetFieldNodeClone.name);
             } else {
-                return targetFieldNodeClone.name.equals(value);
+                return (targetFieldNodeClone.name + (value.contains(";") ? ";" + targetFieldNodeClone.desc : "")).equals(value);
             }
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassCastException e) {
-            throw new MixinFormatException(annotation.annotationType().getName(), "use setTargetFilter when building the transformer to set a custom filter function");
+            return mixinFieldNodeClone.name.equals(targetFieldNodeClone.name);
         }
     };
 

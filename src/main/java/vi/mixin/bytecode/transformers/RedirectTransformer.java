@@ -1,0 +1,129 @@
+package vi.mixin.bytecode.transformers;
+
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.*;
+import vi.mixin.api.MixinFormatException;
+import vi.mixin.api.annotations.methods.Redirect;
+import vi.mixin.api.classtypes.mixintype.MixinAnnotatedMethodEditor;
+import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
+import vi.mixin.api.classtypes.mixintype.MixinTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
+import vi.mixin.api.injection.At;
+import vi.mixin.api.injection.Vars;
+import vi.mixin.api.transformers.BuiltTransformer;
+import vi.mixin.api.transformers.TransformerBuilder;
+import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.transformers.TransformerSupplier;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class RedirectTransformer implements TransformerSupplier {
+
+    private static Type[] getArgs(MixinAnnotatedMethodEditor mixinEditor, Redirect annotation, ClassNode mixinClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+
+        String name = "@Redirect " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
+
+        List<Type> args = new ArrayList<>();
+
+        At at = annotation.at();
+        switch (at.value()) {
+            case INVOKE -> {
+               switch (at.opcode()) {
+                   case INVOKEVIRTUAL, INVOKESPECIAL, INVOKEINTERFACE  -> args.add(Type.getType("L" + at.target().split("\\.")[0] + ";"));
+                   case INVOKESTATIC -> {}
+                   default -> throw new MixinFormatException(name, "unsupported @At method opcode. supported values are: Opcodes.INVOKEVIRTUAL, Opcodes.INVOKESPECIAL, Opcodes.INVOKESTATIC, Opcodes.INVOKEINTERFACE");
+               }
+               args.addAll(List.of(Type.getArgumentTypes("(" + at.target().split("\\(")[1])));
+            }
+            case FIELD -> {
+                switch (at.opcode()) {
+                    case GETSTATIC -> {}
+                    case PUTSTATIC -> args.add(Type.getType(at.target().split(";")[1]));
+                    case GETFIELD -> args.add(Type.getType("L" + at.target().split("\\.")[0] + ";"));
+                    case PUTFIELD -> {
+                        args.add(Type.getType("L" + at.target().split("\\.")[0] + ";"));
+                        args.add(Type.getType(at.target().split(";")[1]));
+                    }
+                    default -> throw new MixinFormatException(name, "unsupported @At method opcode. supported values are: Opcodes.INVOKEVIRTUAL, Opcodes.INVOKESPECIAL, Opcodes.INVOKESTATIC, Opcodes.INVOKEINTERFACE");
+               }
+            }
+            default -> throw new MixinFormatException(name, "unsupported @At location. supported values are: INVOKE, FIELD");
+        }
+        return args.toArray(Type[]::new);
+    }
+
+    private static void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
+
+        String name = "@Redirect " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
+        if((targetMethodNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetMethodNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
+        if(!Type.getReturnType(mixinMethodNode.desc).equals(Type.getReturnType(targetMethodNode.desc)) && !Type.getReturnType(mixinMethodNode.desc).equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + Type.getReturnType(targetMethodNode.desc) + ", " + Type.getType(Object.class));
+        Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
+        Type[] targetArgumentTypes = getArgs(mixinEditor, annotation, mixinClassNodeClone);
+        if(mixinArgumentTypes.length < targetArgumentTypes.length) throw new MixinFormatException(name, "there should be at least " + targetArgumentTypes.length + " arguments");
+        for (int i = 0; i < targetArgumentTypes.length; i++) {
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + (i+1) + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+        }
+        if(mixinArgumentTypes.length > targetArgumentTypes.length+1) throw new MixinFormatException(name, "illegal number of parameters");
+        if(mixinArgumentTypes.length == targetArgumentTypes.length+1 && !mixinArgumentTypes[targetArgumentTypes.length+1].equals(Type.getType(Vars.class))) throw new MixinFormatException(name, "non Vars parameter after required parameters");
+    }
+
+    private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
+
+        mixinEditor.makePublic();
+
+        MixinClassTargetInsnListEditor insnListEditor = targetEditor.getInsnListEditor();
+        InsnList targetList = insnListEditor.getInsnListClone();
+        List<Integer> atIndexes = TransformerHelper.getAtTargetIndexes(targetList, annotation.at());
+
+        boolean isStatic = (mixinMethodNode.access & ACC_STATIC) != 0;
+
+        if(!isStatic) {
+            Type[] mixinArgs = Type.getArgumentTypes(mixinMethodNode.desc);
+
+            Analyzer<BasicValue> analyzer = new Analyzer<>(new BasicInterpreter());
+            try {
+                analyzer.analyze(targetClassNodeClone.name, targetMethodNode);
+            } catch (AnalyzerException e) {
+                throw new RuntimeException(e);
+            }
+
+            for (int atIndex : atIndexes) {
+                AbstractInsnNode cursor = targetList.get(atIndex).getPrevious();
+                int remaining = mixinArgs.length;
+                List<AbstractInsnNode> argLoads = new ArrayList<>();
+                Frame<BasicValue> f = analyzer.getFrames()[atIndex];
+
+                while (remaining > 0 && cursor != null) {
+                    Frame<BasicValue> cf = analyzer.getFrames()[targetList.indexOf(cursor) + 1];
+                    if (cf != null && cf.getStackSize() == f.getStackSize() - remaining + 1) {
+                        argLoads.addFirst(cursor);
+                        remaining -= cf.getStack(cf.getStackSize() - 1).getSize();
+                    }
+                    cursor = cursor.getPrevious();
+                }
+
+                insnListEditor.insertBefore(argLoads.isEmpty() ? atIndex : targetList.indexOf(argLoads.getFirst()), new VarInsnNode(ALOAD, 0));
+            }
+        }
+
+        for (int atIndex : atIndexes) {
+            insnListEditor.insertBefore(atIndex, new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc(targetClassNodeClone.name)));
+            insnListEditor.remove(atIndex);
+        }
+    }
+
+    @Override
+    public List<BuiltTransformer> getBuiltTransformers() {
+        return List.of(
+                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, Redirect.class).withMethodTarget().setTransformer(RedirectTransformer::transform).build()
+        );
+    }
+}

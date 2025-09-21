@@ -16,23 +16,23 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderAnnotatedMethodEditor, ExtenderAnnotatedFieldEditor, ExtenderTargetMethodEditor, ExtenderTargetFieldEditor> {
 
     @Override
-    public ExtenderAnnotatedMethodEditor create(MethodNode mixinMethodNode) {
-        return new ExtenderAnnotatedMethodEditor(mixinMethodNode);
+    public ExtenderAnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditors) {
+        return new ExtenderAnnotatedMethodEditor(mixinMethodNode, targetEditors);
     }
 
     @Override
-    public ExtenderAnnotatedFieldEditor create(FieldNode mixinFieldNode) {
-        return new ExtenderAnnotatedFieldEditor(mixinFieldNode);
+    public ExtenderAnnotatedFieldEditor create(FieldNode mixinFieldNode, Object targetEditors) {
+        return new ExtenderAnnotatedFieldEditor(mixinFieldNode, targetEditors);
     }
 
     @Override
-    public ExtenderTargetMethodEditor create(MixinClassTargetMethodEditor[] targetMethodEditors) {
-        return new ExtenderTargetMethodEditor(targetMethodEditors);
+    public ExtenderTargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
+        return new ExtenderTargetMethodEditor(targetMethodEditors, mixinEditor);
     }
 
     @Override
-    public ExtenderTargetFieldEditor create(MixinClassTargetFieldEditor[] targetFieldEditors) {
-        return new ExtenderTargetFieldEditor(targetFieldEditors);
+    public ExtenderTargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
+        return new ExtenderTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
     private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<ExtenderAnnotatedMethodEditor, ExtenderAnnotatedFieldEditor, ExtenderTargetMethodEditor, ExtenderTargetFieldEditor> editors, Extends annotation, MixinClassTargetClassEditor targetClassEditor) {

@@ -9,8 +9,8 @@ public class ExtenderAnnotatedFieldEditor extends AnnotatedFieldEditor {
     FieldInsnNode set = null;
     boolean delete = false;
 
-    protected ExtenderAnnotatedFieldEditor(FieldNode mixinFieldNode) {
-        super(mixinFieldNode);
+    protected ExtenderAnnotatedFieldEditor(FieldNode mixinFieldNode, Object targetEditors) {
+        super(mixinFieldNode, targetEditors);
     }
 
     public void changeGet(FieldInsnNode fieldInsnNode) {

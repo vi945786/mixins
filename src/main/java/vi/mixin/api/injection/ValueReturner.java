@@ -17,6 +17,17 @@ public class ValueReturner<R> extends Returner {
         return this.returnValue;
     }
 
+    public ValueReturner(         ) {                                  }
+    public ValueReturner(R       r) { returnValue =                 r; }
+    public ValueReturner(byte    r) { returnValue = (R) (Byte)      r; }
+    public ValueReturner(char    r) { returnValue = (R) (Character) r; }
+    public ValueReturner(double  r) { returnValue = (R) (Double)    r; }
+    public ValueReturner(float   r) { returnValue = (R) (Float)     r; }
+    public ValueReturner(int     r) { returnValue = (R) (Integer)   r; }
+    public ValueReturner(long    r) { returnValue = (R) (Long)      r; }
+    public ValueReturner(short   r) { returnValue = (R) (Short)     r; }
+    public ValueReturner(boolean r) { returnValue = (R) (Boolean)   r; }
+
     public byte    getReturnValueB() { if (this.returnValue == null) { return 0;     } return (Byte)      this.returnValue; }
     public char    getReturnValueC() { if (this.returnValue == null) { return 0;     } return (Character) this.returnValue; }
     public double  getReturnValueD() { if (this.returnValue == null) { return 0.0;   } return (Double)    this.returnValue; }

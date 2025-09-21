@@ -4,11 +4,11 @@ import vi.mixin.api.editors.TargetMethodEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 
 public class AccessorTargetMethodEditor extends TargetMethodEditor {
-    protected AccessorTargetMethodEditor(MixinClassTargetMethodEditor[] targetMethodEditors) {
-        super(targetMethodEditors);
+    protected AccessorTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
+        super(targetMethodEditors, mixinEditor);
     }
 
-    public void makePublic(int index) {
-        targetMethodEditors[index].makePublic();
+    public void makePublic() {
+        targetMethodEditor.makePublic();
     }
 }

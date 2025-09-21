@@ -14,29 +14,28 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 
-import static vi.mixin.api.transformers.TransformerHelper.addLoadOpcodesOfMethod;
-import static vi.mixin.api.transformers.TransformerHelper.getOuterClassInstanceFieldName;
+import static vi.mixin.api.transformers.TransformerHelper.*;
 
 public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> {
 
     @Override
-    public MixinAnnotatedMethodEditor create(MethodNode mixinMethodNode) {
-        return new MixinAnnotatedMethodEditor(mixinMethodNode);
+    public MixinAnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditors) {
+        return new MixinAnnotatedMethodEditor(mixinMethodNode, targetEditors);
     }
 
     @Override
-    public MixinAnnotatedFieldEditor create(FieldNode mixinFieldNode) {
-        return new MixinAnnotatedFieldEditor(mixinFieldNode);
+    public MixinAnnotatedFieldEditor create(FieldNode mixinFieldNode, Object targetEditors) {
+        return new MixinAnnotatedFieldEditor(mixinFieldNode, targetEditors);
     }
 
     @Override
-    public MixinTargetMethodEditor create(MixinClassTargetMethodEditor[] targetMethodEditors) {
-        return new MixinTargetMethodEditor(targetMethodEditors);
+    public MixinTargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors) {
+        return new MixinTargetMethodEditor(targetMethodEditors, mixinEditors);
     }
 
     @Override
-    public MixinTargetFieldEditor create(MixinClassTargetFieldEditor[] targetFieldEditors) {
-        return new MixinTargetFieldEditor(targetFieldEditors);
+    public MixinTargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors) {
+        return new MixinTargetFieldEditor(targetFieldEditors, mixinEditors);
     }
 
     private ClassNode mixinClassNode;
@@ -124,19 +123,27 @@ public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnn
                 return;
             }
 
+            String oldDesc = methodNode.desc;
+            int oldAccess = methodNode.access;
+            if ((methodNode.access & ACC_STATIC) == 0) methodNode.desc = getNewDesc(methodNode.desc, targetClassNode.name);
+            methodNode.access |= ACC_STATIC;
+
             if(methodEditor.copy) {
+                if((methodNode.access & ACC_ABSTRACT) != 0) throw new IllegalStateException("cannot copy the abstract method " + mixinClassNode.name + "." + methodNode.name + methodNode.desc);
+
                 //make methods acts like instance methods of target
                 methodNode.access &= ~ACC_PRIVATE;
                 methodNode.access &= ~ACC_PROTECTED;
                 methodNode.access |= ACC_PUBLIC;
 
                 //add invokers in target class
-                methodNode.access &= ~ACC_ABSTRACT;
-                MethodNode addMethodNode = new MethodNode(methodNode.access, replaceName + methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(String[]::new));
+                MethodNode addMethodNode = new MethodNode(oldAccess, replaceName + methodNode.name, oldDesc, methodNode.signature, methodNode.exceptions.toArray(String[]::new));
                 targetClassEditor.addMethod(addMethodNode);
                 boolean isStatic = (addMethodNode.access & ACC_STATIC) != 0;
-                if ((methodNode.access & ACC_STATIC) == 0) methodNode.desc = getNewDesc(methodNode.desc, targetClassNode.name);
-                methodNode.access |= ACC_STATIC;
+
+                addMethodNode.access &= ~ACC_PRIVATE;
+                addMethodNode.access &= ~ACC_PROTECTED;
+                addMethodNode.access |= ACC_PUBLIC;
 
                 int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(addMethodNode.desc));
 

@@ -16,23 +16,23 @@ import java.lang.annotation.Annotation;
 public final class AccessorMixinClassType implements MixinClassType<Annotation, AccessorAnnotatedMethodEditor, AnnotatedFieldEditor, AccessorTargetMethodEditor, AccessorTargetFieldEditor> {
 
     @Override
-    public AccessorAnnotatedMethodEditor create(MethodNode mixinMethodNode) {
-        return new AccessorAnnotatedMethodEditor(mixinMethodNode);
+    public AccessorAnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditor) {
+        return new AccessorAnnotatedMethodEditor(mixinMethodNode, targetEditor);
     }
 
     @Override
-    public AnnotatedFieldEditor create(FieldNode mixinFieldNode) {
+    public AnnotatedFieldEditor create(FieldNode mixinFieldNode, Object targetEditor) {
         throw new UnsupportedOperationException("Accessor classes cannot have annotation mixin fields");
     }
 
     @Override
-    public AccessorTargetMethodEditor create(MixinClassTargetMethodEditor[] targetMethodEditors) {
-        return new AccessorTargetMethodEditor(targetMethodEditors);
+    public AccessorTargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
+        return new AccessorTargetMethodEditor(targetMethodEditors, mixinEditor);
     }
 
     @Override
-    public AccessorTargetFieldEditor create(MixinClassTargetFieldEditor[] targetFieldEditors) {
-        return new AccessorTargetFieldEditor(targetFieldEditors);
+    public AccessorTargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
+        return new AccessorTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
     @Override

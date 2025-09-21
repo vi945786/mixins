@@ -26,11 +26,9 @@ public class SetterTransformer implements TransformerSupplier {
 
     private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
         String name = "@Setter " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
-
         if((targetFieldNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetFieldNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         if(!Type.getReturnType(mixinMethodNode.desc).equals(Type.VOID_TYPE)) throw new MixinFormatException(name, "should return void");
         Type[] argumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
@@ -40,10 +38,10 @@ public class SetterTransformer implements TransformerSupplier {
     private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
-        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
-        targetEditor.makePublic(0);
-        targetEditor.makeNonFinal(0);
+        targetEditor.makePublic();
+        targetEditor.makeNonFinal();
 
         boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
 

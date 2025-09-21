@@ -20,12 +20,9 @@ public class ShadowTransformer implements TransformerSupplier {
 
     private static void validateField(AnnotatedFieldEditor mixinEditor, TargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
         String name = "@Shadow " + mixinClassNodeClone.name + "." + mixinFieldNode.name;
-        if (targetEditor.getNumberOfTargets() != 1)
-            throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
-
         if ((targetFieldNode.access & ACC_STATIC) != (mixinFieldNode.access & ACC_STATIC))
             throw new MixinFormatException(name, "should be " + ((targetFieldNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         Type type = Type.getType(mixinFieldNode.desc);
@@ -35,11 +32,9 @@ public class ShadowTransformer implements TransformerSupplier {
 
     private static void validateMethod(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         String name = "@Shadow " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if (targetEditor.getNumberOfTargets() != 1)
-            throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
 
         if (targetMethodNode.name.equals("<init>"))
             throw new MixinFormatException(name, "shadowing a constructor is not allowed. use @New");
@@ -54,17 +49,17 @@ public class ShadowTransformer implements TransformerSupplier {
             throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
             if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class)))
-                throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " + Type.getType(Object.class));
+                throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " + Type.getType(Object.class));
         }
     }
 
     private static void mixinTransformField(MixinAnnotatedFieldEditor mixinEditor, MixinTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validateField(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
         FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
-        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
-        if ((mixinFieldNode.access & ACC_FINAL) == 0) targetEditor.makeNonFinal(0);
-        targetEditor.makePublic(0);
+        if ((mixinFieldNode.access & ACC_FINAL) == 0) targetEditor.makeNonFinal();
+        targetEditor.makePublic();
         mixinEditor.doNotCopyToTargetClass();
 
         boolean isStatic = (targetFieldNode.access & ACC_STATIC) != 0;
@@ -74,7 +69,7 @@ public class ShadowTransformer implements TransformerSupplier {
 
     private static void mixinTransformMethod(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validateMethod(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         mixinEditor.delete();
         mixinEditor.doNotCopyToTargetClass();
@@ -88,10 +83,10 @@ public class ShadowTransformer implements TransformerSupplier {
     private static void extenderTransformField(ExtenderAnnotatedFieldEditor mixinEditor, ExtenderTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validateField(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
         FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
-        FieldNode targetFieldNode = targetEditor.getFieldNodeClone(0);
+        FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
-        if ((mixinFieldNode.access & ACC_FINAL) == 0) targetEditor.makeNonFinal(0);
-        targetEditor.makePublic(0);
+        if ((mixinFieldNode.access & ACC_FINAL) == 0) targetEditor.makeNonFinal();
+        targetEditor.makePublic();
 
         mixinEditor.delete();
 
@@ -102,7 +97,7 @@ public class ShadowTransformer implements TransformerSupplier {
 
     private static void extenderTransformMethod(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validateMethod(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         mixinEditor.delete();
 

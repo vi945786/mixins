@@ -5,10 +5,12 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
 public class MixinClassTargetMethodEditor {
+    private final String className;
     private final MethodNode modified;
     private final MethodNode original;
 
-    public MixinClassTargetMethodEditor(MethodNode methodNode, MethodNode original) {
+    public MixinClassTargetMethodEditor(String className, MethodNode methodNode, MethodNode original) {
+        this.className = className;
         this.modified = methodNode;
         this.original = original;
     }
@@ -42,6 +44,6 @@ public class MixinClassTargetMethodEditor {
     }
 
     public MixinClassTargetInsnListEditor getInsnListEditor() {
-        return new MixinClassTargetInsnListEditor(modified.instructions, original.instructions);
+        return new MixinClassTargetInsnListEditor(className + "." + original.name + original.desc, modified.instructions, original.instructions);
     }
 }

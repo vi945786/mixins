@@ -5,9 +5,11 @@ import org.objectweb.asm.tree.MethodNode;
 
 public abstract class AnnotatedMethodEditor {
     protected final MethodNode mixinMethodNode;
+    protected final Object targetEditors;
 
-    protected AnnotatedMethodEditor(MethodNode mixinMethodNode) {
+    protected AnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditors) {
         this.mixinMethodNode = mixinMethodNode;
+        this.targetEditors = targetEditors;
     }
 
     public final MethodNode getMethodNodeClone() {

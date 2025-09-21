@@ -8,6 +8,7 @@ import vi.mixin.api.annotations.methods.Inject;
 import vi.mixin.api.injection.At;
 import vi.mixin.api.injection.Returner;
 import vi.mixin.api.injection.ValueReturner;
+import vi.mixin.api.injection.Vars;
 
 public class InjectAnnotationTest {
 
@@ -18,6 +19,7 @@ public class InjectAnnotationTest {
         public static int staticSum(int a, int b) { return a * b; }
         public static StringBuilder staticSb = new StringBuilder();
         public static void staticLog(String msg) { staticSb.append(msg); }
+        public static int sumWithLocal(int a, Integer b) { Integer i = 3; return a + b + i; }
     }
 
     @Test
@@ -44,6 +46,11 @@ public class InjectAnnotationTest {
         InjectTest.staticLog("hi");
         assertEquals("hi[static]", InjectTest.staticSb.toString());
     }
+
+    @Test
+    public void testSumWithLocal() {
+        assertEquals(63, InjectTest.sumWithLocal(4, 53));
+    }
 }
 
 @Mixin(InjectAnnotationTest.InjectTest.class)
@@ -67,5 +74,10 @@ class InjectTestMixin {
     @Inject(value = "staticLog(Ljava/lang/String;)V", at = @At(At.Location.RETURN))
     private static void injectStaticLog(String msg, Returner ret) {
         InjectAnnotationTest.InjectTest.staticSb.append("[static]");
+    }
+
+    @Inject(value = "sumWithLocal(ILjava/lang/Integer;)I", at = @At(At.Location.RETURN))
+    private static void injectSumWithLocal(int a, Integer b, ValueReturner<Integer> ret, Vars vars) {
+        ret.setReturnValue(ret.getReturnValue() + vars.<Integer>get(0));
     }
 }

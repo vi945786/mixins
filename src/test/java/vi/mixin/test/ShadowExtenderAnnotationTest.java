@@ -66,7 +66,7 @@ class ShadowTestExtender {
     @Shadow
     private int instanceField;
 
-    @Shadow("staticField")
+    @Shadow("staticField;I")
     private static int staticField;
 
     @Shadow("instanceMethod(I)I")

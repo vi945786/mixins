@@ -11,8 +11,8 @@ public class MixinAnnotatedMethodEditor extends AnnotatedMethodEditor {
     boolean copy = true;
     boolean delete = false;
 
-    protected MixinAnnotatedMethodEditor(MethodNode mixinMethodNode) {
-        super(mixinMethodNode);
+    protected MixinAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditors) {
+        super(mixinMethodNode, targetEditors);
     }
 
     public void changeInvoke(MethodInsnNode methodInsnNode) {
@@ -27,8 +27,14 @@ public class MixinAnnotatedMethodEditor extends AnnotatedMethodEditor {
         delete = true;
     }
 
+    public void makePublic() {
+        mixinMethodNode.access |= Opcodes.ACC_PUBLIC;
+        mixinMethodNode.access &= ~Opcodes.ACC_PRIVATE;
+        mixinMethodNode.access &= ~Opcodes.ACC_PROTECTED;
+    }
+
     public String getUpdatedDesc(String targetClassNodeName) {
-        if(copy && !delete && (mixinMethodNode.access & Opcodes.ACC_STATIC) == 0) return MixinMixinClassType.getNewDesc(mixinMethodNode.desc, targetClassNodeName);
+        if(!delete && (mixinMethodNode.access & Opcodes.ACC_STATIC) == 0) return MixinMixinClassType.getNewDesc(mixinMethodNode.desc, targetClassNodeName);
         return mixinMethodNode.desc;
     }
 

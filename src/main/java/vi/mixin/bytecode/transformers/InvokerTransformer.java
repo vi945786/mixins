@@ -20,11 +20,9 @@ public class InvokerTransformer implements TransformerSupplier {
 
     private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         String name = "@Invoker " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(targetEditor.getNumberOfTargets() != 1) throw new MixinFormatException(name, "illegal number of targets, should be 1");
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
-
         if(targetMethodNode.name.equals("<init>")) throw new MixinFormatException(name, "invoking a constructor is not allowed. use @New");
         if((targetMethodNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetMethodNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         Type returnType = Type.getReturnType(mixinMethodNode.desc);
@@ -33,16 +31,16 @@ public class InvokerTransformer implements TransformerSupplier {
         Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
         if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
-            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are:" + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
         }
     }
 
     private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
-        MethodNode targetMethodNode = targetEditor.getMethodNodeClone(0);
+        MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
-        targetEditor.makePublic(0);
+        targetEditor.makePublic();
 
         if(!targetMethodNode.name.equals(mixinMethodNode.name) /*|| (targetMethodNode.access & ACC_STATIC) != 0*/) {
             boolean isStatic = (targetMethodNode.access & ACC_STATIC) != 0;

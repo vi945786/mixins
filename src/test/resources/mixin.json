@@ -13,6 +13,7 @@
     "vi.mixin.test.TargetNewAccessor",
     "vi.mixin.test.TargetNewMixin",
     "vi.mixin.test.OverridableAnnotationTestExtender",
+    "vi.mixin.test.RedirectTestMixin",
     "vi.mixin.test.TargetSetterAccessor",
     "vi.mixin.test.ShadowTestExtender",
     "vi.mixin.test.ShadowTestMixin",

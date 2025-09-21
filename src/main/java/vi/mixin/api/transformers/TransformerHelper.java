@@ -16,6 +16,20 @@ import static org.objectweb.asm.tree.AbstractInsnNode.*;
 
 public final class TransformerHelper implements Opcodes {
 
+    public static Type getBoxedType(Type type) {
+        switch (type.getSort()) {
+            case Type.BOOLEAN: return Type.getType(Boolean.class);
+            case Type.CHAR:    return Type.getType(Character.class);
+            case Type.BYTE:    return Type.getType(Byte.class);
+            case Type.SHORT:   return Type.getType(Short.class);
+            case Type.INT:     return Type.getType(Integer.class);
+            case Type.FLOAT:   return Type.getType(Float.class);
+            case Type.LONG:    return Type.getType(Long.class);
+            case Type.DOUBLE:  return Type.getType(Double.class);
+            default: throw new IllegalArgumentException("Not a primitive: " + type);
+        }
+    }
+
     public static int getReturnOpcode(Type returnType) {
         return switch (returnType.getSort()) {
             case Type.BOOLEAN, Type.BYTE, Type.SHORT, Type.INT -> IRETURN;
@@ -93,9 +107,9 @@ public final class TransformerHelper implements Opcodes {
              case RETURN ->
                      getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), ordinal);
              case TAIL ->
-                     Collections.singletonList(getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), List.of()).getLast());
+                     List.of(getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), List.of()).getLast());
              case INVOKE -> {
-                 int splitOwner = target.indexOf(';');
+                 int splitOwner = target.indexOf('.');
                  int splitName = target.indexOf('(');
                  String owner = target.substring(0, splitOwner);
                  String name = target.substring(splitOwner+1, splitName);
@@ -103,12 +117,12 @@ public final class TransformerHelper implements Opcodes {
                  yield getInsnNodesIndexes(list, METHOD_INSN, List.of(INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC, INVOKEINTERFACE), ordinal, owner, name, desc);
              }
              case FIELD -> {
-                 int splitOwner = target.indexOf(';');
+                 int splitOwner = target.indexOf('.');
                  String owner = target.substring(0, splitOwner);
                  String name = target.substring(splitOwner+1);
                  yield getInsnNodesIndexes(list, FIELD_INSN, opcode, ordinal, owner, name, null);
              }
-             case JUMP -> getInsnNodesIndexes(list, JUMP_INSN, opcode, ordinal, (Object) null);
+             case JUMP -> getInsnNodesIndexes(list, JUMP_INSN, opcode, ordinal);
          };
     }
 
@@ -243,6 +257,7 @@ public final class TransformerHelper implements Opcodes {
 
         InvocationHandler handler = (proxy, method, args) -> {
             if (method.getName().equals("annotationType")) return annotationClass;
+            if (method.getName().equals("hashCode")) return System.identityHashCode(proxy);
 
             if (values.containsKey(method.getName())) {
                 return values.get(method.getName());

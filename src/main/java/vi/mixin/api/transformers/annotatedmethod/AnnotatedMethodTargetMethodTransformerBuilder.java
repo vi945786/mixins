@@ -1,6 +1,5 @@
 package vi.mixin.api.transformers.annotatedmethod;
 
-import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.editors.AnnotatedMethodEditor;
 import vi.mixin.api.editors.TargetMethodEditor;
 import vi.mixin.api.transformers.built.AnnotatedMethodTargetMethodBuiltTransformer;
@@ -26,7 +25,7 @@ public class AnnotatedMethodTargetMethodTransformerBuilder<A extends Annotation,
                 return (targetMethodNodeClone.name + (onlyName ? "" : targetMethodNodeClone.desc)).equals(value);
             }
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassCastException e) {
-            throw new MixinFormatException(annotation.annotationType().getName(), "use setTargetFilter when building the transformer to set a custom filter function");
+            return targetMethodNodeClone.name.equals(mixinMethodNodeClone.name) && mixinMethodNodeClone.desc.equals(targetMethodNodeClone.desc);
         }
     };
 

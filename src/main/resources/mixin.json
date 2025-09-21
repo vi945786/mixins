@@ -8,6 +8,7 @@
     "vi.mixin.bytecode.transformers.InvokerTransformer",
     "vi.mixin.bytecode.transformers.NewTransformer",
     "vi.mixin.bytecode.transformers.OverridableTransformer",
+    "vi.mixin.bytecode.transformers.RedirectTransformer",
     "vi.mixin.bytecode.transformers.SetterTransformer",
     "vi.mixin.bytecode.transformers.ShadowTransformer"
   ]

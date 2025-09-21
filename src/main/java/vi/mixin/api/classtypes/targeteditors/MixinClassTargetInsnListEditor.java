@@ -7,7 +7,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 public class MixinClassTargetInsnListEditor {
-    private static final IdentityHashMap<InsnList, List<OpcodeState>> isOriginalOpcode;
+    private static final HashMap<String, List<OpcodeState>> isOriginalOpcode;
 
     private enum OpcodeState {
         ORIGINAL,
@@ -20,25 +20,30 @@ public class MixinClassTargetInsnListEditor {
             try {
                 Field isOriginalOpcodeField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("isOriginalOpcode");
                 isOriginalOpcodeField.setAccessible(true);
-                isOriginalOpcode = (IdentityHashMap<InsnList, List<OpcodeState>>) isOriginalOpcodeField.get(null);
+                isOriginalOpcode = (HashMap<String, List<OpcodeState>>) isOriginalOpcodeField.get(null);
             } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            isOriginalOpcode = new IdentityHashMap<>();
+            isOriginalOpcode = new HashMap<>();
         }
     }
 
+    private final String id;
     private final InsnList modified;
     private final InsnList original;
 
-    public MixinClassTargetInsnListEditor(InsnList insnList, InsnList original) {
+    public MixinClassTargetInsnListEditor(String id, InsnList insnList, InsnList original) {
+        this.id = id;
         this.modified = insnList;
-        this.original = original;
 
-        if(!isOriginalOpcode.containsKey(modified)) {
+        MethodNode clone = new MethodNode();
+        original.accept(clone);
+        this.original = clone.instructions;
+
+        if(!isOriginalOpcode.containsKey(id)) {
             List<OpcodeState> isOriginalList = new ArrayList<>();
-            isOriginalOpcode.put(modified, isOriginalList);
+            isOriginalOpcode.put(id, isOriginalList);
             for(AbstractInsnNode node : modified) {
                 isOriginalList.add(OpcodeState.ORIGINAL);
             }
@@ -48,14 +53,60 @@ public class MixinClassTargetInsnListEditor {
     public InsnList getInsnListClone() {
         MethodNode clone = new MethodNode();
         original.accept(clone);
+
+        for (int i = 0; i < original.size(); i++) {
+            if(clone.instructions.get(i) instanceof LabelNode labelNode) {
+                originalLabelMap.put(labelNode, (LabelNode) original.get(i));
+            }
+        }
+
         return clone.instructions;
+    }
+
+    HashMap<LabelNode, LabelNode> originalLabelMap = new HashMap<>();
+    private InsnList cloneToOriginal(InsnList list) {
+        Arrays.stream(list.toArray())
+                .filter(node -> node instanceof LabelNode labelNode && !originalLabelMap.containsKey(labelNode))
+                .forEach(node -> originalLabelMap.put((LabelNode) node, new LabelNode()));
+
+        InsnList clone = new InsnList();
+        Arrays.stream(list.toArray()).forEach(node -> clone.add(node.clone(originalLabelMap)));
+
+        return clone;
+    }
+
+    private AbstractInsnNode cloneToOriginal(AbstractInsnNode node) {
+        InsnList list = new InsnList();
+        list.add(node);
+
+        return cloneToOriginal(list).getFirst();
+    }
+
+    HashMap<LabelNode, LabelNode> originalToModifiedLabelMap = new HashMap<>();
+    private InsnList cloneToModified(InsnList list) {
+        list = cloneToOriginal(list);
+        Arrays.stream(list.toArray())
+                .filter(node -> node instanceof LabelNode labelNode && !originalToModifiedLabelMap.containsKey(labelNode))
+                .forEach(node -> originalToModifiedLabelMap.put((LabelNode) node, new LabelNode()));
+
+        InsnList clone = new InsnList();
+        Arrays.stream(list.toArray()).forEach(node -> clone.add(node.clone(originalToModifiedLabelMap)));
+
+        return clone;
+    }
+
+    private AbstractInsnNode cloneToModified(AbstractInsnNode node) {
+        InsnList list = new InsnList();
+        list.add(node);
+
+        return cloneToModified(list).getFirst();
     }
 
     private int getUpdatedIndex(int index) {
         int modifiedIndex = index;
         int originals = 0;
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
-        for (int i = 0; originals < index; i++) {
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
+        for (int i = 0; originals <= index; i++) {
             switch (isOriginalList.get(i)) {
                 case ORIGINAL -> originals++;
                 case INJECTED -> modifiedIndex++;
@@ -69,7 +120,7 @@ public class MixinClassTargetInsnListEditor {
     private boolean isDeleted(int index) {
         int modifiedIndex = index;
         int originals = 0;
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
         for (int i = 0; originals < index; i++) {
             switch (isOriginalList.get(i)) {
                 case ORIGINAL, DELETED -> originals++;
@@ -81,37 +132,39 @@ public class MixinClassTargetInsnListEditor {
     }
 
     public void add(AbstractInsnNode node) {
-        modified.add(node);
-        isOriginalOpcode.get(modified).add(OpcodeState.INJECTED);
+        modified.add(cloneToModified(node));
+        isOriginalOpcode.get(id).add(OpcodeState.INJECTED);
     }
 
     public void add(InsnList list) {
-        modified.add(list);
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
-        for(AbstractInsnNode node : list) isOriginalList.add(OpcodeState.INJECTED);
+        modified.add(cloneToModified(list));
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
+        for (int i = 0; i < list.size(); i++) isOriginalList.add(OpcodeState.INJECTED);
     }
 
     public void insertBefore(int index, AbstractInsnNode node) {
         int modifiedIndex = getUpdatedIndex(index);
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
 
-        modified.insertBefore(modified.get(modifiedIndex), node);
+        modified.insertBefore(modified.get(modifiedIndex), cloneToModified(node));
         isOriginalList.add(modifiedIndex, OpcodeState.INJECTED);
     }
 
     public void insertBefore(int index, InsnList list) {
         int modifiedIndex = getUpdatedIndex(index);
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
 
-        modified.insertBefore(modified.get(modifiedIndex), list);
-        for(AbstractInsnNode node : list) isOriginalList.add(modifiedIndex, OpcodeState.INJECTED);
+        modified.insertBefore(modified.get(modifiedIndex), cloneToModified(list));
+        for (int i = 0; i < list.size(); i++) {
+            isOriginalList.add(modifiedIndex, OpcodeState.INJECTED);
+        }
     }
 
     public void remove(int index) {
         if(isDeleted(index)) return;
 
         int modifiedIndex = getUpdatedIndex(index);
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
 
         modified.remove(modified.get(modifiedIndex));
         isOriginalList.set(modifiedIndex, OpcodeState.DELETED);
@@ -119,17 +172,19 @@ public class MixinClassTargetInsnListEditor {
 
     public void insertAfter(int index, AbstractInsnNode node) {
         int modifiedIndex = getUpdatedIndex(index);
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
 
-        modified.insert(modified.get(modifiedIndex), node);
+        modified.insert(modified.get(modifiedIndex), cloneToModified(node));
         isOriginalList.add(modifiedIndex+1, OpcodeState.INJECTED);
     }
 
     public void insertAfter(int index, InsnList list) {
         int modifiedIndex = getUpdatedIndex(index);
-        List<OpcodeState> isOriginalList = isOriginalOpcode.get(modified);
+        List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
 
-        modified.insert(modified.get(modifiedIndex), list);
-        for(AbstractInsnNode node : list) isOriginalList.add(modifiedIndex+1, OpcodeState.INJECTED);
+        modified.insert(modified.get(modifiedIndex), cloneToModified(list));
+        for (int i = 0; i < list.size(); i++) {
+            isOriginalList.add(modifiedIndex+1, OpcodeState.INJECTED);
+        }
     }
 }

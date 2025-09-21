@@ -4,15 +4,15 @@ import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 
 public class AccessorTargetFieldEditor extends TargetFieldEditor {
-    protected AccessorTargetFieldEditor(MixinClassTargetFieldEditor[] targetFieldEditors) {
-        super(targetFieldEditors);
+    protected AccessorTargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
+        super(targetFieldEditors, mixinEditor);
     }
 
-    public void makePublic(int index) {
-        targetFieldEditors[index].makePublic();
+    public void makePublic() {
+        targetFieldEditor.makePublic();
     }
 
-    public void makeNonFinal(int index) {
-        targetFieldEditors[index].makeNonFinal();
+    public void makeNonFinal() {
+        targetFieldEditor.makeNonFinal();
     }
 }

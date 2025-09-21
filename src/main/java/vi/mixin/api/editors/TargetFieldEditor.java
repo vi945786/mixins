@@ -4,17 +4,15 @@ import org.objectweb.asm.tree.FieldNode;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 
 public abstract class TargetFieldEditor {
-    protected final MixinClassTargetFieldEditor[] targetFieldEditors;
+    protected final MixinClassTargetFieldEditor targetFieldEditor;
+    protected final Object mixinEditor;
 
-    protected TargetFieldEditor(MixinClassTargetFieldEditor[] targetFieldEditors) {
-        this.targetFieldEditors = targetFieldEditors;
+    protected TargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
+        this.targetFieldEditor = targetFieldEditors;
+        this.mixinEditor = mixinEditor;
     }
 
-    public final int getNumberOfTargets() {
-        return targetFieldEditors.length;
-    }
-
-    public final FieldNode getFieldNodeClone(int index) {
-        return targetFieldEditors[index].getFieldNodeClone();
+    public final FieldNode getFieldNodeClone() {
+        return targetFieldEditor.getFieldNodeClone();
     }
 }

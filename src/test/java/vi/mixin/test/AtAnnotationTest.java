@@ -75,7 +75,7 @@ public class AtAnnotationTest {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.INVOKE; }
             @Override public int opcode() { return Opcodes.INVOKEVIRTUAL; }
-            @Override public String target() { return "Owner;name(desc)"; }
+            @Override public String target() { return "Owner.name(desc)"; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
@@ -92,7 +92,7 @@ public class AtAnnotationTest {
             @Override public int[] ordinal() { return new int[0]; }
             @Override public At.Location value() { return At.Location.FIELD; }
             @Override public int opcode() { return Opcodes.GETFIELD; }
-            @Override public String target() { return "Owner;name"; }
+            @Override public String target() { return "Owner.name"; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
