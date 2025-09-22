@@ -25,7 +25,7 @@ public class AtAnnotationTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(0)), nodes);
     }
 
@@ -43,7 +43,7 @@ public class AtAnnotationTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(1), list.get(2)), nodes);
     }
 
@@ -60,7 +60,7 @@ public class AtAnnotationTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(2)), nodes);
     }
 
@@ -78,7 +78,7 @@ public class AtAnnotationTest {
             @Override public String target() { return "Owner.name(desc)"; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(1)), nodes);
     }
 
@@ -95,7 +95,7 @@ public class AtAnnotationTest {
             @Override public String target() { return "Owner.name"; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(1)), nodes);
     }
 
@@ -114,7 +114,7 @@ public class AtAnnotationTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(0)), nodes);
     }
 
@@ -135,7 +135,7 @@ public class AtAnnotationTest {
             @Override public String target() { return ""; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
-        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at);
+        List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
         assertEquals(List.of(list.get(3), list.get(5)), nodes);
     }
 }

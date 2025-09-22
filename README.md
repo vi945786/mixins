@@ -300,7 +300,7 @@ When writing methods that use the `Returner`, you can use this special parameter
 **How to use:**
 
 - To exit the target method early, call `doReturn()` (for `Returner`) or `setReturnValue(value)` (for `ValueReturner`).
-- When injecting to `RETURN` you can use `ValueReturner.getReturnValue()` to get the return value of the method.
+- When injecting to `RETURN` or `TAIL` you can use `ValueReturner.getReturnValue()` to get the return value of the method.
 
 **Example:**
 

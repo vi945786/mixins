@@ -3,6 +3,7 @@ package vi.mixin.api.transformers;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.injection.At;
 import vi.mixin.bytecode.MixinClassHelper;
 import vi.mixin.bytecode.Mixiner;
@@ -92,23 +93,49 @@ public final class TransformerHelper implements Opcodes {
         return Mixiner.getTargetClass(mixinNode);
     }
 
-    public static List<AbstractInsnNode> getAtTargetNodes(InsnList list, At atAnnotation) {
-        return getAtTargetIndexes(list, atAnnotation).stream().map(list::get).toList();
+    public static List<AbstractInsnNode> getAtTargetNodesThrows(InsnList list, At atAnnotation, String annotatedName) {
+        return getAtTargetIndexesThrows(list, atAnnotation, annotatedName).stream().map(list::get).toList();
     }
 
-    public static List<Integer> getAtTargetIndexes(InsnList list, At atAnnotation) {
+    public static List<AbstractInsnNode> getAtTargetNodes(InsnList list, At atAnnotation, String annotatedName) {
+        return getAtTargetIndexes(list, atAnnotation, annotatedName).stream().map(list::get).toList();
+    }
+
+    public static List<Integer> getAtTargetIndexesThrows(InsnList list, At atAnnotation, String annotatedName) {
+        List<Integer> indexes = getAtTargetIndexes(list, atAnnotation, annotatedName);
+        if(indexes.isEmpty()) throw new MixinFormatException(annotatedName, "@At has no targets");
+        return indexes;
+    }
+
+    public static List<Integer> getAtTargetIndexes(InsnList list, At atAnnotation, String annotatedName) {
          At.Location location = atAnnotation.value();
          List<Integer> ordinal = Arrays.stream(atAnnotation.ordinal()).boxed().toList();
          String target = atAnnotation.target();
          int opcode = atAnnotation.opcode();
 
          return switch (location) {
-             case HEAD -> List.of(0);
-             case RETURN ->
-                     getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), ordinal);
-             case TAIL ->
-                     List.of(getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), List.of()).getLast());
+             case HEAD -> {
+                 if(!target.isEmpty() || opcode != -1)
+                     throw new MixinFormatException(annotatedName, "unsupported head target or opcode");
+
+                 yield List.of(0);
+             }
+             case RETURN -> {
+                 if (!target.isEmpty() || opcode != -1)
+                     throw new MixinFormatException(annotatedName, "unsupported return target or opcode");
+
+                 yield getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), ordinal);
+             }
+             case TAIL -> {
+                 if (!target.isEmpty() || opcode != -1)
+                     throw new MixinFormatException(annotatedName, "unsupported tail target or opcode");
+
+                 yield List.of(getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), List.of()).getLast());
+             }
              case INVOKE -> {
+                 if(opcode != -1 && !(INVOKEVIRTUAL <= opcode && opcode <= INVOKEINTERFACE))
+                     throw new MixinFormatException(annotatedName, "unsupported method opcode. supported values are: Opcodes.INVOKEVIRTUAL, Opcodes.INVOKESPECIAL, Opcodes.INVOKESTATIC, Opcodes.INVOKEINTERFACE");
+
                  int splitOwner = target.indexOf('.');
                  int splitName = target.indexOf('(');
                  String owner = target.substring(0, splitOwner);
@@ -117,12 +144,22 @@ public final class TransformerHelper implements Opcodes {
                  yield getInsnNodesIndexes(list, METHOD_INSN, List.of(INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC, INVOKEINTERFACE), ordinal, owner, name, desc);
              }
              case FIELD -> {
+                 if(opcode != -1 && !(GETSTATIC <= opcode && opcode <= PUTFIELD))
+                     throw new MixinFormatException("@At", "unsupported field opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
+
                  int splitOwner = target.indexOf('.');
                  String owner = target.substring(0, splitOwner);
-                 String name = target.substring(splitOwner+1);
+                 String name = target.substring(splitOwner+1).split(";")[0];
                  yield getInsnNodesIndexes(list, FIELD_INSN, opcode, ordinal, owner, name, null);
              }
-             case JUMP -> getInsnNodesIndexes(list, JUMP_INSN, opcode, ordinal);
+             case JUMP -> {
+                 if (!target.isEmpty())
+                     throw new MixinFormatException("@At", "unsupported jump target");
+                 if(opcode != -1 && (!(IFEQ <= opcode && opcode <= JSR)) && !(IFNULL <= opcode && opcode <= IFNONNULL))
+                     throw new MixinFormatException("@At", "unsupported jump opcode. supported values are: Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE, Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE, Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE, Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE, Opcodes.GOTO, Opcodes.JSR, Opcodes.IFNULL, Opcodes.IFNONNULL");
+
+                 yield getInsnNodesIndexes(list, JUMP_INSN, opcode, ordinal);
+             }
          };
     }
 
@@ -144,9 +181,16 @@ public final class TransformerHelper implements Opcodes {
         }
 
         if(ordinals == null || ordinals.isEmpty()) return indexes;
+        ordinals = ordinals.stream().sorted().toList();
         List<Integer> newIndexes = new ArrayList<>();
         for (int i = 0; i < indexes.size(); i++) {
             if(ordinals.contains(i)) newIndexes.add(indexes.get(i));
+        }
+        if(ordinals.getLast() >= indexes.size()) {
+            throw new IndexOutOfBoundsException("ordinal is too big");
+        }
+        if(ordinals.getFirst() < 0) {
+            throw new IndexOutOfBoundsException("ordinal is negative");
         }
 
         return newIndexes;

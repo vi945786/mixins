@@ -55,7 +55,7 @@ public class InjectTransformer implements TransformerSupplier {
         String returner = returnType.getSort() == 0 ? Type.getInternalName(Returner.class) : Type.getInternalName(ValueReturner.class);
 
         MixinClassTargetInsnListEditor insnListEditor = targetEditor.getInsnListEditor();
-        for (int atIndex : TransformerHelper.getAtTargetIndexes(insnListEditor.getInsnListClone(), annotation.at())) {
+        for (int atIndex : TransformerHelper.getAtTargetIndexesThrows(insnListEditor.getInsnListClone(), annotation.at(), "@Inject " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc)) {
             InsnList insnList = new InsnList();
             insnList.add(new TypeInsnNode(NEW, returner));
 

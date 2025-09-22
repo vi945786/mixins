@@ -19,7 +19,8 @@ public class InjectAnnotationTest {
         public static int staticSum(int a, int b) { return a * b; }
         public static StringBuilder staticSb = new StringBuilder();
         public static void staticLog(String msg) { staticSb.append(msg); }
-        public static int sumWithLocal(int a, Integer b) { Integer i = 3; return a + b + i; }
+
+        public int sumWithLocal(int a, Integer b) { Integer i = 3; return a + b + i; }
     }
 
     @Test
@@ -49,7 +50,7 @@ public class InjectAnnotationTest {
 
     @Test
     public void testSumWithLocal() {
-        assertEquals(63, InjectTest.sumWithLocal(4, 53));
+        assertEquals(63, new InjectTest().sumWithLocal(4, 53));
     }
 }
 
@@ -77,7 +78,7 @@ class InjectTestMixin {
     }
 
     @Inject(value = "sumWithLocal(ILjava/lang/Integer;)I", at = @At(At.Location.RETURN))
-    private static void injectSumWithLocal(int a, Integer b, ValueReturner<Integer> ret, Vars vars) {
-        ret.setReturnValue(ret.getReturnValue() + vars.<Integer>get(0));
+    private void injectSumWithLocal(int a, Integer b, ValueReturner<Integer> ret, Vars vars) {
+        ret.setReturnValue(ret.getReturnValue() + vars.<Integer>get(2));
     }
 }
