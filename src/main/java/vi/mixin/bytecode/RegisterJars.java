@@ -4,6 +4,9 @@ import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 import com.eclipsesource.json.JsonValue;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.transformers.TransformerSupplier;
@@ -26,49 +29,61 @@ import static vi.mixin.bytecode.Agent.agent;
 
 public class RegisterJars {
 
-    private static final List<String> classesEntries = new ArrayList<>();
+    private static final List<String> classEntries = new ArrayList<>();
     private static final List<String> transformersEntries = new ArrayList<>();
     private static final List<String> mixinClassTypesEntries = new ArrayList<>();
-    public static void add() throws IOException {
-        //load these classes before appending to bootstrap
-        RegisterJars.class.getDeclaredClasses();
+    private static List<byte[]> mixins = new ArrayList<>();
+    private static List<byte[]> inners = new ArrayList<>();
+    static void registerAll() {
+        try {
+            RegisterJars.class.getDeclaredClasses();
+            ClassReader.class.getName();
+            ClassVisitor.class.getName();
+            Class.forName("org.objectweb.asm.Context");
 
-        List<String> agentJars = ManagementFactory.getRuntimeMXBean().getInputArguments().stream().filter(arg -> arg.startsWith("-javaagent:"))
+            doRunArgs();
+
+            List<String> agentJars = ManagementFactory.getRuntimeMXBean().getInputArguments().stream().filter(arg -> arg.startsWith("-javaagent:"))
                     .map(arg -> arg.substring("-javaagent:".length()))
                     .map(arg -> arg.split("=")[0])
                     .toList();
 
-        String agentJarClasspath = "";
-        for(String agentJar : agentJars) {
-            addJar(agentJar);
-            agentJarClasspath += agentJar + File.pathSeparator;
-        }
+            String agentJarClasspath = "";
+            for (String agentJar : agentJars) {
+                addJar(agentJar);
+                agentJarClasspath += agentJar + File.pathSeparator;
+            }
+            agentJarClasspath = agentJarClasspath.substring(0, agentJarClasspath.length() - 1);
 
-        doRunArgs();
+            String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+            Path tempDir = Files.createTempDirectory("mixin-" + pid + "-");
+            generateBuiltinJars(tempDir);
 
-        String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
-        Path tempDir = Files.createTempDirectory("mixin-" + pid + "-");
-        generateBuiltinJars(tempDir);
-
-        String classPath = System.getProperty("java.class.path");
-        try {
-            for (String entry : classPath.split(File.pathSeparator)) {
-                File entryFile = new File(entry);
-                if (entryFile.isFile()) {
-                    if (entryFile.getName().endsWith(".jar")) addJar(entryFile.getAbsolutePath());
-                } else {
-                    if (entry.endsWith(File.separator + "*")) {
-                        for (File file : entryFile.getParentFile().listFiles()) {
-                            if (file.isFile() && file.getName().endsWith(".jar")) addJar(file.getAbsolutePath());
-                        }
+            String classPath = System.getProperty("java.class.path");
+            try {
+                for (String entry : classPath.split(File.pathSeparator)) {
+                    File entryFile = new File(entry);
+                    if (entryFile.isFile()) {
+                        if (entryFile.getName().endsWith(".jar")) addJar(entryFile.getAbsolutePath());
                     } else {
-                        addJar(generateJarFromDir(Path.of(entry), tempDir));
+                        if (entry.endsWith(File.separator + "*")) {
+                            for (File file : entryFile.getParentFile().listFiles()) {
+                                if (file.isFile() && file.getName().endsWith(".jar"))
+                                    addJar(file.getAbsolutePath());
+                            }
+                        } else {
+                            addJar(generateJarFromDir(Path.of(entry), tempDir));
+                        }
                     }
                 }
+            } finally {
+                TempFileDeleter.spawn(agentJarClasspath, tempDir.toString());
             }
-        } finally {
-            TempFileDeleter.spawn(agentJarClasspath.substring(0, agentJarClasspath.length() -1), tempDir.toString());
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException("unable to initialize mixins", e);
         }
+
+        Mixiner.addClasses(mixins, inners);
     }
 
     private static void doRunArgs() {
@@ -78,7 +93,7 @@ public class RegisterJars {
                     MixinFile mixinFile = getMixinFile(Files.newBufferedReader(Path.of(file)));
                     mixinClassTypesEntries.addAll(mixinFile.mixinClassTypes);
                     transformersEntries.addAll(mixinFile.transformers);
-                    classesEntries.addAll(mixinFile.mixinClasses);
+                    classEntries.addAll(mixinFile.mixinClasses);
                 } catch (IOException e) {
                     throw new RuntimeException("failed to load mixin file " + file, e);
                 }
@@ -103,6 +118,7 @@ public class RegisterJars {
                     throw new RuntimeException(e);
                 }
             });
+            jos.finish();
         }
         Path jarPath = tempDir.resolve(tempDir + File.separator + dir.toString().replace(":", "-").replace(dir.getFileSystem().getSeparator(), "-").replace("--", "-") + ".jar");
         try (OutputStream os = Files.newOutputStream(jarPath)) {
@@ -134,7 +150,7 @@ public class RegisterJars {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                 });
+                });
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -150,7 +166,8 @@ public class RegisterJars {
             agent.appendToBootstrapClassLoaderSearch(jarFile);
 
             if(!checkMixins) return;
-            List<byte[]> bytecodes = checkStartUpEntries(jarFile);
+
+            checkStartUpEntries(jarFile);
 
             Manifest manifest = jarFile.getManifest();
             if (manifest != null) {
@@ -164,30 +181,53 @@ public class RegisterJars {
                         registerTransformers(mixinFile.transformers);
 
                         for (String mixinClass : mixinFile.mixinClasses) {
+                            byte[] bytecode;
                             try (InputStream inputStream = jarFile.getInputStream(jarFile.getEntry(nameToEntry(mixinClass)))) {
-                                bytecodes.add(inputStream.readAllBytes());
+                                bytecode = inputStream.readAllBytes();
+                                mixins.add(bytecode);
                             }
+                            findAnonymousInnerClasses(jarFile, bytecode);
                         }
                     }
                 }
             }
-            if(bytecodes.isEmpty()) return;
-            Mixiner.addClasses(bytecodes);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load jar or mixin classes from jar: " + jar, e);
+            throw new RuntimeException("Failed to load jar: " + jar, e);
         }
     }
 
-    private static List<byte[]> checkStartUpEntries(JarFile jarFile) throws IOException {
-        List<byte[]> bytecodes = new ArrayList<>();
+    private static void findAnonymousInnerClasses(JarFile jarFile, byte[] bytecode) {
+        ClassReader cr = new ClassReader(bytecode);
+        cr.accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public void visitInnerClass(String innerName, String outerName, String innerSimpleName, int access) {
+                if (innerSimpleName == null || innerName.matches(".*\\$\\d+$")) {
 
-        for(String name : classesEntries) {
+                    String innerPath = innerName + ".class";
+                    JarEntry innerEntry = jarFile.getJarEntry(innerPath);
+                    if (innerEntry != null) {
+                        try (InputStream is = jarFile.getInputStream(innerEntry)) {
+                            inners.add(is.readAllBytes());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            }
+        }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+    }
+
+    private static void checkStartUpEntries(JarFile jarFile) throws IOException {
+        for(String name : classEntries) {
             JarEntry entry = jarFile.getJarEntry(nameToEntry(name));
             if(entry == null) continue;
 
+            byte[] bytecode;
             try (InputStream inputStream = jarFile.getInputStream(entry)) {
-                bytecodes.add(inputStream.readAllBytes());
+                bytecode = inputStream.readAllBytes();
+                mixins.add(bytecode);
             }
+            findAnonymousInnerClasses(jarFile, bytecode);
         }
         for(String name : transformersEntries) {
             JarEntry entry = jarFile.getJarEntry(nameToEntry(name));
@@ -201,8 +241,6 @@ public class RegisterJars {
 
             registerMixinClassType(name);
         }
-
-        return bytecodes;
     }
 
     private record MixinFile(List<String> mixinClasses, List<String> transformers, List<String> mixinClassTypes) {}
@@ -236,11 +274,14 @@ public class RegisterJars {
         mixinClassTypes.forEach(mixinClassTypeName -> {
             Class<?> mixinClassType = MixinClassHelper.findClass(mixinClassTypeName);
 
-            if(mixinClassType == null) throw new MixinFormatException(mixinClassTypeName, "mixin class type supplier class not found");
+            if(mixinClassType == null) throw new MixinFormatException(mixinClassTypeName, "mixin class type class not found");
             if(!MixinClassType.class.isAssignableFrom(mixinClassType)) throw new MixinFormatException(mixinClassTypeName, "mixin class type does not implement vi.mixin.api.classtypes.MixinClassType");
 
             try {
-                Mixiner.addMixinClassType((MixinClassType<?, ?, ?, ?, ?>) mixinClassType.getConstructor().newInstance());
+                Constructor<?> c = mixinClassType.getDeclaredConstructor();
+                c.setAccessible(true);
+                Mixiner.addMixinClassType((MixinClassType<?, ?, ?, ?, ?>) c.newInstance());
+
             } catch (NoSuchMethodException e) {
                 throw new MixinFormatException(mixinClassTypeName, "mixin class type does not have a public no-args constructor");
             } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {

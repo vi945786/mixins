@@ -1,11 +1,13 @@
 {
   "mixinClassTypes": [
-    "vi.mixin.api.classtypes.extendertype.ExtenderMixinClassType"
+    "vi.mixin.api.classtypes.extendertype.ExtenderMixinClassType",
+    "vi.mixin.api.classtypes.anonymoustype.AnonymousMixinClassType"
   ],
   "transformers": [
     "vi.mixin.bytecode.transformers.GetterTransformer",
     "vi.mixin.bytecode.transformers.InjectTransformer",
     "vi.mixin.bytecode.transformers.InvokerTransformer",
+    "vi.mixin.bytecode.transformers.ModifyValueTransformer",
     "vi.mixin.bytecode.transformers.NewTransformer",
     "vi.mixin.bytecode.transformers.OverridableTransformer",
     "vi.mixin.bytecode.transformers.RedirectTransformer",

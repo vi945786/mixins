@@ -9,7 +9,7 @@ import vi.mixin.api.classtypes.accessortype.AccessorMixinClassType;
 import vi.mixin.api.classtypes.accessortype.AccessorTargetFieldEditor;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.transformers.TransformerBuilder;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
@@ -32,7 +32,8 @@ public class SetterTransformer implements TransformerSupplier {
         if((targetFieldNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetFieldNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         if(!Type.getReturnType(mixinMethodNode.desc).equals(Type.VOID_TYPE)) throw new MixinFormatException(name, "should return void");
         Type[] argumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
-        if(argumentTypes.length != 1 && !argumentTypes[0].equals(Type.getType(targetFieldNode.desc)) && !argumentTypes[0].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid arguments are: " + targetFieldNode.desc + ", " + Type.getType(Object.class));
+        if (argumentTypes.length != 1 && !argumentTypes[0].equals(Type.getType(targetFieldNode.desc)) && (!argumentTypes[0].equals(Type.getType(Object.class)) || Type.getType(targetFieldNode.desc).getSort() <= Type.DOUBLE))
+                throw new MixinFormatException(name, "valid types for argument number " + 1 + " are: " + targetFieldNode.desc + (targetFieldNode.desc.equals(Type.getDescriptor(Object.class)) || argumentTypes[0].getSort() <= Type.DOUBLE ? "" : ", " + Type.getType(Object.class)));
     }
 
     private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {

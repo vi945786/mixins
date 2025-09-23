@@ -9,12 +9,12 @@ import vi.mixin.api.classtypes.accessortype.AccessorMixinClassType;
 import vi.mixin.api.classtypes.accessortype.AccessorTargetMethodEditor;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.transformers.TransformerBuilder;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
 
-import static vi.mixin.api.transformers.TransformerHelper.addLoadOpcodesOfMethod;
+import static vi.mixin.api.util.TransformerHelper.addLoadOpcodesOfMethod;
 
 public class InvokerTransformer implements TransformerSupplier {
 
@@ -23,15 +23,20 @@ public class InvokerTransformer implements TransformerSupplier {
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         String name = "@Invoker " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc;
-        if(targetMethodNode.name.equals("<init>")) throw new MixinFormatException(name, "invoking a constructor is not allowed. use @New");
-        if((targetMethodNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC)) throw new MixinFormatException(name, "should be " + ((targetMethodNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
+        if (targetMethodNode.name.equals("<init>"))
+            throw new MixinFormatException(name, "invoking a constructor is not allowed. use @New");
+        if ((targetMethodNode.access & ACC_STATIC) != (mixinMethodNode.access & ACC_STATIC))
+            throw new MixinFormatException(name, "should be " + ((targetMethodNode.access & ACC_STATIC) != 0 ? "" : "not") + " static");
         Type returnType = Type.getReturnType(mixinMethodNode.desc);
-        if(!returnType.equals(Type.getReturnType(targetMethodNode.desc)) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + Type.getReturnType(targetMethodNode.desc) + ", " + Type.getType(Object.class));
+        if (!returnType.equals(Type.getReturnType(targetMethodNode.desc)) && !returnType.equals(Type.getType(Object.class)))
+            throw new MixinFormatException(name, "valid return types are: " + Type.getReturnType(targetMethodNode.desc) + ", " + Type.getType(Object.class));
         Type[] mixinArgumentTypes = Type.getArgumentTypes(mixinMethodNode.desc);
         Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
-        if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
+        if (mixinArgumentTypes.length != targetArgumentTypes.length)
+            throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
-            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && (!mixinArgumentTypes[i].equals(Type.getType(Object.class)) || targetArgumentTypes[i].getSort() <= Type.DOUBLE))
+                throw new MixinFormatException(name, "valid types for argument number " + (i + 1) + " are: " + targetArgumentTypes[i] + (targetArgumentTypes[i].equals(Type.getType(Object.class)) || targetArgumentTypes[i].getSort() <= Type.DOUBLE ? "" : ", " + Type.getType(Object.class)));
         }
     }
 

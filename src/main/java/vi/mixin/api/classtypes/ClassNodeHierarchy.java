@@ -2,15 +2,12 @@ package vi.mixin.api.classtypes;
 
 import org.objectweb.asm.tree.ClassNode;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public record ClassNodeHierarchy(ClassNode classNode, ClassNodeHierarchy parent, List<ClassNodeHierarchy> children) {
 
-    public Set<ClassNode> getAllClassesInHierarchy() {
-        return getAllClassesInHierarchy(new HashSet<>());
+    public List<ClassNode> getAllClassesInHierarchy() {
+        return getAllClassesInHierarchy(new HashSet<>()).stream().sorted(Comparator.comparing(a -> a.name)).toList();
     }
 
     private Set<ClassNode> getAllClassesInHierarchy(Set<ClassNode> visited) {
@@ -24,6 +21,11 @@ public record ClassNodeHierarchy(ClassNode classNode, ClassNodeHierarchy parent,
         children.forEach(inner -> classEditors.addAll(inner.getAllClassesInHierarchy(visited)));
 
         return classEditors;
+    }
+
+    @Override
+    public String toString() {
+        return "";
     }
 
     @Override

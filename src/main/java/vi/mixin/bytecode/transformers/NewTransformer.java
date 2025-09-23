@@ -17,7 +17,7 @@ import vi.mixin.api.editors.AnnotatedMethodEditor;
 import vi.mixin.api.editors.TargetMethodEditor;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.transformers.TransformerBuilder;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
@@ -41,7 +41,7 @@ public class NewTransformer implements TransformerSupplier {
         Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
         if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
-            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + (targetArgumentTypes[i].equals(Type.getType(Object.class)) ? "" : ", " + Type.getType(Object.class)));
         }
         Type returnType = Type.getReturnType(mixinMethodNode.desc);
         if(!returnType.getInternalName().equals(targetClassNodeClone.name) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + "L" + targetClassNodeClone.name + ";" + ", " + Type.getType(Object.class));
@@ -57,7 +57,8 @@ public class NewTransformer implements TransformerSupplier {
         Type[] targetArgumentTypes = Type.getArgumentTypes(targetMethodNode.desc);
         if(mixinArgumentTypes.length != targetArgumentTypes.length) throw new MixinFormatException(name, "there should be " + targetArgumentTypes.length + " arguments");
         for (int i = 0; i < targetArgumentTypes.length; i++) {
-            if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid types for argument number " + i + " are: " + targetArgumentTypes[i] + ", " +Type.getType(Object.class));
+                        if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && (!mixinArgumentTypes[i].equals(Type.getType(Object.class)) || targetArgumentTypes[i].getSort() <= Type.DOUBLE))
+                throw new MixinFormatException(name, "valid types for argument number " + (i+1) + " are: " + targetArgumentTypes[i] + (targetArgumentTypes[i].equals(Type.getType(Object.class)) || targetArgumentTypes[i].getSort() <= Type.DOUBLE ? "" : ", " + Type.getType(Object.class)));
         }
 
         Type returnType = Type.getReturnType(mixinMethodNode.desc);

@@ -8,18 +8,19 @@ CONSTANT injection point
 
 add @At offset
 
-mixinclass @ModifyValue - method, @At
-    get the real type by the last opcode before the inject point
+test:
+    Object as the target
 
-    if target is static
-        1st parameter: the type of the value to change
-    if target is not static
-        1st parameter: the targets type
-        2nd parameter: the type of the value to change
+add to the readme:
+    Vars
+    @Redirect
+    @ModifyValue
 
-    returns the new value
+    anonymous classes inside mixin classes
+    anonymous classes as targets
 
-anonymous classes inside mixin classes
+    lambda expressions inside mixin classes
+    lambda expressions as targets
 
-add Vars to the readme
-add @Redirect to the readme
+    TransformerBuilder and MixinClassType
+    TransformerHelper

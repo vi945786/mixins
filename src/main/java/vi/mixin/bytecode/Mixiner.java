@@ -14,12 +14,12 @@ import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.editors.TargetMethodEditor;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 
-import java.lang.annotation.Annotation;
+import java.lang.annotation.*;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.UnmodifiableClassException;
@@ -99,25 +99,39 @@ public class Mixiner {
                 if(targetClass != void.class) return targetClass;
                 targetClass = MixinClassHelper.findClass(annotation.name());
                 if(targetClass == null) throw new MixinFormatException(mixinClassNode.name, "invalid @Mixin target");
-                return MixinClassHelper.findClass(annotation.name());
+                return targetClass;
             }
         }
 
         throw new MixinFormatException(mixinClassNode.name, "doesn't have a @Mixin annotation");
     }
 
-    public static void addClasses(List<byte[]> bytecodes) {
+    public static void addClasses(List<byte[]> mixins, List<byte[]> anonymousInners) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
         Map<String, ClassNodeHierarchy> outerClassNodeMap = new HashMap<>();
         Map<ClassNodeHierarchy, List<ClassNodeHierarchy>> classNodeChildrenClassMap = new HashMap<>();
-        for(byte[] bytecode : bytecodes) {
+        for(byte[] bytecode : mixins) {
             ClassReader mixinClassReader = new ClassReader(bytecode);
             ClassNode mixinClassNode = new ClassNode();
             mixinClassReader.accept(mixinClassNode, 0);
             String outerName = mixinClassNode.innerClasses.stream().filter(inner -> inner.name.equals(mixinClassNode.name)).map(inner -> inner.outerName).findFirst().orElse(null);
             outerClassMap.put(mixinClassNode, outerName);
         }
-        bytecodes = null; //allow garbage collection
+        for(byte[] bytecode : anonymousInners) {
+            ClassReader mixinClassReader = new ClassReader(bytecode);
+            ClassNode mixinClassNode = new ClassNode();
+            mixinClassReader.accept(mixinClassNode, 0);
+            String outerName = mixinClassNode.outerClass;
+            outerClassMap.put(mixinClassNode, outerName);
+            mixinClassNode.invisibleAnnotations = new ArrayList<>();
+
+            AnnotationNode mixin = new AnnotationNode(Type.getDescriptor(Mixin.class));
+            mixin.values = new ArrayList<>(List.of("value", Type.getType("L" + mixinClassNode.name + ";")));
+            mixinClassNode.invisibleAnnotations.add(mixin);
+            mixinClassNode.invisibleAnnotations.add(new AnnotationNode("Lvi/mixin/api/classtypes/anonymoustype/AnonymousMixinClassType$Anonymous;"));
+        }
+        mixins.clear();
+        anonymousInners.clear();;
 
         outerClassNodeMap.put(null, null);
         classNodeChildrenClassMap.put(null, new ArrayList<>());
@@ -155,6 +169,7 @@ public class Mixiner {
         Map<Class<?>, Class<?>> mixinClasses = new HashMap<>();
         for (ClassNodeHierarchy classNodeHierarchy : classNodeChildrenClassMap.keySet()) {
             ClassNode mixinClassNode = classNodeHierarchy.classNode();
+
             Class<?> targetClass = mixinClassNodesToTargetClass.get(mixinClassNode);
             MixinResult mixinResult = mixinClassNodesToMixinResult.get(mixinClassNode);
 
@@ -251,7 +266,7 @@ public class Mixiner {
 
         for (MethodNode methodNode : modifyMixinClassNode.methods) {
             if (methodNode.invisibleAnnotations == null) {
-            mixinMethodEditors.put(methodNode, mixinClassType.create(methodNode, null));
+                mixinMethodEditors.put(methodNode, mixinClassType.create(methodNode, null));
                 continue;
             }
             for (AnnotationNode annotationNode : methodNode.invisibleAnnotations) {
@@ -259,7 +274,7 @@ public class Mixiner {
                 BuiltTransformer builtTransformer = transformers.stream().filter(t -> t.getMixinClassType().getName().equals(mixinClassTypeName) && t.isAnnotatedMethod()).findAny().orElse(null);
                 if (builtTransformer == null) continue;
 
-                String name = originalMixinClassNode.name + methodNode.name + methodNode.desc;
+                String name = originalMixinClassNode.name + "." + methodNode.name + methodNode.desc;
 
                 Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
                 ClassNode mixinClassNodeClone = new ClassNode();
@@ -292,7 +307,7 @@ public class Mixiner {
                 BuiltTransformer builtTransformer = transformers.stream().filter(t -> t.getMixinClassType().getName().equals(mixinClassTypeName) && !t.isAnnotatedMethod()).findAny().orElse(null);
                 if (builtTransformer == null) continue;
 
-                String name = originalMixinClassNode.name + fieldNode.name;
+                String name = originalMixinClassNode.name+ "." + fieldNode.name;
 
                 Annotation annotation = TransformerHelper.getAnnotation(annotationNode);
                 ClassNode mixinClassNodeClone = new ClassNode();
@@ -403,17 +418,5 @@ public class Mixiner {
             }
             return null;
         }
-    }
-
-    private static class NoMaxClassNode extends ClassNode {
-
-    }
-
-    private static class NoMaxMethodNode extends MethodNode {
-          @Override
-          public void visitMaxs(final int maxStack, final int maxLocals) {
-            this.maxStack = 65535;
-            this.maxLocals = 65535;
-          }
     }
 }

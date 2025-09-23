@@ -8,10 +8,11 @@ import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.Editors;
 import vi.mixin.api.classtypes.MixinClassType;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+
 
 public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderAnnotatedMethodEditor, ExtenderAnnotatedFieldEditor, ExtenderTargetMethodEditor, ExtenderTargetFieldEditor> {
 

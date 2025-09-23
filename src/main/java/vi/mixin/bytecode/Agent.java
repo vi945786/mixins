@@ -25,10 +25,11 @@ public class Agent {
 
     public static void premain(String agentArgs, Instrumentation inst) throws IOException, ClassNotFoundException {
         agent = inst;
-        System.setProperty("mixin.stage", "premain");
 
-        MixinClassHelper.loadClass(MixinClassHelper.class.getName()); //static init
-        RegisterJars.add();
+        System.setProperty("mixin.stage", "premain");
+        MixinClassHelper.loadClass(MixinClassHelper.class.getName());
+
+        RegisterJars.registerAll();
         System.setProperty("mixin.stage", "main");
     }
 

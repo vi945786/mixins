@@ -1,5 +1,6 @@
 package vi.mixin.api.classtypes.mixintype;
 
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -8,15 +9,19 @@ import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.Editors;
 import vi.mixin.api.classtypes.MixinClassType;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.bytecode.LambdaHandler;
 
-import static vi.mixin.api.transformers.TransformerHelper.*;
+import java.lang.invoke.LambdaMetafactory;
+import java.util.Arrays;
 
-public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> {
+import static vi.mixin.api.util.TransformerHelper.*;
+
+public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> {
 
     @Override
     public MixinAnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditors) {
@@ -63,21 +68,22 @@ public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnn
 
         for (ClassNode classNode : mixinClassNodeHierarchy.getAllClassesInHierarchy()) {
             for (MethodNode methodNode : classNode.methods) {
+                //replace mixin outer class instance field with the target outer class instance field
+                if (mixinClassNodeHierarchy.parent() != null && (methodNode.access & ACC_STATIC) == 0) {
+                    for (AbstractInsnNode node : TransformerHelper.getInsnNodes(methodNode.instructions, AbstractInsnNode.FIELD_INSN, GETFIELD, mixinClassNode.name, getOuterClassInstanceFieldName(mixinClassNode, targetClass), "L" + mixinClassNodeHierarchy.parent().classNode().name + ";")) {
+                        FieldInsnNode fieldInsnNode = (FieldInsnNode) node;
+
+                        String type = Type.getType(TransformerHelper.getTargetClass(mixinClassNode)).getInternalName();
+                        String outerType = Type.getType(TransformerHelper.getTargetClass(mixinClassNodeHierarchy.parent().classNode())).getDescriptor();
+                        methodNode.instructions.insertBefore(fieldInsnNode, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, outerType));
+                        methodNode.instructions.remove(fieldInsnNode);
+                    }
+                }
+
                 for (AbstractInsnNode insnNode : methodNode.instructions) {
                     if(insnNode instanceof TypeInsnNode typeInsnNode && typeInsnNode.getOpcode() == CHECKCAST) {
                         if(typeInsnNode.desc.equals(mixinClassNode.name) || typeInsnNode.desc.equals(targetClassNode.name)) {
                             methodNode.instructions.remove(typeInsnNode);
-                        }
-                    }
-                    //replace mixin outer class instance field with the target outer class instance field
-                    if (mixinClassNodeHierarchy.parent() != null && (methodNode.access & ACC_STATIC) == 0) {
-                        for (AbstractInsnNode node : TransformerHelper.getInsnNodes(methodNode.instructions, AbstractInsnNode.FIELD_INSN, GETFIELD, mixinClassNode.name, getOuterClassInstanceFieldName(mixinClassNode, targetClass), "L" + mixinClassNodeHierarchy.parent().classNode().name + ";")) {
-                            FieldInsnNode fieldInsnNode = (FieldInsnNode) node;
-
-                            String type = Type.getType(TransformerHelper.getTargetClass(mixinClassNode)).getInternalName();
-                            String outerType = Type.getType(TransformerHelper.getTargetClass(mixinClassNodeHierarchy.parent().classNode())).getDescriptor();
-                            methodNode.instructions.insertBefore(fieldInsnNode, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, outerType));
-                            methodNode.instructions.remove(fieldInsnNode);
                         }
                     }
                     if(insnNode instanceof MethodInsnNode methodInsnNode && methodInsnNode.owner.equals(mixinClassNode.name)) {
@@ -89,6 +95,20 @@ public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnn
                             methodNode.instructions.insertBefore(insnNode, invoke);
                             methodNode.instructions.remove(methodInsnNode);
                         }
+                    }
+                    if(insnNode instanceof InvokeDynamicInsnNode invokeDynamicInsnNode) {
+                        if(invokeDynamicInsnNode.desc.startsWith("(L" + mixinClassNode.name)) {
+                            invokeDynamicInsnNode.desc = "(L" + targetClassNode.name + invokeDynamicInsnNode.desc.substring(2 + mixinClassNode.name.length());
+                        }
+                        invokeDynamicInsnNode.bsmArgs = Arrays.stream(invokeDynamicInsnNode.bsmArgs).map(arg -> {
+                            if(arg instanceof Handle handle && handle.getOwner().equals(mixinClassNode.name)) {
+                                MethodNode bsmNodeMethodNode = mixinClassNode.methods.stream().filter(m -> (m.name + m.desc).equals(handle.getName() + handle.getDesc())).findAny().orElse(null);
+                                if (bsmNodeMethodNode != null) {
+                                    return new Handle(H_INVOKESTATIC, handle.getOwner(), handle.getName(), handle.getTag() == H_INVOKESTATIC ? handle.getDesc() : getNewDesc(handle.getDesc(), targetClassNode.name), handle.isInterface());
+                                }
+                            }
+                            return arg;
+                        }).toArray(Object[]::new);
                     }
                     if(insnNode instanceof FieldInsnNode fieldInsnNode) {
                         FieldNode nodeFieldNode = mixinClassNode.fields.stream().filter(m -> m.name.equals(fieldInsnNode.name)).findAny().orElse(null);
@@ -123,6 +143,7 @@ public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnn
                 return;
             }
 
+            methodNode.access &= ~ACC_SYNTHETIC;
             String oldDesc = methodNode.desc;
             int oldAccess = methodNode.access;
             if ((methodNode.access & ACC_STATIC) == 0) methodNode.desc = getNewDesc(methodNode.desc, targetClassNode.name);
@@ -152,6 +173,19 @@ public final class MixinMixinClassType implements MixinClassType<Mixin, MixinAnn
                 addMethodNode.instructions.add(new InsnNode(returnOpcode));
             }
         });
+
+        for (MethodNode methodNode : targetClassNode.methods) {
+            for (int index : TransformerHelper.getInsnNodesIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
+                if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode) || !invokeDynamicInsnNode.bsm.getOwner().equals(Type.getInternalName(LambdaMetafactory.class))) continue;
+                MixinClassTargetInsnListEditor insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
+
+                methodNode.instructions.remove(invokeDynamicInsnNode);
+                invokeDynamicInsnNode.bsm = new Handle(H_INVOKESTATIC, Type.getInternalName(LambdaHandler.class), "createLambda", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false);
+
+                insnListEditor.insertBefore(index, invokeDynamicInsnNode);
+                insnListEditor.remove(index);
+            }
+        }
 
         return clinitName;
     }

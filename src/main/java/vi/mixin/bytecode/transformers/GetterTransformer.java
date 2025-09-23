@@ -7,7 +7,7 @@ import vi.mixin.api.annotations.methods.Getter;
 import vi.mixin.api.classtypes.accessortype.AccessorAnnotatedMethodEditor;
 import vi.mixin.api.classtypes.accessortype.AccessorMixinClassType;
 import vi.mixin.api.classtypes.accessortype.AccessorTargetFieldEditor;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.transformers.TransformerSupplier;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.transformers.TransformerBuilder;

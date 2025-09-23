@@ -7,10 +7,10 @@ import vi.mixin.api.editors.TargetMethodEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 import vi.mixin.api.injection.Vars;
-import vi.mixin.api.transformers.TransformerHelper;
+import vi.mixin.api.util.TransformerHelper;
 
 import static org.objectweb.asm.Opcodes.*;
-import static vi.mixin.api.transformers.TransformerHelper.getLoadOpcode;
+import static vi.mixin.api.util.TransformerHelper.getLoadOpcode;
 
 public class MixinTargetMethodEditor extends TargetMethodEditor {
 

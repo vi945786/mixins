@@ -1,23 +1,28 @@
 {
   "mixins": [
-    "vi.mixin.test.FinalBaseExtender",
-    "vi.mixin.test.SealedBaseExtender",
+    "vi.mixin.test.AnonymousShadowMixin",
+    "vi.mixin.test.AnonymousTargetMixin",
     "vi.mixin.test.BaseNewExtender",
-    "vi.mixin.test.TargetGetterAccessor",
+    "vi.mixin.test.FinalBaseExtender",
     "vi.mixin.test.InjectTestMixin",
-    "vi.mixin.test.TargetInvokerAccessor",
+    "vi.mixin.test.LambdaShadowMixin",
+    "vi.mixin.test.LambdaTargetMixin",
+    "vi.mixin.test.ModifyValueMixin",
     "vi.mixin.test.OuterFieldMixin",
     "vi.mixin.test.OuterFieldMixin$InnerFieldMixin",
     "vi.mixin.test.OuterMethodCallMixin",
     "vi.mixin.test.OuterMethodCallMixin$InnerMethodCallMixin",
-    "vi.mixin.test.TargetNewAccessor",
-    "vi.mixin.test.TargetNewMixin",
+    "vi.mixin.test.OuterShadowMixin",
+    "vi.mixin.test.OuterShadowMixin$InnerShadowMixin",
     "vi.mixin.test.OverridableAnnotationTestExtender",
     "vi.mixin.test.RedirectTestMixin",
-    "vi.mixin.test.TargetSetterAccessor",
+    "vi.mixin.test.SealedBaseExtender",
     "vi.mixin.test.ShadowTestExtender",
     "vi.mixin.test.ShadowTestMixin",
-    "vi.mixin.test.OuterShadowMixin",
-    "vi.mixin.test.OuterShadowMixin$InnerShadowMixin"
+    "vi.mixin.test.TargetGetterAccessor",
+    "vi.mixin.test.TargetInvokerAccessor",
+    "vi.mixin.test.TargetNewAccessor",
+    "vi.mixin.test.TargetNewMixin",
+    "vi.mixin.test.TargetSetterAccessor"
   ]
 }
