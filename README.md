@@ -27,16 +27,14 @@
 
 ---
 
-
-
 ## Types of Mixin Classes
 
 There are three built-in types of mixin classes:
 
 **Mixins**:
 - Abstract, concrete, or static classes annotated with `@Mixin`.
-- Used to logic into the target class.
-- Should not be referenced outside itself
+- Used to inject logic into the target class.
+- Should not be referenced outside itself.
 
 **Extenders**:
 - Classes annotated with both `@Mixin` and `@Extends`.
@@ -58,7 +56,7 @@ The mixin file is a JSON file that specifies the mixin class types, transformers
 ```json
 {
 	"mixinClassTypes": [
-    	"package.ExampleMixinClassType"
+		"package.ExampleMixinClassType"
   	],
 	"transformers": [
 		"package.ExampleTransformer"
@@ -391,6 +389,6 @@ for now check the java files under the path `vi.mixin.bytecode.transformers`
 
 ---
 
-## Custom Mixin 
+## Custom Mixin Class Types
 will be added soon.\
 for now check the java files under the sub paths of `vi.mixin.api.classtypes`

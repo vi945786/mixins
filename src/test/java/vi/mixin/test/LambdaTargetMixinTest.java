@@ -2,8 +2,9 @@ package vi.mixin.test;
 
 import org.junit.jupiter.api.Test;
 import vi.mixin.api.annotations.Mixin;
-import vi.mixin.api.annotations.methods.ModifyValue;
+import vi.mixin.api.annotations.methods.Inject;
 import vi.mixin.api.injection.At;
+import vi.mixin.api.injection.ValueReturner;
 
 import java.util.function.Supplier;
 
@@ -20,15 +21,15 @@ public class LambdaTargetMixinTest {
 
     @Test
     void testModifyValueLambda() {
-        assertEquals(Target.method(), 2);
+        assertEquals(2, Target.method());
     }
 }
 
 @Mixin(LambdaTargetMixinTest.Target.class)
 class LambdaTargetMixin {
 
-    @ModifyValue(value = "lambda$method$0", at = @At(At.Location.RETURN))
-    private static Object testOnAnon(Integer i) {
-        return 2;
+    @Inject(value = "lambda$method$0", at = @At(At.Location.RETURN))
+    private static void testOnAnon(ValueReturner<Integer> valueReturner) {
+        valueReturner.setReturnValue(2);
     }
 }

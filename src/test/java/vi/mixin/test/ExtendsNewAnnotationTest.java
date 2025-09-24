@@ -8,7 +8,7 @@ import vi.mixin.api.annotations.methods.New;
 
 public class ExtendsNewAnnotationTest {
 
-    public static class Base {
+    public static final class Base {
         private final int a, b;
         public Base(int a, Integer b) {
             this.a = a;

@@ -61,11 +61,16 @@ public class InjectTransformer implements TransformerSupplier {
             insnList.add(new TypeInsnNode(NEW, returner));
 
             int opcode = insnListEditor.getInsnListClone().get(atIndex).getOpcode();
-            if(IRETURN <= opcode && opcode <= ARETURN) {
+            if(IRETURN <= opcode && opcode <= DRETURN) {
                 insnList.add(new InsnNode(DUP_X1));
                 insnList.add(new InsnNode(SWAP));
                 insnList.add(new InsnNode(DUP_X2));
                 insnList.add(new MethodInsnNode(INVOKESPECIAL, returner, "<init>", "(" + Type.getReturnType(targetMethodNode.desc).getDescriptor() + ")V"));
+            } else if(opcode == ARETURN) {
+                insnList.add(new InsnNode(DUP_X1));
+                insnList.add(new InsnNode(SWAP));
+                insnList.add(new InsnNode(DUP_X2));
+                insnList.add(new MethodInsnNode(INVOKESPECIAL, returner, "<init>", "(" + Type.getDescriptor(Object.class) + ")V"));
             } else {
                 insnList.add(new InsnNode(DUP));
                 insnList.add(new MethodInsnNode(INVOKESPECIAL, returner, "<init>", "()V"));
@@ -95,10 +100,10 @@ public class InjectTransformer implements TransformerSupplier {
             if (returnType.getSort() != 0) {
 
                 String methodName = "getReturnValue";
-                String methodDesc = "()java/lang/Object";
+                String methodDesc = "()Ljava/lang/Object;";
                 if (returnType.getSort() <= 8) {
-                    methodName += returnType.getInternalName();
-                    methodDesc = "()" + returnType.getInternalName();
+                    methodName += returnType.getDescriptor();
+                    methodDesc = "()" + returnType.getDescriptor();
                 }
                 insnList.add(new MethodInsnNode(INVOKEVIRTUAL, returner, methodName, methodDesc));
             }
