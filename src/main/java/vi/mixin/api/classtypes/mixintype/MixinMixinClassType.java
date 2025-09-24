@@ -175,7 +175,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
         });
 
         for (MethodNode methodNode : targetClassNode.methods) {
-            for (int index : TransformerHelper.getInsnNodesIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
+            for (int index : TransformerHelper.getInsnNodeIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
                 if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode) || !invokeDynamicInsnNode.bsm.getOwner().equals(Type.getInternalName(LambdaMetafactory.class))) continue;
                 MixinClassTargetInsnListEditor insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
 
@@ -264,7 +264,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
 
         targetClassEditor.getMethodEditors().stream().filter(methodNode -> methodNode.getMethodNodeClone().name.equals("<init>")).forEach(methodEditor -> {
             MixinClassTargetInsnListEditor insnListEditor = methodEditor.getInsnListEditor();
-            for (int index : TransformerHelper.getInsnNodesIndexes(methodEditor.getInsnListEditor().getInsnListClone(), AbstractInsnNode.INSN, RETURN)) {
+            for (int index : TransformerHelper.getInsnNodeIndexes(methodEditor.getInsnListEditor().getInsnListClone(), AbstractInsnNode.INSN, RETURN)) {
                 InsnList insnList = new InsnList();
                 insnList.add(new VarInsnNode(ALOAD, 0));
                 insnList.add(new MethodInsnNode(INVOKESTATIC, mixinClassNode.name, newInit.name, newInit.desc));

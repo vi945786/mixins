@@ -43,6 +43,10 @@ public class RegisterJars {
 
             doRunArgs();
 
+            String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+            Path tempDir = Files.createTempDirectory("mixin-" + pid + "-");
+            generateBuiltinJars(tempDir);
+
             List<String> agentJars = ManagementFactory.getRuntimeMXBean().getInputArguments().stream().filter(arg -> arg.startsWith("-javaagent:"))
                     .map(arg -> arg.substring("-javaagent:".length()))
                     .map(arg -> arg.split("=")[0])
@@ -50,29 +54,25 @@ public class RegisterJars {
 
             String agentJarClasspath = "";
             for (String agentJar : agentJars) {
-                addJar(agentJar);
+                addJar(agentJar, true);
                 agentJarClasspath += agentJar + File.pathSeparator;
             }
             agentJarClasspath = agentJarClasspath.substring(0, agentJarClasspath.length() - 1);
-
-            String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
-            Path tempDir = Files.createTempDirectory("mixin-" + pid + "-");
-            generateBuiltinJars(tempDir);
 
             String classPath = System.getProperty("java.class.path");
             try {
                 for (String entry : classPath.split(File.pathSeparator)) {
                     File entryFile = new File(entry);
                     if (entryFile.isFile()) {
-                        if (entryFile.getName().endsWith(".jar")) addJar(entryFile.getAbsolutePath());
+                        if (entryFile.getName().endsWith(".jar")) addJar(entryFile.getAbsolutePath(), true);
                     } else {
                         if (entry.endsWith(File.separator + "*")) {
                             for (File file : entryFile.getParentFile().listFiles()) {
                                 if (file.isFile() && file.getName().endsWith(".jar"))
-                                    addJar(file.getAbsolutePath());
+                                    addJar(file.getAbsolutePath(), true);
                             }
                         } else {
-                            addJar(generateJarFromDir(Path.of(entry), tempDir));
+                            addJar(generateJarFromDir(Path.of(entry), tempDir), true);
                         }
                     }
                 }
@@ -146,7 +146,7 @@ public class RegisterJars {
             try (DirectoryStream<Path> moduleDirs = Files.newDirectoryStream(modulesRoot)) {
                 StreamSupport.stream(moduleDirs.spliterator(), true).forEach(moduleDir -> {
                     try {
-                        addJar(generateJarFromDir(moduleDir, tempDir), false);
+                        addJar(generateJarFromDir(moduleDir, tempDir));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -158,10 +158,10 @@ public class RegisterJars {
     }
 
     public static void addJar(String jar) {
-        addJar(jar, true);
+        addJar(jar, false);
     }
 
-    public static void addJar(String jar, boolean checkMixins) {
+    private static void addJar(String jar, boolean checkMixins) {
         try (JarFile jarFile = new JarFile(jar)) {
             agent.appendToBootstrapClassLoaderSearch(jarFile);
 

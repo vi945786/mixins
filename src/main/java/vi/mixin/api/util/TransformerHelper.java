@@ -123,11 +123,12 @@ public final class TransformerHelper implements Opcodes {
 
     public static List<Integer> getAtTargetIndexes(InsnList list, At atAnnotation, String annotatedName) {
          At.Location location = atAnnotation.value();
-         List<Integer> ordinal = Arrays.stream(atAnnotation.ordinal()).boxed().toList();
+         List<Integer> ordinals = Arrays.stream(atAnnotation.ordinals()).boxed().toList();
          String target = atAnnotation.target();
          int opcode = atAnnotation.opcode();
+         int offset = atAnnotation.offset();
 
-         return switch (location) {
+         List<Integer> indexes = switch (location) {
              case HEAD -> {
                  if(!target.isEmpty() || opcode != -1)
                      throw new MixinFormatException(annotatedName, "unsupported head target or opcode");
@@ -138,13 +139,13 @@ public final class TransformerHelper implements Opcodes {
                  if (!target.isEmpty() || opcode != -1)
                      throw new MixinFormatException(annotatedName, "unsupported return target or opcode");
 
-                 yield getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), ordinal);
+                 yield getInsnNodeIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), ordinals);
              }
              case TAIL -> {
                  if (!target.isEmpty() || opcode != -1)
                      throw new MixinFormatException(annotatedName, "unsupported tail target or opcode");
 
-                 yield List.of(getInsnNodesIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), List.of()).getLast());
+                 yield List.of(getInsnNodeIndexes(list, INSN, List.of(IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN), List.of()).getLast());
              }
              case INVOKE -> {
                  if(opcode != -1 && !(INVOKEVIRTUAL <= opcode && opcode <= INVOKEINTERFACE))
@@ -155,16 +156,85 @@ public final class TransformerHelper implements Opcodes {
                  String owner = target.substring(0, splitOwner);
                  String name = target.substring(splitOwner+1, splitName);
                  String desc = target.substring(splitName);
-                 yield getInsnNodesIndexes(list, METHOD_INSN, List.of(INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC, INVOKEINTERFACE), ordinal, owner, name, desc);
+                 yield getInsnNodeIndexes(list, METHOD_INSN, List.of(INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC, INVOKEINTERFACE), ordinals, owner, name, desc);
              }
              case FIELD -> {
                  if(opcode != -1 && !(GETSTATIC <= opcode && opcode <= PUTFIELD))
-                     throw new MixinFormatException("@At", "unsupported field opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
+                     throw new MixinFormatException(annotatedName, "unsupported field opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
 
                  int splitOwner = target.indexOf('.');
                  String owner = target.substring(0, splitOwner);
                  String name = target.substring(splitOwner+1).split(";")[0];
-                 yield getInsnNodesIndexes(list, FIELD_INSN, opcode, ordinal, owner, name, null);
+                 yield getInsnNodeIndexes(list, FIELD_INSN, opcode, ordinals, owner, name, null);
+             }
+             case STORE -> {
+                 if(opcode != -1 && !(ISTORE <= opcode && opcode <= ASTORE))
+                     throw new MixinFormatException(annotatedName, "unsupported store opcode. supported values are: Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE");
+
+                if (target == null || target.isEmpty()) {
+                    yield getInsnNodeIndexes(list, VAR_INSN, opcode, ordinals);
+                } else {
+                    try {
+                        int varIndex = Integer.parseInt(target);
+                        yield getInsnNodeIndexes(list, VAR_INSN, opcode, ordinals, varIndex);
+                    } catch (NumberFormatException e) {
+                        throw new MixinFormatException(annotatedName, "invalid store target: expected variable index");
+                    }
+                }
+             }
+             case LOAD -> {
+                if(opcode != -1 && !(ILOAD <= opcode && opcode <= ALOAD))
+                     throw new MixinFormatException(annotatedName, "unsupported load opcode. supported values are: Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD");
+
+                if (target == null || target.isEmpty()) {
+                    yield getInsnNodeIndexes(list, VAR_INSN, opcode, ordinals);
+                } else {
+                    try {
+                        int varIndex = Integer.parseInt(target);
+                        yield getInsnNodeIndexes(list, VAR_INSN, opcode, ordinals, varIndex);
+                    } catch (NumberFormatException e) {
+                        throw new MixinFormatException(annotatedName, "invalid load target: expected variable index");
+                    }
+                }
+             }
+             case CONSTANT -> {
+                 if (opcode != -1)
+                     throw new MixinFormatException(annotatedName, "unsupported constant opcode.");
+
+                 List<Integer> i = switch (target) {
+                     case "null" -> getInsnNodeIndexes(list, INSN, ACONST_NULL, ordinals);
+                     case "int;-1" -> getInsnNodeIndexes(list, INSN, ICONST_M1, ordinals);
+                     case "int;0" -> getInsnNodeIndexes(list, INSN, ICONST_0, ordinals);
+                     case "int;1" -> getInsnNodeIndexes(list, INSN, ICONST_1, ordinals);
+                     case "int;2" -> getInsnNodeIndexes(list, INSN, ICONST_2, ordinals);
+                     case "int;3" -> getInsnNodeIndexes(list, INSN, ICONST_3, ordinals);
+                     case "int;4" -> getInsnNodeIndexes(list, INSN, ICONST_4, ordinals);
+                     case "int;5" -> getInsnNodeIndexes(list, INSN, ICONST_5, ordinals);
+                     case "long;0" -> getInsnNodeIndexes(list, INSN, LCONST_0, ordinals);
+                     case "long;1" -> getInsnNodeIndexes(list, INSN, LCONST_1, ordinals);
+                     case "float;0" -> getInsnNodeIndexes(list, INSN, FCONST_0, ordinals);
+                     case "float;1" -> getInsnNodeIndexes(list, INSN, FCONST_1, ordinals);
+                     case "float;2" -> getInsnNodeIndexes(list, INSN, FCONST_2, ordinals);
+                     case "double;0" -> getInsnNodeIndexes(list, INSN, DCONST_0, ordinals);
+                     case "double;1" -> getInsnNodeIndexes(list, INSN, DCONST_1, ordinals);
+                     default -> new ArrayList<>();
+                 };
+
+                 if(target.equals("null")) yield i;
+                 String value = target.split(";", 2)[1];
+                 switch (target.split(";")[0]) {
+                     case "int" -> {
+                         i.addAll(getInsnNodeIndexes(list, INT_INSN, (List<Integer>) null, ordinals, Integer.parseInt(value)));
+                         i.addAll(getInsnNodeIndexes(list, LDC_INSN, (List<Integer>) null, ordinals, Integer.parseInt(value)));
+                     }
+                     case "long" -> i.addAll(getInsnNodeIndexes(list, LDC_INSN, (List<Integer>) null, ordinals, Long.parseLong(value)));
+                     case "float" -> i.addAll(getInsnNodeIndexes(list, LDC_INSN, (List<Integer>) null, ordinals, Float.parseFloat(value)));
+                     case "double" -> i.addAll(getInsnNodeIndexes(list, LDC_INSN, (List<Integer>) null, ordinals, Double.parseDouble(value)));
+                     case "string" -> i.addAll(getInsnNodeIndexes(list, LDC_INSN, (List<Integer>) null, ordinals, value));
+                     case "class" -> i.addAll(getInsnNodeIndexes(list, LDC_INSN, (List<Integer>) null, ordinals, Type.getType(value)));
+                 }
+
+                 yield i;
              }
              case JUMP -> {
                  if (!target.isEmpty())
@@ -172,20 +242,22 @@ public final class TransformerHelper implements Opcodes {
                  if(opcode != -1 && (!(IFEQ <= opcode && opcode <= JSR)) && !(IFNULL <= opcode && opcode <= IFNONNULL))
                      throw new MixinFormatException("@At", "unsupported jump opcode. supported values are: Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE, Opcodes.IFGT, Opcodes.IFLE, Opcodes.IF_ICMPEQ, Opcodes.IF_ICMPNE, Opcodes.IF_ICMPLT, Opcodes.IF_ICMPGE, Opcodes.IF_ICMPGT, Opcodes.IF_ICMPLE, Opcodes.IF_ACMPEQ, Opcodes.IF_ACMPNE, Opcodes.GOTO, Opcodes.JSR, Opcodes.IFNULL, Opcodes.IFNONNULL");
 
-                 yield getInsnNodesIndexes(list, JUMP_INSN, opcode, ordinal);
+                 yield getInsnNodeIndexes(list, JUMP_INSN, opcode, ordinals);
              }
          };
+
+         return indexes.stream().map(i -> i + offset).sorted().toList();
     }
 
-    public static List<Integer> getInsnNodesIndexes(InsnList list, int type, Integer opcode, Object... values) {
-        return getInsnNodesIndexes(list, type, opcode == null ? null : List.of(opcode), List.of(), values);
+    public static List<Integer> getInsnNodeIndexes(InsnList list, int type, Integer opcode, Object... values) {
+        return getInsnNodeIndexes(list, type, opcode == null ? null : List.of(opcode), List.of(), values);
     }
 
-    public static List<Integer> getInsnNodesIndexes(InsnList list, int type, Integer opcode, List<Integer> ordinals, Object... values) {
-        return getInsnNodesIndexes(list, type, opcode == null ? null : List.of(opcode), ordinals, values);
+    public static List<Integer> getInsnNodeIndexes(InsnList list, int type, Integer opcode, List<Integer> ordinals, Object... values) {
+        return getInsnNodeIndexes(list, type, opcode == null ? null : List.of(opcode), ordinals, values);
     }
 
-    public static List<Integer> getInsnNodesIndexes(InsnList list, int type, List<Integer> opcodes, List<Integer> ordinals, Object... values) {
+    public static List<Integer> getInsnNodeIndexes(InsnList list, int type, List<Integer> opcodes, List<Integer> ordinals, Object... values) {
         List<Integer> indexes = new ArrayList<>();
         for(int i = 0; i < list.size(); i++) {
             AbstractInsnNode insnNode = list.get(i);
@@ -200,10 +272,10 @@ public final class TransformerHelper implements Opcodes {
         for (int i = 0; i < indexes.size(); i++) {
             if(ordinals.contains(i)) newIndexes.add(indexes.get(i));
         }
-        if(ordinals.getLast() >= indexes.size()) {
+        if(ordinals.get(ordinals.size() - 1) >= indexes.size()) {
             throw new IndexOutOfBoundsException("ordinal is too big");
         }
-        if(ordinals.getFirst() < 0) {
+        if(ordinals.get(0) < 0) {
             throw new IndexOutOfBoundsException("ordinal is negative");
         }
 
@@ -219,7 +291,7 @@ public final class TransformerHelper implements Opcodes {
     }
 
     public static List<AbstractInsnNode> getInsnNodes(InsnList list, int type, List<Integer> opcodes, List<Integer> ordinals, Object... values) {
-        return getInsnNodesIndexes(list, type, opcodes, ordinals, values).stream().map(list::get).toList();
+        return getInsnNodeIndexes(list, type, opcodes, ordinals, values).stream().map(list::get).toList();
     }
 
     public static boolean equals(AbstractInsnNode node, Object... values) {

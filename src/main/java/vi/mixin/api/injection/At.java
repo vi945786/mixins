@@ -11,7 +11,7 @@ public @interface At {
     /**
      * Which instance of the matching opcodes to mixin
      */
-    int[] ordinal() default {};
+    int[] ordinals() default {};
 
     Location value();
 
@@ -25,12 +25,17 @@ public @interface At {
      */
     String target() default "";
 
+    int offset() default 0;
+
     enum Location {
         HEAD,
         RETURN,
         TAIL,
         INVOKE,
         FIELD,
+        STORE,
+        LOAD,
+        CONSTANT,
         JUMP
     }
 }

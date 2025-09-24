@@ -23,7 +23,6 @@ import java.lang.annotation.*;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.UnmodifiableClassException;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -36,40 +35,11 @@ import static vi.mixin.bytecode.Agent.agent;
 
 public class Mixiner {
 
-    private static final Map<String, MixinClassType<?, ?, ?, ?, ?>> mixinClassTypes;
-    private static final Map<String, List<BuiltTransformer>> transformers;
+    private static final Map<String, MixinClassType<?, ?, ?, ?, ?>> mixinClassTypes = new HashMap<>();
+    private static final Map<String, List<BuiltTransformer>> transformers = new HashMap<>();
 
-    private static final Map<String, ClassNode> originalTargetClassNodes;
-    private static final Set<String> usedMixinClasses;
-
-    static {
-        if("main".equals(System.getProperty("mixin.stage"))) {
-            try {
-                Field mixinClassTypesField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("mixinClassTypes");
-                mixinClassTypesField.setAccessible(true);
-                mixinClassTypes = (Map<String, MixinClassType<?, ?, ?, ?, ?>>) mixinClassTypesField.get(null);
-
-                Field transformersField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("transformers");
-                transformersField.setAccessible(true);
-                transformers = (Map<String, List<BuiltTransformer>>) transformersField.get(null);
-
-                Field originalTargetClassNodesField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("originalTargetClassNodes");
-                originalTargetClassNodesField.setAccessible(true);
-                originalTargetClassNodes = (Map<String, ClassNode>) originalTargetClassNodesField.get(null);
-
-                Field usedMixinClassesField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("usedMixinClasses");
-                usedMixinClassesField.setAccessible(true);
-                usedMixinClasses = (Set<String>) usedMixinClassesField.get(null);
-            } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            mixinClassTypes = new HashMap<>();
-            transformers = new HashMap<>();
-            originalTargetClassNodes = new HashMap<>();
-            usedMixinClasses = new HashSet<>();
-        }
-    }
+    private static final Map<String, ClassNode> originalTargetClassNodes = new HashMap<>();
+    private static final Set<String> usedMixinClasses = new HashSet<>();
 
     public static void addMixinClassType(MixinClassType<?, ?, ?, ?, ?> mixinClassType) {
         for(java.lang.reflect.Type type : mixinClassType.getClass().getGenericInterfaces()) {
@@ -131,7 +101,7 @@ public class Mixiner {
             mixinClassNode.invisibleAnnotations.add(new AnnotationNode("Lvi/mixin/api/classtypes/anonymoustype/AnonymousMixinClassType$Anonymous;"));
         }
         mixins.clear();
-        anonymousInners.clear();;
+        anonymousInners.clear();
 
         outerClassNodeMap.put(null, null);
         classNodeChildrenClassMap.put(null, new ArrayList<>());
@@ -201,7 +171,8 @@ public class Mixiner {
                 throw new MixinFormatException(mixinClassNode.name, "added \"set up\" method not found. make sure it takes no parameters");
             }
         }
-         //allow garbage collection
+        //allow garbage collection
+        classNodeChildrenClassMap = null;
         mixinClassNodesToTargetClass = null;
         mixinClassNodesToMixinResult = null;
 

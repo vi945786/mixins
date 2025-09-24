@@ -29,6 +29,7 @@ public class RedirectTransformer implements TransformerSupplier {
         List<Type> args = new ArrayList<>();
 
         At at = annotation.at();
+        if(at.offset() != 0) throw new MixinFormatException(name, "unsupported @Redirect @At offset.");
         switch (at.value()) {
             case INVOKE -> {
                switch (at.opcode()) {
@@ -47,7 +48,7 @@ public class RedirectTransformer implements TransformerSupplier {
                         args.add(Type.getType("L" + at.target().split("\\.")[0] + ";"));
                         args.add(Type.getType(at.target().split(";")[1] + ";"));
                     }
-                    default -> throw new MixinFormatException(name, "unsupported @At method opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
+                    default -> throw new MixinFormatException(name, "unsupported @At field opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
                }
             }
             default -> throw new MixinFormatException(name, "unsupported @At location. supported values are: INVOKE, FIELD");

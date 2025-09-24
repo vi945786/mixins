@@ -1,13 +1,3 @@
-STORE/LOAD injection point
-    use opcode for the type
-
-CONSTANT injection point
-    use target for the constant
-    "null" for null
-    "type;value" for the rest
-
-add @At offset
-
 test:
     Object as the target
 
@@ -15,6 +5,9 @@ add to the readme:
     Vars
     @Redirect
     @ModifyValue
+
+    STORE/LOAD/CONSTANT @At injection points
+    @At offset
 
     anonymous classes inside mixin classes
     anonymous classes as targets
