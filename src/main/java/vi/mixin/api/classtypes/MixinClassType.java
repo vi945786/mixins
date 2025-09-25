@@ -20,6 +20,10 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
     TM create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors);
     TF create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors);
 
+    default boolean redefineTargetFirst() {
+        return true;
+    }
+
     String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<AM, AF, TM, TF> editors, A annotation, MixinClassTargetClassEditor targetClassEditor);
 }
 

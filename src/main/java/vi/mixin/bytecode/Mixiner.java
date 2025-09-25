@@ -157,11 +157,12 @@ public class Mixiner {
                 mixinClassNode.accept(mixinWriter);
 
                 new MixinerTransformer(mixinClassNode.name, mixinWriter.toByteArray());
-                agent.redefineClasses(new ClassDefinition(targetClass, targetWriter.toByteArray()));
-
+                if(mixinResult.redefineTargetFirst) agent.redefineClasses(new ClassDefinition(targetClass, targetWriter.toByteArray()));
                 Class<?> mixinClass = MixinClassHelper.findClass(mixinClassNode.name);
                 assert mixinClass != null;
                 agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+                if(!mixinResult.redefineTargetFirst)agent.redefineClasses(new ClassDefinition(targetClass, targetWriter.toByteArray()));
+
 
                 mixinClasses.put(mixinClass, targetClass);
 
@@ -309,7 +310,7 @@ public class Mixiner {
             }
         }
 
-        return new MixinResult(modifyTargetClassNode, mixinClassType.transform(mixinClassNodeHierarchy, new Editors<>(mixinMethodEditors, mixinFieldEditors, targetMethodEditors, targetFieldEditors), mixinClassAnnotation, new MixinClassTargetClassEditor(modifyTargetClassNode, originalTargetClassNode, targetClass)));
+        return new MixinResult(mixinClassType.redefineTargetFirst(), modifyTargetClassNode, mixinClassType.transform(mixinClassNodeHierarchy, new Editors<>(mixinMethodEditors, mixinFieldEditors, targetMethodEditors, targetFieldEditors), mixinClassAnnotation, new MixinClassTargetClassEditor(modifyTargetClassNode, originalTargetClassNode, targetClass)));
     }
 
     private static <A extends Annotation> MixinClassTargetMethodEditor getTargetMethodEditor(BuiltTransformer builtTransformer, String name, MethodNode methodNode, ClassNode originalTargetClassNode, ClassNode modifyTargetClassNode, A annotation) {
@@ -380,7 +381,7 @@ public class Mixiner {
         throw new MixinFormatException(name, "doesn't have a target");
     }
 
-    private record MixinResult(ClassNode targetClassNode, String setUpMethodName) {}
+    private record MixinResult(boolean redefineTargetFirst, ClassNode targetClassNode, String setUpMethodName) {}
 
     private record MixinerTransformer(String name, byte[] bytecode) implements ClassFileTransformer {
 

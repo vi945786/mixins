@@ -35,10 +35,17 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
         return new AccessorTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
+    public boolean redefineTargetFirst() {
+        return false;
+    }
+
     @Override
     public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<AccessorAnnotatedMethodEditor, AnnotatedFieldEditor, AccessorTargetMethodEditor, AccessorTargetFieldEditor> editors, Annotation annotation, MixinClassTargetClassEditor targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         targetClassEditor.addInterface(mixinClassNode.name);
+        mixinClassNode.access |= ACC_PUBLIC;
+        mixinClassNode.access &= ~ACC_PRIVATE;
+        mixinClassNode.access &= ~ACC_PROTECTED;
 
         ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
         mixinClassNode.methods.forEach(methodNode -> {

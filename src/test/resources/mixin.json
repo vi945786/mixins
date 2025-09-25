@@ -8,6 +8,7 @@
     "vi.mixin.test.LambdaShadowMixin",
     "vi.mixin.test.LambdaTargetMixin",
     "vi.mixin.test.ModifyValueMixin",
+    "vi.mixin.test.NumberAccessor",
     "vi.mixin.test.OuterFieldMixin",
     "vi.mixin.test.OuterFieldMixin$InnerFieldMixin",
     "vi.mixin.test.OuterMethodCallMixin",

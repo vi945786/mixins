@@ -38,6 +38,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
 
     private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, MixinClassTargetClassEditor targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
+        targetClassEditor.makePublic();
 
         String name = "@Extends " + mixinClassNode.name;
         if(mixinClassNode.superName != null && !mixinClassNode.superName.equals("java/lang/Object")) throw new MixinFormatException(name, "extends " + mixinClassNode.superName + ". @Extend classes must not extend any other class");
