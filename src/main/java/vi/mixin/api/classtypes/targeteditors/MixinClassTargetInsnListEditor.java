@@ -1,32 +1,15 @@
 package vi.mixin.api.classtypes.targeteditors;
 
 import org.objectweb.asm.tree.*;
-import vi.mixin.bytecode.Mixiner;
-
-import java.lang.reflect.Field;
 import java.util.*;
 
 public class MixinClassTargetInsnListEditor {
-    private static final HashMap<String, List<OpcodeState>> isOriginalOpcode;
+    private static final HashMap<String, List<OpcodeState>> isOriginalOpcode = new HashMap<>();
 
     private enum OpcodeState {
         ORIGINAL,
         INJECTED,
         DELETED
-    }
-
-    static {
-        if("main".equals(System.getProperty("mixin.stage"))) {
-            try {
-                Field isOriginalOpcodeField = Class.forName(Mixiner.class.getName(), false, ClassLoader.getSystemClassLoader()).getDeclaredField("isOriginalOpcode");
-                isOriginalOpcodeField.setAccessible(true);
-                isOriginalOpcode = (HashMap<String, List<OpcodeState>>) isOriginalOpcodeField.get(null);
-            } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            isOriginalOpcode = new HashMap<>();
-        }
     }
 
     private final String id;

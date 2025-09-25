@@ -29,19 +29,27 @@ import static vi.mixin.bytecode.Agent.agent;
 
 public class RegisterJars {
 
-    private static final List<String> classEntries = new ArrayList<>();
-    private static final List<String> transformersEntries = new ArrayList<>();
-    private static final List<String> mixinClassTypesEntries = new ArrayList<>();
-    private static List<byte[]> mixins = new ArrayList<>();
-    private static List<byte[]> inners = new ArrayList<>();
-    static void registerAll() {
+    private final List<String> classEntries = new ArrayList<>();
+    private final List<String> transformersEntries = new ArrayList<>();
+    private final List<String> mixinClassTypesEntries = new ArrayList<>();
+    private final List<byte[]> mixins = new ArrayList<>();
+    private final List<byte[]> inners = new ArrayList<>();
+    private final Mixiner mixiner = new Mixiner();
+
+    private RegisterJars() {};
+
+    static void registerAll(String args) {
+        new RegisterJars().registerAll0(args);
+    }
+
+    private void registerAll0(String args) {
         try {
             RegisterJars.class.getDeclaredClasses();
             ClassReader.class.getName();
             ClassVisitor.class.getName();
             Class.forName("org.objectweb.asm.Context");
 
-            doRunArgs();
+            doRunArgs(args);
 
             String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
             Path tempDir = Files.createTempDirectory("mixin-" + pid + "-");
@@ -83,12 +91,12 @@ public class RegisterJars {
             throw new RuntimeException("unable to initialize mixins", e);
         }
 
-        Mixiner.addClasses(mixins, inners);
+        mixiner.addClasses(mixins, inners);
     }
 
-    private static void doRunArgs() {
-        if(System.getProperty("mixin.files") != null) {
-            for (String file : System.getProperty("mixin.files").split(File.pathSeparator)) {
+    private void doRunArgs(String args) {
+        if(args != null) {
+            for (String file : args.split(File.pathSeparator)) {
                 try {
                     MixinFile mixinFile = getMixinFile(Files.newBufferedReader(Path.of(file)));
                     mixinClassTypesEntries.addAll(mixinFile.mixinClassTypes);
@@ -101,7 +109,7 @@ public class RegisterJars {
         }
     }
 
-    private static String generateJarFromDir(Path dir, Path tempDir) throws IOException {
+    private String generateJarFromDir(Path dir, Path tempDir) throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         try (ZipOutputStream jos = new ZipOutputStream(byteArrayOutputStream)) {
             jos.setLevel(Deflater.NO_COMPRESSION);
@@ -127,7 +135,7 @@ public class RegisterJars {
         return jarPath.toString();
     }
 
-    private static void generateBuiltinJars(Path tempDir) {
+    private void generateBuiltinJars(Path tempDir) {
         FileSystem jrtFileSystem;
         try {
             Class<?> jrtFileSystemProvider = MixinClassHelper.findClass("jdk.internal.jrtfs.JrtFileSystemProvider");
@@ -158,10 +166,14 @@ public class RegisterJars {
     }
 
     public static void addJar(String jar) {
-        addJar(jar, false);
+        try {
+            agent.appendToBootstrapClassLoaderSearch(new JarFile(jar));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load jar: " + jar, e);
+        }
     }
 
-    private static void addJar(String jar, boolean checkMixins) {
+    private void addJar(String jar, boolean checkMixins) {
         try (JarFile jarFile = new JarFile(jar)) {
             agent.appendToBootstrapClassLoaderSearch(jarFile);
 
@@ -196,7 +208,7 @@ public class RegisterJars {
         }
     }
 
-    private static void findAnonymousInnerClasses(JarFile jarFile, byte[] bytecode) {
+    private void findAnonymousInnerClasses(JarFile jarFile, byte[] bytecode) {
         ClassReader cr = new ClassReader(bytecode);
         cr.accept(new ClassVisitor(Opcodes.ASM9) {
             @Override
@@ -217,7 +229,7 @@ public class RegisterJars {
         }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
-    private static void checkStartUpEntries(JarFile jarFile) throws IOException {
+    private void checkStartUpEntries(JarFile jarFile) throws IOException {
         for(String name : classEntries) {
             JarEntry entry = jarFile.getJarEntry(nameToEntry(name));
             if(entry == null) continue;
@@ -245,11 +257,11 @@ public class RegisterJars {
 
     private record MixinFile(List<String> mixinClasses, List<String> transformers, List<String> mixinClassTypes) {}
 
-    private static void registerTransformer(String transformer) {
+    private void registerTransformer(String transformer) {
         registerTransformers(List.of(transformer));
     }
 
-    private static void registerTransformers(List<String> transformers) {
+    private  void registerTransformers(List<String> transformers) {
         transformers.forEach(mixinTransformer -> {
             Class<?> transformer = MixinClassHelper.findClass(mixinTransformer);
 
@@ -257,7 +269,7 @@ public class RegisterJars {
             if(!TransformerSupplier.class.isAssignableFrom(transformer)) throw new MixinFormatException(mixinTransformer, "transformer does not implement vi.mixin.api.transformers.TransformerSupplier");
 
             try {
-                ((TransformerSupplier) transformer.getConstructor().newInstance()).getBuiltTransformers().forEach(Mixiner::addBuiltTransformer);
+                ((TransformerSupplier) transformer.getConstructor().newInstance()).getBuiltTransformers().forEach(mixiner::addBuiltTransformer);
             } catch (NoSuchMethodException e) {
                 throw new MixinFormatException(mixinTransformer, "transformer does not have a public no-args constructor");
             } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
@@ -266,11 +278,11 @@ public class RegisterJars {
         });
     }
 
-    private static void registerMixinClassType(String mixinClassType) {
+    private void registerMixinClassType(String mixinClassType) {
         registerTransformers(List.of(mixinClassType));
     }
 
-    private static void registerMixinClassTypes(List<String> mixinClassTypes) {
+    private void registerMixinClassTypes(List<String> mixinClassTypes) {
         mixinClassTypes.forEach(mixinClassTypeName -> {
             Class<?> mixinClassType = MixinClassHelper.findClass(mixinClassTypeName);
 
@@ -280,7 +292,7 @@ public class RegisterJars {
             try {
                 Constructor<?> c = mixinClassType.getDeclaredConstructor();
                 c.setAccessible(true);
-                Mixiner.addMixinClassType((MixinClassType<?, ?, ?, ?, ?>) c.newInstance());
+                mixiner.addMixinClassType((MixinClassType<?, ?, ?, ?, ?>) c.newInstance());
 
             } catch (NoSuchMethodException e) {
                 throw new MixinFormatException(mixinClassTypeName, "mixin class type does not have a public no-args constructor");

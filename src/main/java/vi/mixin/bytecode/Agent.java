@@ -2,9 +2,12 @@ package vi.mixin.bytecode;
 
 import java.io.*;
 import java.lang.instrument.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.jar.JarFile;
 
 public class Agent {
 
@@ -12,25 +15,25 @@ public class Agent {
 
     static {
         if(!System.getProperty("java.vm.vendor").equals("JetBrains s.r.o."))
-            throw new UnsupportedOperationException("Illegal java distribution. Install a distribution of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
+            throw new UnsupportedOperationException("Illegal java distribution. Install a version of the JetBrains Runtime: https://github.com/JetBrains/JetBrainsRuntime/releases");
 
-        if(System.getProperty("mixin.stage") != null) {
-            try {
-                agent = (Instrumentation) Class.forName(Agent.class.getName(), false, ClassLoader.getSystemClassLoader()).getField("agent").get(null);
-            } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            agent = (Instrumentation) Class.forName(Agent.class.getName(), false, ClassLoader.getSystemClassLoader()).getField("agent").get(null);
+        } catch (IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public static void premain(String agentArgs, Instrumentation inst) throws IOException, ClassNotFoundException {
+    public static void premain(String agentArgs, Instrumentation inst) throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         agent = inst;
+        agent.appendToBootstrapClassLoaderSearch(new JarFile(Agent.class.getProtectionDomain().getCodeSource().getLocation().getPath()));
 
         System.setProperty("mixin.stage", "premain");
-        MixinClassHelper.loadClass(MixinClassHelper.class.getName());
-
-        RegisterJars.registerAll();
-        System.setProperty("mixin.stage", "main");
+        Method register = RegisterJars.class.getDeclaredMethod("registerAll", String.class);
+        register.setAccessible(true);
+        register.invoke(null, agentArgs);
+        System.clearProperty("mixin.stage");
+        System.gc();
     }
 
     public static byte[] getBytecode(Class<?> c) {

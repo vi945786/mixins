@@ -24,8 +24,7 @@ test {
         *(project.hasProperty('debug') ? ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=y"] : []),
         "-XX:+AllowEnhancedClassRedefinition",
         "-Xshare:off",
-        "-javaagent:${wd}\\build\\libs\\mixin.jar",
-        "-Dmixin.files=${wd}\\src\\test\\resources\\mixin.json"
+        "-javaagent:${wd}\\build\\libs\\mixin.jar=${wd}\\src\\test\\resources\\mixin.json"
     ]
 
     classpath = classpath - sourceSets.main.output

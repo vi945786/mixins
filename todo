@@ -1,6 +1,3 @@
-test:
-    Object as the target
-
 add to the readme:
     Vars
     @Redirect
@@ -17,3 +14,5 @@ add to the readme:
 
     TransformerBuilder and MixinClassType
     TransformerHelper
+
+    agent args

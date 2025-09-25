@@ -35,13 +35,34 @@ import static vi.mixin.bytecode.Agent.agent;
 
 public class Mixiner {
 
-    private static final Map<String, MixinClassType<?, ?, ?, ?, ?>> mixinClassTypes = new HashMap<>();
-    private static final Map<String, List<BuiltTransformer>> transformers = new HashMap<>();
+    private final Map<String, MixinClassType<?, ?, ?, ?, ?>> mixinClassTypes = new HashMap<>();
+    private final Map<String, List<BuiltTransformer>> transformers = new HashMap<>();
 
-    private static final Map<String, ClassNode> originalTargetClassNodes = new HashMap<>();
-    private static final Set<String> usedMixinClasses = new HashSet<>();
+    private final Map<String, ClassNode> originalTargetClassNodes = new HashMap<>();
+    private final Set<String> usedMixinClasses = new HashSet<>();
 
-    public static void addMixinClassType(MixinClassType<?, ?, ?, ?, ?> mixinClassType) {
+    Mixiner() {}
+
+    public static Class<?> getTargetClass(ClassNode mixinClassNode) {
+        for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
+            if(annotationNode.desc.equals(Type.getType(Mixin.class).getDescriptor())) {
+                Mixin annotation = TransformerHelper.getAnnotation(annotationNode);
+                Class<?> targetClass = annotation.value();
+                if(targetClass == void.class) {
+                    targetClass = MixinClassHelper.findClass(annotation.name());
+                    if (targetClass == null) throw new MixinFormatException(mixinClassNode.name, "@Mixin target not found");
+                } else if (!annotation.name().isEmpty()) {
+                    throw new MixinFormatException(mixinClassNode.name, "@Mixin \"value\" and \"name\" set");
+                }
+                if (targetClass == Object.class) throw new MixinFormatException(mixinClassNode.name, "@Mixin target cannot be Object");
+                return targetClass;
+            }
+        }
+
+        throw new MixinFormatException(mixinClassNode.name, "doesn't have a @Mixin annotation");
+    }
+
+    public void addMixinClassType(MixinClassType<?, ?, ?, ?, ?> mixinClassType) {
         for(java.lang.reflect.Type type : mixinClassType.getClass().getGenericInterfaces()) {
             if(!type.getTypeName().split("<")[0].equals(MixinClassType.class.getName())) continue;
             if(!(type instanceof ParameterizedType pt)) throw new MixinFormatException(mixinClassType.getClass().getName(), "mixin class type must pass generic parameters to the to MixinClassType interface");
@@ -53,7 +74,7 @@ public class Mixiner {
         }
     }
 
-    public static void addBuiltTransformer(BuiltTransformer transformer) {
+    public void addBuiltTransformer(BuiltTransformer transformer) {
         String annotationDesc = "L" + transformer.getAnnotation().getName().replace(".", "/") + ";";
 
         if(transformers.getOrDefault(annotationDesc, List.of()).stream().anyMatch(t -> t.getMixinClassType().getName().equals(transformer.getMixinClassType().getName()) && t.isAnnotatedMethod() == transformer.isAnnotatedMethod()))
@@ -61,22 +82,7 @@ public class Mixiner {
         transformers.computeIfAbsent(annotationDesc, (k) -> new ArrayList<>()).add(transformer);
     }
 
-    public static Class<?> getTargetClass(ClassNode mixinClassNode) {
-        for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
-            if(annotationNode.desc.equals(Type.getType(Mixin.class).getDescriptor())) {
-                Mixin annotation = TransformerHelper.getAnnotation(annotationNode);
-                Class<?> targetClass = annotation.value();
-                if(targetClass != void.class) return targetClass;
-                targetClass = MixinClassHelper.findClass(annotation.name());
-                if(targetClass == null) throw new MixinFormatException(mixinClassNode.name, "invalid @Mixin target");
-                return targetClass;
-            }
-        }
-
-        throw new MixinFormatException(mixinClassNode.name, "doesn't have a @Mixin annotation");
-    }
-
-    public static void addClasses(List<byte[]> mixins, List<byte[]> anonymousInners) {
+    public void addClasses(List<byte[]> mixins, List<byte[]> anonymousInners) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
         Map<String, ClassNodeHierarchy> outerClassNodeMap = new HashMap<>();
         Map<ClassNodeHierarchy, List<ClassNodeHierarchy>> classNodeChildrenClassMap = new HashMap<>();
@@ -191,7 +197,7 @@ public class Mixiner {
         }
     }
 
-    private static MixinResult addClass(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
+    private MixinResult addClass(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         if(usedMixinClasses.contains(mixinClassNode.name)) throw new IllegalArgumentException("Mixin class " + mixinClassNode.name + " used twice");
         usedMixinClasses.add(mixinClassNode.name);
@@ -199,7 +205,7 @@ public class Mixiner {
         return mixin(targetClass, mixinClassNodeHierarchy);
     }
 
-    private static MixinResult mixin(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
+    private MixinResult mixin(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
         byte[] targetBytecode = Agent.getBytecode(targetClass);
         ClassReader targetClassReader = new ClassReader(targetBytecode);
         ClassNode modifyTargetClassNode = new ClassNode();
@@ -219,7 +225,7 @@ public class Mixiner {
         MixinClassType mixinClassType = null;
         String mixinClassTypeName;
         for (AnnotationNode annotationNode : originalMixinClassNode.invisibleAnnotations) {
-            mixinClassType = Mixiner.mixinClassTypes.get(annotationNode.desc);
+            mixinClassType = mixinClassTypes.get(annotationNode.desc);
             if(mixinClassType == null) continue;
             mixinClassAnnotation = TransformerHelper.getAnnotation(annotationNode);
             break;
@@ -241,7 +247,7 @@ public class Mixiner {
                 continue;
             }
             for (AnnotationNode annotationNode : methodNode.invisibleAnnotations) {
-                List<BuiltTransformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+                List<BuiltTransformer> transformers = this.transformers.getOrDefault(annotationNode.desc, List.of());
                 BuiltTransformer builtTransformer = transformers.stream().filter(t -> t.getMixinClassType().getName().equals(mixinClassTypeName) && t.isAnnotatedMethod()).findAny().orElse(null);
                 if (builtTransformer == null) continue;
 
@@ -274,7 +280,7 @@ public class Mixiner {
                 continue;
             }
             for (AnnotationNode annotationNode : fieldNode.invisibleAnnotations) {
-                List<BuiltTransformer> transformers = Mixiner.transformers.getOrDefault(annotationNode.desc, List.of());
+                List<BuiltTransformer> transformers = this.transformers.getOrDefault(annotationNode.desc, List.of());
                 BuiltTransformer builtTransformer = transformers.stream().filter(t -> t.getMixinClassType().getName().equals(mixinClassTypeName) && !t.isAnnotatedMethod()).findAny().orElse(null);
                 if (builtTransformer == null) continue;
 

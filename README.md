@@ -333,8 +333,7 @@ test {
 		*(project.hasProperty('debug') ? ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=y"] : []),
 		"-XX:+AllowEnhancedClassRedefinition",
 		"-Xshare:off",
-		"-javaagent:${wd}\\build\\libs\\mixin.jar",
-		"-Dmixin.files=${wd}\\src\\test\\resources\\mixin.json"
+		"-javaagent:<mixin jar location>=${wd}\\src\\test\\resources\\mixin.json"
 	]
 
 	useJUnitPlatform()
@@ -354,22 +353,6 @@ Listening for transport dt_socket at address: <port>
 ```
 
 IntelliJ will offer an "Attach debugger" option. You must click it to start debugging and step through the mixin agent or transformer code.
-
----
-
-## Using the -Dmixin.files Argument
-
-You can specify additional mixin configuration files at runtime using the `-Dmixin.files` JVM argument:
-
-```
--Dmixin.files=path/to/mixins1.json;path/to/mixins2.json
-```
-
-Separate multiple files with your platform's path separator (`;` on Windows, `:` on Unix). Each file will be loaded and its mixins and transformers registered at startup.
-
-This is useful for adding mixins without modifying the JAR manifest.
-
----
 
 ## MixinManager
 
