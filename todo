@@ -1,8 +1,4 @@
 add to the readme:
-    Vars
-    @Redirect
-    @ModifyValue
-
     STORE/LOAD/CONSTANT @At injection points
     @At offset
 
@@ -16,3 +12,5 @@ add to the readme:
     TransformerHelper
 
     agent args
+
+

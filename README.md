@@ -169,26 +169,6 @@ interface TargetAccessor {
 
 ---
 
-### `@Inject`
-
-Injects the bytecode of the annotated method into the target method at the location specified by `@At`.
-- Defined for the "Mixin" mixin class type
-- Specifying the target descriptor is only needed when the descriptor doesn't match the target
-
-```java
-@Mixin(Target.class)
-class MyMixin {
-	@Inject(method = "foo", at = @At(At.Location.HEAD))
-	public void injectFoo(Target self, Returner ret) {
-		// code to inject at the start of foo()
-	}
-}
-```
-
-- The injected method must take all target method arguments plus a `Returner` if the target returns void or `ValueReturner` otherwise as the last argument and must return void.
-
----
-
 ### `@Overridable`
 
 Marks a method in the target class as non-final, allowing it to be overridden in a mixin.
@@ -202,6 +182,82 @@ class TargetSubclass {
 	public int methodName(int x) { ... }
 }
 ```
+
+---
+
+### `@Inject`
+
+Injects the bytecode of the annotated method into the target method at the location specified by `@At`.
+- Defined for the "Mixin" mixin class type
+- Specifying the target descriptor is only needed when the descriptor doesn't match the target
+- Supports local variable captures 
+
+```java
+@Mixin(Target.class)
+class MyMixin {
+	@Inject(method = "foo", at = @At(At.Location.HEAD))
+	public void injectFoo(Target self, Returner ret) {
+		// code to inject at the start of foo()
+	}
+}
+```
+
+The inject method must take all target method arguments plus a `Returner` if the target returns void or `ValueReturner` otherwise as the last argument and must return void.
+
+---
+
+### `@ModifyValue`
+
+Modifies the value at the top of the stack at the location specified by `@At`.
+- Defined for the "Mixin" mixin class type
+- Specifying the target descriptor is only needed when the descriptor doesn't match the target
+- Supports local variable captures 
+
+```java
+@Mixin(Target.class)
+class MyMixin {
+    @ModifyValue(value = "getX", at = @At(At.Location.RETURN))
+    private Object modifyGetX(int original) {
+        return original + 2;
+    }
+}
+```
+
+The annotated method takes a single value (typed according to the value from the top of the stack) and returns Object. 
+The returned type is not enforced but should usually be the same type as was received.
+
+---
+
+### `@Redirect`
+
+Redirects a method call or field access in the target method at the location specified by `@At`.
+- Defined for the "Mixin" mixin class type
+- The full target descriptor and the opcode is always required
+- Valid locations are `INVOKE`, `FIELD`
+- Supports local variable captures
+
+```java
+@Mixin(Target.class)
+class MyMixin {
+	@Redirect(value = "method", at = @At(value = At.Location.INVOKE, target = "example/Helper.helper(Ljava/lang/String;)Ljava/lang/String;", opcode = Opcodes.INVOKEVIRTUAL))
+    private String redirectHelper(Helper helper, String s) {
+        return "redirected:" + s;
+    }
+}
+```
+
+#### Signatures:
+> The redirect method signature differs between static or instance redirect methods or fields.
+
+- Static Method Redirects:
+  - the signature of the redirected method
+- Static Field Get Redirects: 
+  - empty signature
+- Static Field Set Redirects: 
+  - the value which the field will be set to. 
+
+Redirecting instance methods/fields is identical to static methods/fields, just add an additional parameter (always the first in the signature) containing 
+the instance which the method is called on. This parameter is of the type that declared the redirected method. 
 
 ---
 
@@ -320,6 +376,24 @@ public void injectBar(Target self, ValueReturner<String> ret) {
 
 ---
 
+## Capturing Local Variables
+    
+Capturing Local Variables is done by adding an extra parameter of type `Vars` at the end of method signature. 
+
+Vars is a class containing an `Object[]` of captured values. The first values (0 based indexing) are the parameters 
+passed into the method, followed by the local variables in order of declaration inside the method. The Vars class 
+provides a `<T> T get(int index)` helper method.
+
+examples:
+```java
+int i = vars.get(1); // implicit type casting
+int i = vars.<Integer>get(1); // explicit type casting
+```
+
+Capturing Local Variables is supported on methods annotated with any of the following:
+`@Inject`, `@Redirect`, `@ModifyValue`
+
+---
 
 ## Gradle Test Configuration for Mixins
 
