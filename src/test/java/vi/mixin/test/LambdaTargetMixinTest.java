@@ -25,6 +25,7 @@ public class LambdaTargetMixinTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(LambdaTargetMixinTest.Target.class)
 class LambdaTargetMixin {
 

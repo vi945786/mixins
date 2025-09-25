@@ -19,7 +19,7 @@ public record AnnotatedMethodTargetFieldBuiltTransformer<A extends Annotation, A
     }
 
     @Override
-    public Class<? extends MixinClassType> getMixinClassType() {
+    public Class<? extends MixinClassType<?, ?, ?, ?, ?>> getMixinClassType() {
         return mixinClassType();
     }
 
@@ -31,12 +31,12 @@ public record AnnotatedMethodTargetFieldBuiltTransformer<A extends Annotation, A
         return false;
     }
 
-    @Override
+    @Override @SuppressWarnings("unchecked")
     public boolean isTarget(Object mixinFieldNodeClone, Object targetFieldNodeClone, Annotation annotation) {
         return targetFilter.isTarget((MethodNode) mixinFieldNodeClone, (FieldNode) targetFieldNodeClone, (A) annotation);
     }
 
-    @Override
+    @Override @SuppressWarnings("unchecked")
     public void transform(Object mixinEditor, Object targetEditor, Annotation annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         transformer().transform((AM) mixinEditor, (TF) targetEditor, (A) annotation, mixinClassNodeClone, targetClassNodeClone);
     }

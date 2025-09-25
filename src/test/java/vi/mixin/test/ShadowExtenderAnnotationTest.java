@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SuppressWarnings("all")
 public class ShadowExtenderAnnotationTest {
 
     public static class ShadowTest {
@@ -61,6 +62,7 @@ public class ShadowExtenderAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(ShadowMixinAnnotationTest.ShadowTest.class) @Extends
 class ShadowTestExtender {
     @Shadow

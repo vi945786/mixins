@@ -127,8 +127,8 @@ public class Mixiner {
             outerClassMapLen = outerClassMap.size();
         }
          //allow garbage collection
-        outerClassNodeMap = null;
-        outerClassMap = null;
+        outerClassNodeMap.clear();
+        outerClassMap.clear();
 
         classNodeChildrenClassMap.remove(null);
 
@@ -160,6 +160,7 @@ public class Mixiner {
                 agent.redefineClasses(new ClassDefinition(targetClass, targetWriter.toByteArray()));
 
                 Class<?> mixinClass = MixinClassHelper.findClass(mixinClassNode.name);
+                assert mixinClass != null;
                 agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
 
                 mixinClasses.put(mixinClass, targetClass);
@@ -178,9 +179,9 @@ public class Mixiner {
             }
         }
         //allow garbage collection
-        classNodeChildrenClassMap = null;
-        mixinClassNodesToTargetClass = null;
-        mixinClassNodesToMixinResult = null;
+        classNodeChildrenClassMap.clear();
+        mixinClassNodesToTargetClass.clear();
+        mixinClassNodesToMixinResult.clear();
 
         for(Map.Entry<Class<?>, Class<?>> mixinClass : mixinClasses.entrySet()) {
             for(Class<?> inner : mixinClass.getKey().getDeclaredClasses()) {
@@ -205,6 +206,7 @@ public class Mixiner {
         return mixin(targetClass, mixinClassNodeHierarchy);
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private MixinResult mixin(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
         byte[] targetBytecode = Agent.getBytecode(targetClass);
         ClassReader targetClassReader = new ClassReader(targetBytecode);

@@ -19,6 +19,7 @@ import vi.mixin.api.transformers.TransformerSupplier;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class RedirectTransformer implements TransformerSupplier {
 
     private static Type[] getArgs(MixinAnnotatedMethodEditor mixinEditor, Redirect annotation, ClassNode mixinClassNodeClone) {
@@ -75,7 +76,7 @@ public class RedirectTransformer implements TransformerSupplier {
         };
     }
 
-    private static void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -92,7 +93,7 @@ public class RedirectTransformer implements TransformerSupplier {
     }
 
     private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 

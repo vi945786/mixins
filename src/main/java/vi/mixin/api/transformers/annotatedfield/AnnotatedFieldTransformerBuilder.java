@@ -16,6 +16,7 @@ public class AnnotatedFieldTransformerBuilder<A extends Annotation, AF extends A
         this.annotation = annotation;
     }
 
+    @SuppressWarnings("unused")
     public AnnotatedFieldTargetMethodTransformerBuilder<A, AF, TM> withMethodTarget() {
         return new AnnotatedFieldTargetMethodTransformerBuilder<>(mixinClassType, annotation);
     }

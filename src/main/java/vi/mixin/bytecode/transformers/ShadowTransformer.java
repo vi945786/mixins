@@ -16,9 +16,10 @@ import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class ShadowTransformer implements TransformerSupplier {
 
-    private static void validateField(AnnotatedFieldEditor mixinEditor, TargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validateField(AnnotatedFieldEditor mixinEditor, TargetFieldEditor targetEditor, ClassNode mixinClassNodeClone) {
         FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
         FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
@@ -30,7 +31,7 @@ public class ShadowTransformer implements TransformerSupplier {
             throw new MixinFormatException(name, "valid types are: " + targetFieldNode.desc + ", " + Type.getType(Object.class));
     }
 
-    private static void validateMethod(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validateMethod(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -54,7 +55,7 @@ public class ShadowTransformer implements TransformerSupplier {
     }
 
     private static void mixinTransformField(MixinAnnotatedFieldEditor mixinEditor, MixinTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validateField(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validateField(mixinEditor, targetEditor, mixinClassNodeClone);
         FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
         FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
@@ -68,7 +69,7 @@ public class ShadowTransformer implements TransformerSupplier {
     }
 
     private static void mixinTransformMethod(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validateMethod(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validateMethod(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         mixinEditor.delete();
@@ -82,7 +83,7 @@ public class ShadowTransformer implements TransformerSupplier {
     }
 
     private static void extenderTransformField(ExtenderAnnotatedFieldEditor mixinEditor, ExtenderTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validateField(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validateField(mixinEditor, targetEditor, mixinClassNodeClone);
         FieldNode mixinFieldNode = mixinEditor.getFieldNodeClone();
         FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
@@ -97,7 +98,7 @@ public class ShadowTransformer implements TransformerSupplier {
     }
 
     private static void extenderTransformMethod(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validateMethod(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validateMethod(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         mixinEditor.delete();

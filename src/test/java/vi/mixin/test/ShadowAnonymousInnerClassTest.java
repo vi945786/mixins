@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class ShadowAnonymousInnerClassTest {
 
     public static class Target {
@@ -31,6 +32,7 @@ public class ShadowAnonymousInnerClassTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(ShadowAnonymousInnerClassTest.Target.class)
 class AnonymousShadowMixin {
 

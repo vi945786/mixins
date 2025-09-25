@@ -6,6 +6,7 @@ import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.New;
 
+@SuppressWarnings("all")
 public class ExtendsNewAnnotationTest {
 
     public static final class Base {
@@ -24,6 +25,7 @@ public class ExtendsNewAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(ExtendsNewAnnotationTest.Base.class) @Extends
 class BaseNewExtender {
     @New("ILjava/lang/Integer;")

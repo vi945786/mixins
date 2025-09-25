@@ -10,6 +10,7 @@ import vi.mixin.api.injection.Returner;
 import vi.mixin.api.injection.ValueReturner;
 import vi.mixin.api.injection.Vars;
 
+@SuppressWarnings("all")
 public class InjectAnnotationTest {
 
     public static class InjectTest {
@@ -54,6 +55,7 @@ public class InjectAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(InjectAnnotationTest.InjectTest.class)
 class InjectTestMixin {
     @Inject(value = "sum", at = @At(At.Location.HEAD))

@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class NestedMixinMethodCallTest {
 
     public static class Outer {
@@ -44,6 +45,7 @@ public class NestedMixinMethodCallTest {
 
 }
 
+@SuppressWarnings("all")
 @Mixin(NestedMixinMethodCallTest.Outer.class)
 abstract class OuterMethodCallMixin {
     private void callInnerMethod() {

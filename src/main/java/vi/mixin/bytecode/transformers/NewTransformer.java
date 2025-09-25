@@ -22,6 +22,7 @@ import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class NewTransformer implements TransformerSupplier {
 
      private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
@@ -31,7 +32,7 @@ public class NewTransformer implements TransformerSupplier {
         return targetMethodNodeClone.name.equals("<init>") && targetMethodNodeClone.desc.equals("(" + annotation.value() + ")V");
     }
 
-    private static void validate(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validate(AnnotatedMethodEditor mixinEditor, TargetMethodEditor targetEditor, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -47,7 +48,7 @@ public class NewTransformer implements TransformerSupplier {
         if(!returnType.getInternalName().equals(targetClassNodeClone.name) && !returnType.equals(Type.getType(Object.class))) throw new MixinFormatException(name, "valid return types are: " + "L" + targetClassNodeClone.name + ";" + ", " + Type.getType(Object.class));
     }
 
-    private static void extenderValidate(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void extenderValidate(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -66,7 +67,7 @@ public class NewTransformer implements TransformerSupplier {
     }
 
     private static void mixinTransform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, mixinClassNodeClone, targetClassNodeClone);
         mixinEditor.doNotCopyToTargetClass();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -85,7 +86,7 @@ public class NewTransformer implements TransformerSupplier {
     }
 
     private static void accessorTransform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, mixinClassNodeClone, targetClassNodeClone);
          MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         targetEditor.makePublic();
@@ -103,7 +104,7 @@ public class NewTransformer implements TransformerSupplier {
     }
 
     private static void extenderTransform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        extenderValidate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        extenderValidate(mixinEditor, targetEditor, mixinClassNodeClone);
         targetEditor.makePublic();
         mixinEditor.delete();
     }

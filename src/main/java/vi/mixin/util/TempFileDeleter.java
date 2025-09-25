@@ -8,14 +8,16 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class TempFileDeleter {
 
+    @SuppressWarnings("all")
     public static void main(String[] args) throws Exception {
         Files.list(Path.of(System.getProperty("java.io.tmpdir"))).filter(Files::isDirectory).filter(path -> path.getFileName().toString().startsWith("mixin-")).forEach(file -> {
             try {
                 deleteDirectory(file);
-            } catch (IOException e) {}
+            } catch (IOException ignored) {}
         });
 
         for (String arg : args) {
@@ -33,11 +35,13 @@ public class TempFileDeleter {
 
     private static void deleteDirectory(Path path) throws IOException {
         if (Files.exists(path)) {
-            Files.walk(path).sorted(Comparator.reverseOrder()).forEach(p -> {
-                 try {
-                     Files.delete(p);
-                 } catch (IOException ignored) {}
-            });
+            try (Stream<Path> walk = Files.walk(path)) {
+                walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException ignored) {}
+                });
+            }
         }
     }
 

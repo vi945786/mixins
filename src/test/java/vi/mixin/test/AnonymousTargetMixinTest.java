@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class AnonymousTargetMixinTest {
 
     public static class Producer {
@@ -29,6 +30,7 @@ public class AnonymousTargetMixinTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(name = "vi/mixin/test/AnonymousTargetMixinTest$Producer$1")
 class AnonymousTargetMixin {
     @Shadow private int anonField;

@@ -31,6 +31,7 @@ public final class TransformerHelper implements Opcodes {
         };
     }
 
+    @SuppressWarnings("unused")
     public static Type getUnboxedType(Type type) {
         return switch (type.getClassName()) {
             case "java.lang.Boolean"   -> Type.BOOLEAN_TYPE;
@@ -87,11 +88,10 @@ public final class TransformerHelper implements Opcodes {
             if (!searchArgumentTypes[i].equals(targetArgumentTypes[i]) && !searchArgumentTypes[i].equals(Type.getType(Object.class))) return false;
         }
 
-        if (!Type.getReturnType(search).equals(Type.getReturnType(target)) && !Type.getReturnType(search).equals(Type.getType(Object.class))) return false;
-
-        return true;
+        return Type.getReturnType(search).equals(Type.getReturnType(target)) || Type.getReturnType(search).equals(Type.getType(Object.class));
     }
 
+    @SuppressWarnings("unused")
     public static MethodNode getTargetMethod(ClassNode classNode, String nameAndDesc) {
         String name = nameAndDesc.split("\\(")[0];
         String desc = "(" + nameAndDesc.split("\\(")[1];
@@ -107,6 +107,7 @@ public final class TransformerHelper implements Opcodes {
         return Mixiner.getTargetClass(mixinNode);
     }
 
+    @SuppressWarnings("unused")
     public static List<AbstractInsnNode> getAtTargetNodesThrows(InsnList list, At atAnnotation, String annotatedName) {
         return getAtTargetIndexesThrows(list, atAnnotation, annotatedName).stream().map(list::get).toList();
     }
@@ -272,10 +273,10 @@ public final class TransformerHelper implements Opcodes {
         for (int i = 0; i < indexes.size(); i++) {
             if(ordinals.contains(i)) newIndexes.add(indexes.get(i));
         }
-        if(ordinals.get(ordinals.size() - 1) >= indexes.size()) {
+        if(ordinals.getLast() >= indexes.size()) {
             throw new IndexOutOfBoundsException("ordinal is too big");
         }
-        if(ordinals.get(0) < 0) {
+        if(ordinals.getFirst() < 0) {
             throw new IndexOutOfBoundsException("ordinal is negative");
         }
 
@@ -297,7 +298,7 @@ public final class TransformerHelper implements Opcodes {
     public static boolean equals(AbstractInsnNode node, Object... values) {
         return switch (node) {
             case null -> false;
-            case InsnNode n -> true;
+            case InsnNode ignored -> true;
             case IntInsnNode n -> match(n.operand, values, 0);
             case VarInsnNode n -> match(n.var, values, 0);
             case TypeInsnNode n -> match(n.desc, values, 0);
@@ -365,6 +366,7 @@ public final class TransformerHelper implements Opcodes {
         return expected == null || Objects.equals(actual, expected);
     }
 
+    @SuppressWarnings("all")
     private static boolean matchArray(Object[] actual, Object[] values, int index) {
         if (index >= values.length) return true;
         Object expected = values[index];
@@ -373,10 +375,12 @@ public final class TransformerHelper implements Opcodes {
         return Arrays.equals(actual, expArr);
     }
 
-     public static <T extends Annotation> T getAnnotation(AnnotationNode node) {
+    @SuppressWarnings("unchecked")
+    public static <T extends Annotation> T getAnnotation(AnnotationNode node) {
         Class<?> annotationClass = MixinClassHelper.findClass(node.desc.substring(1, node.desc.length() - 1));
+        assert annotationClass != null;
 
-         Map<String, Object> values = new HashMap<>();
+        Map<String, Object> values = new HashMap<>();
         if (node.values != null) {
             for (int i = 0; i < node.values.size(); i += 2) {
                 String name = (String) node.values.get(i);
@@ -386,8 +390,16 @@ public final class TransformerHelper implements Opcodes {
         }
 
         InvocationHandler handler = (proxy, method, args) -> {
-            if (method.getName().equals("annotationType")) return annotationClass;
-            if (method.getName().equals("hashCode")) return System.identityHashCode(proxy);
+            switch (method.getName()) {
+                case "annotationType" -> {
+                    return annotationClass;}
+                case "hashCode" -> {
+                    return ("@" + annotationClass.getName() + values).hashCode();
+                }
+                case "toString" -> {
+                    return "@" + annotationClass.getName() + values;
+                }
+            }
 
             if (values.containsKey(method.getName())) {
                 return values.get(method.getName());
@@ -402,8 +414,9 @@ public final class TransformerHelper implements Opcodes {
         );
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static Object convertValue(Object value) {
-        if (value instanceof List list) {
+        if (value instanceof List<?> list) {
             Object[] arr = new Object[list.size()];
             for (int i = 0; i < list.size(); i++) {
                 arr[i] = convertValue(list.get(i));
@@ -416,6 +429,7 @@ public final class TransformerHelper implements Opcodes {
         } else if (value instanceof String[] enumDesc && enumDesc.length == 2) {
             String className = enumDesc[0].substring(1, enumDesc[0].length() - 1).replace('/', '.');
             Class<?> enumClass = MixinClassHelper.findClass(className);
+            assert enumClass != null;
             return Enum.valueOf((Class<Enum>) enumClass, enumDesc[1]);
         }
         return value;

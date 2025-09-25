@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.methods.Getter;
 
+@SuppressWarnings("all")
 public class GetterAnnotationTest {
 
     public static class Target {

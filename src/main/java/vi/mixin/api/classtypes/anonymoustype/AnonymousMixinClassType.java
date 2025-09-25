@@ -14,6 +14,7 @@ import vi.mixin.api.editors.TargetMethodEditor;
 
 import java.lang.annotation.*;
 
+@SuppressWarnings("unused")
 class AnonymousMixinClassType implements MixinClassType<AnonymousMixinClassType.Anonymous, AnnotatedMethodEditor, AnnotatedFieldEditor, TargetMethodEditor, TargetFieldEditor> {
 
     @Target(ElementType.TYPE)

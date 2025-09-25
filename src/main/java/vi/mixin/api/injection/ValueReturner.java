@@ -1,5 +1,6 @@
 package vi.mixin.api.injection;
 
+@SuppressWarnings({"unused", "unchecked"})
 public class ValueReturner<R> extends Returner {
 
     private R returnValue = null;

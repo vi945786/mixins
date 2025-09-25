@@ -74,6 +74,7 @@ public class MixinClassTargetClassEditor {
         return modified.methods.stream().map(methodNode -> new MixinClassTargetMethodEditor(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).toList();
     }
 
+    @SuppressWarnings("unused")
     public List<MixinClassTargetMethodEditor> getMethodEditors(String name) {
         return modified.methods.stream().filter(methodNode -> methodNode.name.equals(name)).map(methodNode -> new MixinClassTargetMethodEditor(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).toList();
     }
@@ -85,14 +86,14 @@ public class MixinClassTargetClassEditor {
         return modified.methods.stream().filter(methodNode -> {
             if(!methodNode.name.equals(name)) return false;
 
-                Type[] searchArgumentTypes = Type.getArgumentTypes(desc);
-                Type[] targetArgumentTypes = Type.getArgumentTypes(methodNode.desc);
-                if(searchArgumentTypes.length != targetArgumentTypes.length) return false;
-                for (int i = 0; i < targetArgumentTypes.length; i++) {
-                    if (!searchArgumentTypes[i].equals(targetArgumentTypes[i]) && !searchArgumentTypes[i].equals(Type.getType(Object.class))) return false;
-                }
+            Type[] searchArgumentTypes = Type.getArgumentTypes(desc);
+            Type[] targetArgumentTypes = Type.getArgumentTypes(methodNode.desc);
+            if(searchArgumentTypes.length != targetArgumentTypes.length) return false;
+            for (int i = 0; i < targetArgumentTypes.length; i++) {
+                if (!searchArgumentTypes[i].equals(targetArgumentTypes[i]) && !searchArgumentTypes[i].equals(Type.getType(Object.class))) return false;
+            }
 
-                return true;
+            return true;
         }).map(methodNode -> new MixinClassTargetMethodEditor(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc))).findAny().orElse(null);
     }
 
@@ -104,6 +105,7 @@ public class MixinClassTargetClassEditor {
         originalFieldNodes.put(cloneFieldNode.name, cloneFieldNode);
     }
 
+    @SuppressWarnings("unused")
     public List<MixinClassTargetFieldEditor> getFieldEditors() {
         return modified.fields.stream().map(fieldNode -> new MixinClassTargetFieldEditor(fieldNode, originalFieldNodes.get(fieldNode.name))).toList();
     }

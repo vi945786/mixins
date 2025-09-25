@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.zip.Deflater;
 import java.util.zip.ZipOutputStream;
@@ -36,17 +37,18 @@ public class RegisterJars {
     private final List<byte[]> inners = new ArrayList<>();
     private final Mixiner mixiner = new Mixiner();
 
-    private RegisterJars() {};
+    private RegisterJars() {}
 
     static void registerAll(String args) {
         new RegisterJars().registerAll0(args);
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void registerAll0(String args) {
         try {
             RegisterJars.class.getDeclaredClasses();
             ClassReader.class.getName();
-            ClassVisitor.class.getName();
+            Class.forName(ClassVisitor.class.getName());
             Class.forName("org.objectweb.asm.Context");
 
             doRunArgs(args);
@@ -60,32 +62,32 @@ public class RegisterJars {
                     .map(arg -> arg.split("=")[0])
                     .toList();
 
-            String agentJarClasspath = "";
+            StringBuilder agentJarClasspath = new StringBuilder();
             for (String agentJar : agentJars) {
-                addJar(agentJar, true);
-                agentJarClasspath += agentJar + File.pathSeparator;
+                addJarWithMixins(agentJar);
+                agentJarClasspath.append(agentJar).append(File.pathSeparator);
             }
-            agentJarClasspath = agentJarClasspath.substring(0, agentJarClasspath.length() - 1);
+            agentJarClasspath = new StringBuilder(agentJarClasspath.substring(0, agentJarClasspath.length() - 1));
 
             String classPath = System.getProperty("java.class.path");
             try {
                 for (String entry : classPath.split(File.pathSeparator)) {
                     File entryFile = new File(entry);
                     if (entryFile.isFile()) {
-                        if (entryFile.getName().endsWith(".jar")) addJar(entryFile.getAbsolutePath(), true);
+                        if (entryFile.getName().endsWith(".jar")) addJarWithMixins(entryFile.getAbsolutePath());
                     } else {
                         if (entry.endsWith(File.separator + "*")) {
-                            for (File file : entryFile.getParentFile().listFiles()) {
+                            for (File file : Objects.requireNonNull(entryFile.getParentFile().listFiles())) {
                                 if (file.isFile() && file.getName().endsWith(".jar"))
-                                    addJar(file.getAbsolutePath(), true);
+                                    addJarWithMixins(file.getAbsolutePath());
                             }
                         } else {
-                            addJar(generateJarFromDir(Path.of(entry), tempDir), true);
+                            addJarWithMixins(generateJarFromDir(Path.of(entry), tempDir));
                         }
                     }
                 }
             } finally {
-                TempFileDeleter.spawn(agentJarClasspath, tempDir.toString());
+                TempFileDeleter.spawn(agentJarClasspath.toString(), tempDir.toString());
             }
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException("unable to initialize mixins", e);
@@ -111,9 +113,9 @@ public class RegisterJars {
 
     private String generateJarFromDir(Path dir, Path tempDir) throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try (ZipOutputStream jos = new ZipOutputStream(byteArrayOutputStream)) {
+        try (ZipOutputStream jos = new ZipOutputStream(byteArrayOutputStream); Stream<Path> walk = Files.walk(dir)) {
             jos.setLevel(Deflater.NO_COMPRESSION);
-            Files.walk(dir).filter(Files::isRegularFile).forEach(file -> {
+            walk.filter(Files::isRegularFile).forEach(file -> {
                 try {
                     String entryName = dir.relativize(file).toString().replace(File.separatorChar, '/');
 
@@ -135,13 +137,15 @@ public class RegisterJars {
         return jarPath.toString();
     }
 
+    @SuppressWarnings("unchecked")
     private void generateBuiltinJars(Path tempDir) {
         FileSystem jrtFileSystem;
         try {
             Class<?> jrtFileSystemProvider = MixinClassHelper.findClass("jdk.internal.jrtfs.JrtFileSystemProvider");
+            assert jrtFileSystemProvider != null;
             agent.redefineModule(jrtFileSystemProvider.getModule(), new HashSet<>(), new HashMap<>(), Map.of(jrtFileSystemProvider.getPackageName(), Set.of(RegisterJars.class.getModule())), new HashSet<>(), new HashMap<>());
 
-            Constructor<FileSystem> jrtFileSystemConstructor = (Constructor<FileSystem>) MixinClassHelper.findClass("jdk.internal.jrtfs.JrtFileSystem").getDeclaredConstructors()[0];
+            Constructor<FileSystem> jrtFileSystemConstructor = (Constructor<FileSystem>) Objects.requireNonNull(MixinClassHelper.findClass("jdk.internal.jrtfs.JrtFileSystem")).getDeclaredConstructors()[0];
             jrtFileSystemConstructor.setAccessible(true);
             jrtFileSystem = jrtFileSystemConstructor.newInstance(jrtFileSystemProvider.getConstructors()[0].newInstance(), Map.of());
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
@@ -173,11 +177,9 @@ public class RegisterJars {
         }
     }
 
-    private void addJar(String jar, boolean checkMixins) {
+    private void addJarWithMixins(String jar) {
         try (JarFile jarFile = new JarFile(jar)) {
             agent.appendToBootstrapClassLoaderSearch(jarFile);
-
-            if(!checkMixins) return;
 
             checkStartUpEntries(jarFile);
 

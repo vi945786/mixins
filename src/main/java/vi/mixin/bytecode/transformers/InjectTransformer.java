@@ -18,9 +18,10 @@ import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class InjectTransformer implements TransformerSupplier {
 
-    private static void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -43,7 +44,7 @@ public class InjectTransformer implements TransformerSupplier {
     }
 
     private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 

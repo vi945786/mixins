@@ -7,6 +7,7 @@ public class Vars {
         this.v = v;
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T get(int i) {
         return (T) v[i];
     }

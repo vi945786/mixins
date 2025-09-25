@@ -14,6 +14,7 @@ import vi.mixin.api.transformers.TransformerSupplier;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class SetterTransformer implements TransformerSupplier {
 
     private static boolean targetFilter(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Setter annotation) {
@@ -24,7 +25,7 @@ public class SetterTransformer implements TransformerSupplier {
         return targetFieldNodeClone.name.equals(annotation.value());
     }
 
-    private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 
@@ -37,7 +38,7 @@ public class SetterTransformer implements TransformerSupplier {
     }
 
     private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
 

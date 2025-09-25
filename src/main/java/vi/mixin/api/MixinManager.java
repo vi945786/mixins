@@ -2,6 +2,7 @@ package vi.mixin.api;
 
 import vi.mixin.bytecode.RegisterJars;
 
+@SuppressWarnings("unused")
 public class MixinManager {
 
     /**

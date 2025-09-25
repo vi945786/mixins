@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.annotations.Mixin;
 
+@SuppressWarnings("all")
 public class NewAnnotationAccessorTest {
 
     public static class Target {
@@ -21,6 +22,7 @@ public class NewAnnotationAccessorTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(NewAnnotationAccessorTest.Target.class)
 interface TargetNewAccessor {
     @New

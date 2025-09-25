@@ -98,7 +98,7 @@ public class BaseSubclass { ... }
 ### `@Shadow`
 
 Accesses (shadows) fields or methods from the target class.  
-- Defined for Mixin and Extender mixin class types 
+- Defined for the "Mixin" and "Extender" mixin class types 
 - Must be `private`.
 - Only valid inside the mixin class or its inner/outer mixin classes.
 - Specifying the target is only needed when the name/descriptor doesn't match the target
@@ -119,7 +119,7 @@ abstract class TargetMixin {
 ### `@Getter` / `@Setter`
 
 Generates getter/setter methods for fields in the target class.
-- Defined for Accessor mixin class type
+- Defined for the "Accessor" mixin class type
 - Valid everywhere
 - Specifying the target is only needed when the name/descriptor doesn't match the target
 
@@ -139,7 +139,7 @@ interface TargetAccessor {
 ### `@Invoker`
 
 Allows calling private or otherwise inaccessible methods in the target class.
-- Defined for Accessor mixin class type
+- Defined the for "Accessor" mixin class type
 - Valid everywhere
 - Specifying the target is only needed when the name/descriptor doesn't match the target
 
@@ -156,7 +156,7 @@ interface TargetAccessor {
 ### `@New`
 
 Allows construction of new instances of the target class using a specific constructor signature.
-- Defined for Mixin, Accessor, and Extender mixin class type
+- Defined for the "Mixin", "Accessor", and "Extender" mixin class type
 - Specifying the target is only needed when the name/descriptor doesn't match the target
 
 ```java
@@ -172,7 +172,7 @@ interface TargetAccessor {
 ### `@Inject`
 
 Injects the bytecode of the annotated method into the target method at the location specified by `@At`.
-- Defined for Mixin mixin class type
+- Defined for the "Mixin" mixin class type
 - Specifying the target descriptor is only needed when the descriptor doesn't match the target
 
 ```java
@@ -192,7 +192,7 @@ class MyMixin {
 ### `@Overridable`
 
 Marks a method in the target class as non-final, allowing it to be overridden in a mixin.
-- Defined for Extender mixin class type
+- Defined for the "Extender" mixin class type
 - Specifying the target descriptor is only needed when the descriptor doesn't match the target
 
 ```java

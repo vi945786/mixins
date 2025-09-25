@@ -18,10 +18,12 @@ public class MixinTargetMethodEditor extends TargetMethodEditor {
         super(targetMethodEditors, mixinEditor);
     }
 
+    @SuppressWarnings("unused")
     public void makeNonFinal() {
         targetMethodEditor.makeNonFinal();
     }
 
+    @SuppressWarnings("unused")
     public void makeNonAbstract() {
         targetMethodEditor.makeNonAbstract();
     }

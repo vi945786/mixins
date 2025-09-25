@@ -6,6 +6,7 @@ import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.Overridable;
 
+@SuppressWarnings("all")
 public class OverridableAnnotationTest {
 
     public static class Base {
@@ -20,6 +21,7 @@ public class OverridableAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(OverridableAnnotationTest.Base.class) @Extends
 class OverridableAnnotationTestExtender {
 

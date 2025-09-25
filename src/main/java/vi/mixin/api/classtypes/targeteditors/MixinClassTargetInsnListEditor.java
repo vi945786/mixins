@@ -27,7 +27,7 @@ public class MixinClassTargetInsnListEditor {
         if(!isOriginalOpcode.containsKey(id)) {
             List<OpcodeState> isOriginalList = new ArrayList<>();
             isOriginalOpcode.put(id, isOriginalList);
-            for(AbstractInsnNode node : modified) {
+            for (int i = 0; i < modified.size(); i++) {
                 isOriginalList.add(OpcodeState.ORIGINAL);
             }
         }
@@ -58,6 +58,7 @@ public class MixinClassTargetInsnListEditor {
         return clone;
     }
 
+    @SuppressWarnings("unused")
     private AbstractInsnNode cloneToOriginal(AbstractInsnNode node) {
         InsnList list = new InsnList();
         list.add(node);
@@ -153,6 +154,7 @@ public class MixinClassTargetInsnListEditor {
         isOriginalList.set(modifiedIndex, OpcodeState.DELETED);
     }
 
+    @SuppressWarnings("unused")
     public void insertAfter(int index, AbstractInsnNode node) {
         int modifiedIndex = getUpdatedIndex(index);
         List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);
@@ -161,6 +163,7 @@ public class MixinClassTargetInsnListEditor {
         isOriginalList.add(modifiedIndex+1, OpcodeState.INJECTED);
     }
 
+    @SuppressWarnings("unused")
     public void insertAfter(int index, InsnList list) {
         int modifiedIndex = getUpdatedIndex(index);
         List<OpcodeState> isOriginalList = isOriginalOpcode.get(id);

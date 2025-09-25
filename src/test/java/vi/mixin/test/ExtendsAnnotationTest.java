@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.classes.Extends;
 
+@SuppressWarnings("all")
 public class ExtendsAnnotationTest {
 
     public static sealed class SealedBase permits FinalBase {}

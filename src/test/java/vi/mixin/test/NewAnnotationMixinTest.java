@@ -6,6 +6,7 @@ import vi.mixin.api.annotations.methods.New;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class NewAnnotationMixinTest {
 
     public static class Target {
@@ -21,6 +22,7 @@ public class NewAnnotationMixinTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(NewAnnotationMixinTest.Target.class)
 class TargetNewMixin {
     @New

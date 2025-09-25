@@ -16,9 +16,10 @@ import java.util.List;
 
 import static vi.mixin.api.util.TransformerHelper.addLoadOpcodesOfMethod;
 
+@SuppressWarnings("unused")
 public class InvokerTransformer implements TransformerSupplier {
 
-    private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void validate(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -41,7 +42,7 @@ public class InvokerTransformer implements TransformerSupplier {
     }
 
     private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 

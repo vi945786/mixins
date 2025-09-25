@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class ShadowMixinAnnotationTest {
 
     public static class ShadowTest {
@@ -55,6 +56,7 @@ public class ShadowMixinAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(ShadowMixinAnnotationTest.ShadowTest.class)
 abstract class ShadowTestMixin {
     @Shadow("instanceField")

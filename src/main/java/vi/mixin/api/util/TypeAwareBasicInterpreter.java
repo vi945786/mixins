@@ -9,6 +9,7 @@ public class TypeAwareBasicInterpreter extends BasicInterpreter {
         super(ASM9);
     }
 
+    @SuppressWarnings("unused")
     public TypeAwareBasicInterpreter(int api) {
         super(api);
     }

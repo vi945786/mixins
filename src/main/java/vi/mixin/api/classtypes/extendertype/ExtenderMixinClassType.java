@@ -36,7 +36,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
         return new ExtenderTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
-    private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<ExtenderAnnotatedMethodEditor, ExtenderAnnotatedFieldEditor, ExtenderTargetMethodEditor, ExtenderTargetFieldEditor> editors, Extends annotation, MixinClassTargetClassEditor targetClassEditor) {
+    private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, MixinClassTargetClassEditor targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
 
         String name = "@Extends " + mixinClassNode.name;
@@ -74,7 +74,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
 
     @Override
     public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<ExtenderAnnotatedMethodEditor, ExtenderAnnotatedFieldEditor, ExtenderTargetMethodEditor, ExtenderTargetFieldEditor> editors, Extends annotation, MixinClassTargetClassEditor targetClassEditor) {
-        validate(mixinClassNodeHierarchy, editors, annotation, targetClassEditor);
+        validate(mixinClassNodeHierarchy, targetClassEditor);
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
 

@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class ModifyValueTransformer implements TransformerSupplier {
     private Type[] args = null;
 
@@ -54,7 +55,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
         else args = new Type[] {type};
     }
 
-    private void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private void validate(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ClassNode mixinClassNodeClone) {
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -72,7 +73,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
 
     private void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
         setArg(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-        validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+        validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
@@ -136,9 +137,8 @@ public class ModifyValueTransformer implements TransformerSupplier {
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
                 TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, ModifyValue.class).withMethodTarget().setTransformer(
-                        (MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) -> {
-                            new ModifyValueTransformer().transform(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
-                        })
+                        (MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) ->
+                                new ModifyValueTransformer().transform(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone))
                         .build()
         );
     }

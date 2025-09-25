@@ -233,6 +233,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
 
     private void addAndMoveInit() {
         MethodNode mixinInit = mixinClassNode.methods.stream().filter(m -> m.name.equals("<init>")).findAny().orElse(null);
+        assert mixinInit != null;
         MethodNode newInit = new MethodNode(ACC_PUBLIC | ACC_STATIC, replaceName + "init", "(L" + targetClassNode.name + ";)V", null, mixinInit.exceptions.toArray(String[]::new));
         mixinClassNode.methods.add(newInit);
 

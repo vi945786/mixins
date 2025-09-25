@@ -8,6 +8,7 @@ public class Returner {
         returned = true;
     }
 
+    @SuppressWarnings("unused")
     public boolean isReturned() {
         return returned;
     }

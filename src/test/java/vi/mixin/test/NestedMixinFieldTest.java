@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class NestedMixinFieldTest {
 
     public static class Outer {
@@ -44,6 +45,7 @@ public class NestedMixinFieldTest {
 
 }
 
+@SuppressWarnings("all")
 @Mixin(NestedMixinFieldTest.Outer.class)
 abstract class OuterFieldMixin {
     private int outerField = 15;

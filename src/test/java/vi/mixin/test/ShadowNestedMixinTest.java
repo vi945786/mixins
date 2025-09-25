@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SuppressWarnings("all")
 public class ShadowNestedMixinTest {
 
     public static class Outer {
@@ -40,16 +41,13 @@ public class ShadowNestedMixinTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(ShadowNestedMixinTest.Outer.class)
 abstract class OuterShadowMixin {
-    @Shadow("outerField")
-    private int shadowOuterField;
-    @Shadow("outerMethod(I)I")
-    private int shadowOuterMethod(int x) { return 0; }
-    @Shadow("staticOuterField")
-    private static int shadowStaticOuterField;
-    @Shadow("staticOuterMethod(I)I")
-    private static int shadowStaticOuterMethod(int x) { return 0; }
+    @Shadow("outerField") private int shadowOuterField;
+    @Shadow("outerMethod(I)I") private int shadowOuterMethod(int x) { return 0; }
+    @Shadow("staticOuterField") private static int shadowStaticOuterField;
+    @Shadow("staticOuterMethod(I)I") private static int shadowStaticOuterMethod(int x) { return 0; }
 
     private void testInnerShadowsInOuter() {
         InnerShadowMixin inner = (InnerShadowMixin) (Object) ((ShadowNestedMixinTest.Outer) (Object) this).new Inner();
@@ -64,14 +62,10 @@ abstract class OuterShadowMixin {
 
     @Mixin(ShadowNestedMixinTest.Outer.Inner.class)
     abstract class InnerShadowMixin {
-        @Shadow("innerField")
-        private int shadowInnerField;
-        @Shadow("innerMethod(I)I")
-        private int shadowInnerMethod(int x) { return 0; }
-        @Shadow("staticInnerField")
-        private static int shadowStaticInnerField;
-        @Shadow("staticInnerMethod(I)I")
-        private static int shadowStaticInnerMethod(int x) { return 0; }
+        @Shadow("innerField") private int shadowInnerField;
+        @Shadow("innerMethod(I)I") private int shadowInnerMethod(int x) { return 0; }
+        @Shadow("staticInnerField") private static int shadowStaticInnerField;
+        @Shadow("staticInnerMethod(I)I") private static int shadowStaticInnerMethod(int x) { return 0; }
 
         private void testOuterShadowsInInner() {
             shadowOuterField = 555;

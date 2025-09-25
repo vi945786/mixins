@@ -9,6 +9,7 @@ import vi.mixin.api.annotations.methods.Redirect;
 import vi.mixin.api.injection.At;
 import vi.mixin.api.injection.Vars;
 
+@SuppressWarnings("all")
 public class RedirectAnnotationTest {
 
     public static class RedirectTest {
@@ -83,6 +84,7 @@ public class RedirectAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(RedirectAnnotationTest.RedirectTest.class)
 class RedirectTestMixin {
     @Redirect(value = "call", at = @At(value = At.Location.INVOKE, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.helper(Ljava/lang/String;)Ljava/lang/String;", opcode = Opcodes.INVOKEVIRTUAL))

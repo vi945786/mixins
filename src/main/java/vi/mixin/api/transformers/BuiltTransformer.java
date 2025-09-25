@@ -7,7 +7,7 @@ import java.lang.annotation.Annotation;
 
 public interface BuiltTransformer {
     Class<? extends Annotation> getAnnotation();
-    Class<? extends MixinClassType> getMixinClassType();
+    Class<? extends MixinClassType<?, ?, ?, ?, ?>> getMixinClassType();
 
     boolean isAnnotatedMethod();
     boolean isTargetMethod();

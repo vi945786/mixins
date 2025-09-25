@@ -39,6 +39,7 @@ public class ModifyValueAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(ModifyValueAnnotationTest.ModifyValueTarget.class)
 class ModifyValueMixin {
 

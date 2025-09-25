@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import vi.mixin.api.annotations.methods.Invoker;
 import vi.mixin.api.annotations.Mixin;
 
+@SuppressWarnings("all")
 public class InvokerAnnotationTest {
 
     public static class Target {
@@ -28,6 +29,7 @@ public class InvokerAnnotationTest {
     }
 }
 
+@SuppressWarnings("all")
 @Mixin(InvokerAnnotationTest.Target.class)
 interface TargetInvokerAccessor {
     @Invoker
