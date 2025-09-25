@@ -58,6 +58,10 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
         replaceName = mixinClassNode.name.replace("/", "$$") + "$$";
         validate();
 
+        mixinClassNode.access |= ACC_PUBLIC;
+        mixinClassNode.access &= ~ACC_PRIVATE;
+        mixinClassNode.access &= ~ACC_PROTECTED;
+
         String targetOuterInstanceFieldName = getOuterClassInstanceFieldName(targetClassNode, targetClass);
         if(mixinClassNodeHierarchy.parent() != null) addOuterClassInstanceFieldToTarget(targetOuterInstanceFieldName);
 
