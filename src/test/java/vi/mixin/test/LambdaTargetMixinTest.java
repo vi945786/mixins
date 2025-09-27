@@ -14,14 +14,15 @@ public class LambdaTargetMixinTest {
 
     public static class Target {
         public static int method() {
-            Supplier<Integer> lambda = () -> 1;
-            return lambda.get();
+            Supplier<Integer> lambda0 = () -> 2;
+            Supplier<Integer> lambda1 = () -> 1;
+            return lambda0.get() + lambda1.get();
         }
     }
 
     @Test
     void testModifyValueLambda() {
-        assertEquals(2, Target.method());
+        assertEquals(5, Target.method());
     }
 }
 
@@ -29,8 +30,8 @@ public class LambdaTargetMixinTest {
 @Mixin(LambdaTargetMixinTest.Target.class)
 class LambdaTargetMixin {
 
-    @Inject(value = "lambda$method$0", at = @At(At.Location.RETURN))
+    @Inject(value = "lambda$method$1", at = @At(At.Location.RETURN))
     private static void testOnAnon(ValueReturner<Integer> valueReturner) {
-        valueReturner.setReturnValue(2);
+        valueReturner.setReturnValue(3);
     }
 }

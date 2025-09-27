@@ -43,14 +43,8 @@ public class RegisterJars {
         new RegisterJars().registerAll0(args);
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void registerAll0(String args) {
         try {
-            RegisterJars.class.getDeclaredClasses();
-            ClassReader.class.getName();
-            Class.forName(ClassVisitor.class.getName());
-            Class.forName("org.objectweb.asm.Context");
-
             doRunArgs(args);
 
             String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
@@ -89,8 +83,8 @@ public class RegisterJars {
             } finally {
                 TempFileDeleter.spawn(agentJarClasspath.toString(), tempDir.toString());
             }
-        } catch (IOException | ClassNotFoundException e) {
-            throw new RuntimeException("unable to initialize mixins", e);
+        } catch (IOException e) {
+            throw new RuntimeException("unable to register jars", e);
         }
 
         mixiner.addClasses(mixins, inners);

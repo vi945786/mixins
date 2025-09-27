@@ -24,15 +24,18 @@ public class Agent {
         }
     }
 
-    public static void premain(String agentArgs, Instrumentation inst) throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    public static void premain(String agentArgs, Instrumentation inst) throws IOException, NoSuchMethodException, IllegalAccessException {
         agent = inst;
         agent.appendToBootstrapClassLoaderSearch(new JarFile(Agent.class.getProtectionDomain().getCodeSource().getLocation().getPath()));
 
-        System.setProperty("mixin.stage", "premain");
-        Method register = RegisterJars.class.getDeclaredMethod("registerAll", String.class);
-        register.setAccessible(true);
-        register.invoke(null, agentArgs);
-        System.clearProperty("mixin.stage");
+        try {
+            Method register = RegisterJars.class.getDeclaredMethod("registerAll", String.class);
+            register.setAccessible(true);
+            register.invoke(null, agentArgs);
+        } catch (InvocationTargetException e) {
+            e.getCause().printStackTrace();
+        }
+
         System.gc();
     }
 

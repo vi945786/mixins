@@ -1,7 +1,7 @@
 {
   "mixinClassTypes": [
     "vi.mixin.api.classtypes.extendertype.ExtenderMixinClassType",
-    "vi.mixin.api.classtypes.anonymoustype.AnonymousMixinClassType"
+    "vi.mixin.bytecode.anonymoustype.AnonymousMixinClassType"
   ],
   "transformers": [
     "vi.mixin.bytecode.transformers.GetterTransformer",

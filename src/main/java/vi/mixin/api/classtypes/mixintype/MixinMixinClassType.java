@@ -184,8 +184,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
                 MixinClassTargetInsnListEditor insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
 
                 methodNode.instructions.remove(invokeDynamicInsnNode);
-                invokeDynamicInsnNode.bsm = new Handle(H_INVOKESTATIC, Type.getInternalName(LambdaHandler.class), "createLambda", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false);
-
+                invokeDynamicInsnNode.bsm = new Handle(H_INVOKESTATIC, Type.getInternalName(LambdaHandler.class), invokeDynamicInsnNode.bsm.getName(), invokeDynamicInsnNode.bsm.getDesc(), false);
                 insnListEditor.insertBefore(index, invokeDynamicInsnNode);
                 insnListEditor.remove(index);
             }

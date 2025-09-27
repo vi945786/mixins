@@ -1,4 +1,4 @@
-package vi.mixin.api.classtypes.anonymoustype;
+package vi.mixin.bytecode.anonymoustype;
 
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;

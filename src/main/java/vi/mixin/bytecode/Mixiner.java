@@ -71,6 +71,7 @@ public class Mixiner {
 
             if(mixinClassTypes.containsKey(annotationDesc)) throw new IllegalArgumentException(annotationDesc + " is already registered for a mixin class type annotation");
             mixinClassTypes.put(annotationDesc, mixinClassType);
+            break;
         }
     }
 
@@ -104,7 +105,7 @@ public class Mixiner {
             AnnotationNode mixin = new AnnotationNode(Type.getDescriptor(Mixin.class));
             mixin.values = new ArrayList<>(List.of("value", Type.getType("L" + mixinClassNode.name + ";")));
             mixinClassNode.invisibleAnnotations.add(mixin);
-            mixinClassNode.invisibleAnnotations.add(new AnnotationNode("Lvi/mixin/api/classtypes/anonymoustype/AnonymousMixinClassType$Anonymous;"));
+            mixinClassNode.invisibleAnnotations.add(new AnnotationNode("Lvi/mixin/bytecode/anonymoustype/AnonymousMixinClassType$Anonymous;"));
         }
         mixins.clear();
         anonymousInners.clear();
