@@ -1,3 +1,6 @@
 add to the readme:
-    TransformerBuilder and MixinClassType
-    TransformerHelper
+
+    MixinClassType
+        ClassNodeHierarchy
+        Editors
+        Mixin Class Target Editors

@@ -541,13 +541,26 @@ The `MixinManager` class provides a utility for registering JARs at runtime:
 MixinManager.addJarToClasspath("/path/to/your.jar");
 ```
 
-Use this if you load classes instead of reflection or custom class loaders (such as `URLClassLoader`). Any JARs that are not on the main classpath must be registered this way to ensure they don't interfere with the mixin system.
+Use this if you load classes instead of reflection or custom class loaders (such as `URLClassLoader`).\
+Any JARs that are not on the main classpath must be registered this way to ensure they don't interfere with the mixin system.
 
 ---
 
 ## Custom Transformers
-will be added soon.\
-for now check the java files under the path `vi.mixin.bytecode.transformers`
+
+To define a custom transformer implement a `TransformerSupplier` with the single method `getBuiltTransformers` which returns a list of built transformers.\
+The TransformerSupplier must be registered in the mixin file.
+
+To create a built transformer use the `TransformerBuilder`.\
+The usage is as follows:
+1. Start with calling the `annotatedMethodTransformerBuilder` or `annotatedFieldTransformerBuilder` method with the chosen MixinClassType and annotation to instantiate a builder.
+2. Use `withMethodTarget()` or `withFieldTarget()` to specify the target type.
+3. Set the transformation logic with the `setTransformer` method.
+4. Optionally Filter applicable targets using the `setTargetFilter` method.
+5. finally, call the `build()` method to return a BuiltTransformer which is ready for use.
+
+Many common helper functions related to ASM bytecode manipulation can be found in the `TransformerHelper` class.\
+For more advanced bytecode analysis, there is a type-aware version of the ASM `BasicInterpreter` called `TypeAwareBasicInterpreter`, useful when you need more type information during analysis.
 
 ---
 
