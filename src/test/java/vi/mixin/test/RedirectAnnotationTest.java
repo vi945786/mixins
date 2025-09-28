@@ -97,22 +97,22 @@ class RedirectTestMixin {
         return "redirectedStatic:" + s;
     }
 
-    @Redirect(value = "getInstField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.instField;Ljava/lang/String;", opcode = Opcodes.GETFIELD))
+    @Redirect(value = "getInstField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.instField:Ljava/lang/String;", opcode = Opcodes.GETFIELD))
     private static String redirectGetInstField(RedirectAnnotationTest.RedirectFrom redirectFrom) {
         return "redirected:" + redirectFrom.instField;
     }
 
-    @Redirect(value = "setInstField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.instField;Ljava/lang/String;", opcode = Opcodes.PUTFIELD))
+    @Redirect(value = "setInstField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.instField:Ljava/lang/String;", opcode = Opcodes.PUTFIELD))
     private static void redirectSetInstField(RedirectAnnotationTest.RedirectFrom redirectFrom, String v, Vars vars) {
         redirectFrom.instField = "redirected:" + v.charAt(0) + vars.<String>get(1).substring(1);
     }
 
-    @Redirect(value = "getStaticField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.staticField;Ljava/lang/String;", opcode = Opcodes.GETSTATIC))
+    @Redirect(value = "getStaticField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.staticField:Ljava/lang/String;", opcode = Opcodes.GETSTATIC))
     public static String redirectGetStaticField() {
         return "redirected:" + RedirectAnnotationTest.RedirectFrom.staticField;
     }
 
-    @Redirect(value = "setStaticField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.staticField;Ljava/lang/String;", opcode = Opcodes.PUTSTATIC))
+    @Redirect(value = "setStaticField", at = @At(value = At.Location.FIELD, target = "vi/mixin/test/RedirectAnnotationTest$RedirectFrom.staticField:Ljava/lang/String;", opcode = Opcodes.PUTSTATIC))
     public static void redirectSetStaticField(String v) {
         RedirectAnnotationTest.RedirectFrom.staticField = "redirected:" + v;
     }

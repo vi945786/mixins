@@ -83,7 +83,7 @@ public class Mixiner {
         transformers.computeIfAbsent(annotationDesc, (k) -> new ArrayList<>()).add(transformer);
     }
 
-    public void addClasses(List<byte[]> mixins, List<byte[]> anonymousInners) {
+    public void addClasses(Collection<byte[]> mixins, Collection<byte[]> anonymousInners) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
         Map<String, ClassNodeHierarchy> outerClassNodeMap = new HashMap<>();
         Map<ClassNodeHierarchy, List<ClassNodeHierarchy>> classNodeChildrenClassMap = new HashMap<>();

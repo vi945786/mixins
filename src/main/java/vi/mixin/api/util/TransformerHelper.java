@@ -164,9 +164,11 @@ public final class TransformerHelper implements Opcodes {
                      throw new MixinFormatException(annotatedName, "unsupported field opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
 
                  int splitOwner = target.indexOf('.');
+                 int splitName = target.indexOf(':');
                  String owner = target.substring(0, splitOwner);
-                 String name = target.substring(splitOwner+1).split(";")[0];
-                 yield getInsnNodeIndexes(list, FIELD_INSN, opcode, ordinals, owner, name, null);
+                 String name = target.substring(splitOwner+1, splitName);
+                 String desc = target.substring(splitName+1);
+                 yield getInsnNodeIndexes(list, FIELD_INSN, opcode, ordinals, owner, name, desc);
              }
              case STORE -> {
                  if(opcode != -1 && !(ISTORE <= opcode && opcode <= ASTORE))
@@ -199,8 +201,8 @@ public final class TransformerHelper implements Opcodes {
                 }
              }
              case CONSTANT -> {
-                 if (opcode != -1)
-                     throw new MixinFormatException(annotatedName, "unsupported constant opcode.");
+                 if (opcode != -1 || target.isEmpty())
+                     throw new MixinFormatException(annotatedName, "unsupported constant opcode or target.");
 
                  List<Integer> i = switch (target) {
                      case "null" -> getInsnNodeIndexes(list, INSN, ACONST_NULL, ordinals);

@@ -1,16 +1,3 @@
 add to the readme:
-    STORE/LOAD/CONSTANT @At injection points
-    @At offset
-
-    anonymous classes inside mixin classes
-    anonymous classes as targets
-
-    lambda expressions inside mixin classes
-    lambda expressions as targets
-
     TransformerBuilder and MixinClassType
     TransformerHelper
-
-    agent args
-
-

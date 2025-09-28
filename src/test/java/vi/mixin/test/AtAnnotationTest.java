@@ -97,7 +97,7 @@ public class AtAnnotationTest {
             @Override public int[] ordinals() { return new int[0]; }
             @Override public At.Location value() { return At.Location.FIELD; }
             @Override public int opcode() { return Opcodes.GETFIELD; }
-            @Override public String target() { return "Owner.name"; }
+            @Override public String target() { return "Owner.name:I"; }
             @Override public int offset() { return 0; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };

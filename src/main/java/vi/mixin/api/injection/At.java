@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 public @interface At {
 
     /**
-     * Which instance of the matching opcodes to mixin
+     * Which occurrence of the matching opcodes to match
      */
     int[] ordinals() default {};
 

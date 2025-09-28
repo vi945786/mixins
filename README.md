@@ -70,7 +70,7 @@ The mixin file is a JSON file that specifies the mixin class types, transformers
 
 ---
 
-## Annotations & Features
+## Annotations
 
 ### `@Mixin`
 
@@ -280,44 +280,85 @@ Note that this it will not work for primitives.
 
 ---
 
-## Nested Mixins
-
-Mixins can be nested (inner/outer classes), and shadows can be used between them.  
-Example:
-
-```java
-@Mixin(Outer.class)
-public class OuterMixin {
-	@Shadow("outerField")
-	private int shadowOuterField;
-
-	@Mixin(Outer.Inner.class)
-	class InnerMixin {
-		@Shadow("innerField")
-		private int shadowInnerField;
-
-		private void printOuterField() {
-			System.out.println(shadowOuterField);
-		}
-	}
-}
-```
-
----
-
 ## Bytecode Injection Points: `@At`
 
-The `@At` annotation is used to specify precise bytecode injection points for `@Inject` (and other transformers that will be added later). The supported locations are:
+The `@At` annotation is used to specify precise bytecode injection points for `@Inject`, `@Redirect`, and `@ModifyValue`.\
+The supported locations are:
 
 - `HEAD`: The start of the method.
 - `RETURN`: All return instructions.
 - `TAIL`: The last return instruction.
-- `INVOKE`: A specific method invocation (by owner, name, and descriptor).
-- `FIELD`: A specific field access (by owner, name, and opcode).
-- `JUMP`: A specific jump instruction (by opcode).
+- `INVOKE`: A specific method invocation (by owner, name, and desc, and optionally opcode).
+  - opcodes:
+    - `INVOKEVIRTUAL`: instance method calls
+    - `INVOKESTATIC`: static method calls
+    - `INVOKESPECIAL`: constructor/private/super method calls 
+    - `INVOKEINTERFACE`: instance method calls when the compile-time reference is an interface
+  - target: declaring class's internal name followed by a period then the method name and method desc 
+    - example: `package1/package2/ClassName.method(Ljava/lang/String;)Ljava/lang/String;`
+- `FIELD`: A specific field access (by owner, name, desc, and optionally opcode).
+  - opcodes:
+      - `GETSTATIC`: get the value of a static field
+      - `PUTSTATIC`: set the value of a static field
+      - `GETFIELD`: get the value of an instance field
+      - `PUTFIELD`: set the value of an instance field
+  - target: declaring class's internal name followed by a period then the field name and field desc separated by a colon 
+    - example: `package1/package2/ClassName.field:Ljava/lang/String;`
+- `STORE`: A specific store instruction (optionally by opcode).
+  - opcodes:
+      - `ISTORE`: store a boolean, byte, char, short, or int to a local variable 
+      - `LSTORE`: store a long to a local variable 
+      - `FSTORE`: store a float to a local variable 
+      - `DSTORE`: store a double to a local variable 
+      - `ASTORE`: store an object to a local variable 
+  - target: the local variable index
+- `LOAD`: A specific load instruction (optionally by opcode).
+  - opcodes:
+    - `ILOAD`: load a boolean, byte, char, short, or int to a local variable 
+    - `LLOAD`: load a long to a local variable 
+    - `FLOAD`: load a float to a local variable 
+    - `DLOAD`: load a double to a local variable 
+    - `ALOAD`: load an object to a local variable 
+  - target: the local variable index
+- `CONSTANT`: A specific constant (by value). 
+  - target: the constant type followed by the value
+    - constant types:
+      - int (boolean, byte, char, short, or int)
+      - long
+      - float
+      - double
+      - string
+      - class (the value is in the descriptor format)
+    - examples:
+      - `"int;0"` (this is also false) 
+      - `"int;1"` (this is also true)
+      - `"float;3.141"`
+      - `"string;abc"`
+      - `"class;Ljava/lang/String;"`
+- `JUMP`: A specific jump instruction (optionally by opcode).
+  - opcodes:
+    - `IFEQ`: jump if value == 0
+    - `IFNE`: jump if value != 0 
+    - `IFLT`: jump if value < 0 
+    - `IFGE`: jump if value >= 0 
+    - `IFGT`: jump if value > 0 
+    - `IFLE`: jump if value <= 0
+    - `IF_ICMPEQ`: jump if int1 == int2
+    - `IF_ICMPNE`: jump if int1 != int2
+    - `IF_ICMPLT`: jump if int1 < int2
+    - `IF_ICMPGE`: jump if int1 >= int2
+    - `IF_ICMPGT`: jump if int1 > int2
+    - `IF_ICMPLE`: jump if int1 <= int2
+    - `IF_ACMPEQ`: jump if two references are equal (==)
+    - `IF_ACMPNE`: jump if two references are not equal (!=)
+    - `GOTO`: always jump
+    - `JSR`: jump to subroutine (obsolete since Java 6)
+    - `IFNULL`: jump if reference == null
+    - `IFNONNULL`: jump if reference = null
 
-You can also use the `ordinal` parameter to select specific occurrences of the matched instructions.\
-For examples on how to use check out the tests. 
+Other options:
+- `ordinals`: choose which occurrences to match (0-based). If empty, matches all.
+- `offset`: shift the injection points forward or backward by the given number of instructions (positive = forward, negative = backward). Fragile across versions, avoid if possible.
 
 ---
 
@@ -392,6 +433,70 @@ int i = vars.<Integer>get(1); // explicit type casting
 
 Capturing Local Variables is supported on methods annotated with any of the following:
 `@Inject`, `@Redirect`, `@ModifyValue`
+
+---
+
+## Nested Mixins
+
+Mixins can be nested (inner/outer classes), and shadows can be used between them.  
+Example:
+
+```java
+@Mixin(Outer.class)
+public class OuterMixin {
+	@Shadow("outerField")
+	private int shadowOuterField;
+
+	@Mixin(Outer.Inner.class)
+	class InnerMixin {
+		@Shadow("innerField")
+		private int shadowInnerField;
+
+		private void printOuterField() {
+			System.out.println(shadowOuterField);
+		}
+	}
+}
+```
+
+---
+
+## Anonymous classes as targets
+
+Anonymous classes compile to names like `full.package.Outer$1`, `full.package.Outer$2` (order-based). \
+Target them with `@Mixin(name = "full/package/Outer$N")`.
+This is fragile, avoid if possible. 
+
+---
+
+## Lambda functions as target
+
+Lambdas compile to methods named like `lambda$enclosingMethod$0`, `lambda$enclosingMethod$1` (order-based) in the same class.\
+
+Example of injecting a lambda:
+  ```java
+  @Mixin(Target.class)
+  class TargetMixin {
+    @Inject(value = "lambda$method$1", at = @At(At.Location.RETURN))
+    private static void swapReturn(ValueReturner<Integer> v) {
+        v.setReturnValue(3);
+    }
+  }
+  ```
+
+This is fragile, avoid if possible. 
+
+---
+
+## Using the mixin agent arguments
+
+You can specify additional mixin configuration files at runtime using the mixin agent arguments:
+
+```
+-javaagent:<mixin jar location>=path/to/mixins1.json;path/to/mixins2.json
+```
+
+Separate multiple files with your platform's path separator (`;` on Windows, `:` on Unix).
 
 ---
 

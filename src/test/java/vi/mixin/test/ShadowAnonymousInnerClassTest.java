@@ -6,6 +6,7 @@ import vi.mixin.api.annotations.Shadow;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -27,6 +28,13 @@ public class ShadowAnonymousInnerClassTest {
     @Test
     void testShadowsInAnonymousObject() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Method m = AnonymousShadowMixin.class.getDeclaredMethod("testShadowsInAnonymousObject", Target.class);
+        m.setAccessible(true);
+        m.invoke(null, new Target());
+    }
+
+    @Test
+    void testShadowsInDoubleAnonymous() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Method m = AnonymousShadowMixin.class.getDeclaredMethod("doubleAnonymous", Target.class);
         m.setAccessible(true);
         m.invoke(null, new Target());
     }
@@ -60,5 +68,21 @@ class AnonymousShadowMixin {
         };
 
         assertEquals(field, anon.hashCode());
+    }
+
+    private void doubleAnonymous() {
+        Supplier<ShadowAnonymousInnerClassTest.Target> targetSupplier = new Supplier<ShadowAnonymousInnerClassTest.Target>() {
+            @Override
+            public ShadowAnonymousInnerClassTest.Target get() {
+                return new ShadowAnonymousInnerClassTest.Target() {
+                    @Override
+                    protected int method(int x) {
+                        return field;
+                    }
+                };
+            }
+        };
+
+        assertEquals(field, targetSupplier.get().method(0));
     }
 }

@@ -34,7 +34,7 @@ public class RegisterJars {
     private final List<String> transformersEntries = new ArrayList<>();
     private final List<String> mixinClassTypesEntries = new ArrayList<>();
     private final List<byte[]> mixins = new ArrayList<>();
-    private final List<byte[]> inners = new ArrayList<>();
+    private final Map<String, byte[]> inners = new HashMap<>();
     private final Mixiner mixiner = new Mixiner();
 
     private RegisterJars() {}
@@ -87,7 +87,7 @@ public class RegisterJars {
             throw new RuntimeException("unable to register jars", e);
         }
 
-        mixiner.addClasses(mixins, inners);
+        mixiner.addClasses(mixins, inners.values());
     }
 
     private void doRunArgs(String args) {
@@ -209,19 +209,23 @@ public class RegisterJars {
         cr.accept(new ClassVisitor(Opcodes.ASM9) {
             @Override
             public void visitInnerClass(String innerName, String outerName, String innerSimpleName, int access) {
-                if (innerSimpleName == null || innerName.matches(".*\\$\\d+$")) {
+                if(innerSimpleName != null) return;
 
-                    String innerPath = innerName + ".class";
-                    JarEntry innerEntry = jarFile.getJarEntry(innerPath);
-                    if (innerEntry != null) {
-                        try (InputStream is = jarFile.getInputStream(innerEntry)) {
-                            inners.add(is.readAllBytes());
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                String innerPath = innerName + ".class";
+                JarEntry innerEntry = jarFile.getJarEntry(innerPath);
+                if (innerEntry != null) {
+                    try (InputStream is = jarFile.getInputStream(innerEntry)) {
+                        byte[] innerBytecode = is.readAllBytes();
+                        if(!inners.containsKey(innerName)) {
+                            inners.put(innerName, innerBytecode);
+                            findAnonymousInnerClasses(jarFile, innerBytecode);
                         }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
+
         }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 

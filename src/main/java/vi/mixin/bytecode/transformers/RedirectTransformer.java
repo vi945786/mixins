@@ -43,11 +43,11 @@ public class RedirectTransformer implements TransformerSupplier {
             case FIELD -> {
                 switch (at.opcode()) {
                     case GETSTATIC -> {}
-                    case PUTSTATIC -> args.add(Type.getType(at.target().split(";")[1] + ";"));
+                    case PUTSTATIC -> args.add(Type.getType(at.target().split(":")[1]));
                     case GETFIELD -> args.add(Type.getType("L" + at.target().split("\\.")[0] + ";"));
                     case PUTFIELD -> {
                         args.add(Type.getType("L" + at.target().split("\\.")[0] + ";"));
-                        args.add(Type.getType(at.target().split(";")[1] + ";"));
+                        args.add(Type.getType(at.target().split(":")[1]));
                     }
                     default -> throw new MixinFormatException(name, "unsupported @At field opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
                }
@@ -68,7 +68,7 @@ public class RedirectTransformer implements TransformerSupplier {
         return switch (at.value()) {
             case INVOKE -> Type.getReturnType("(" + at.target().split("\\(")[1]);
             case FIELD -> switch (at.opcode()) {
-                case GETSTATIC, GETFIELD -> Type.getType(at.target().split(";")[1] + ";");
+                case GETSTATIC, GETFIELD -> Type.getType(at.target().split(":")[1]);
                 case PUTSTATIC, PUTFIELD -> Type.VOID_TYPE;
                 default -> throw new MixinFormatException(name, "unsupported @At method opcode. supported values are: Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD");
            };
