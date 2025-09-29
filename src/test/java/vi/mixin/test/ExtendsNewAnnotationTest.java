@@ -31,7 +31,11 @@ class BaseNewExtender {
     @New("ILjava/lang/Integer;")
     public static void create(int a, Object b) {}
 
+    public BaseNewExtender(int i) {
+        create(4, i);
+    }
+
     public BaseNewExtender() {
-        create(4, 2);
+        this(2);
     }
 }

@@ -50,8 +50,10 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
                 boolean foundCall = false;
                 for(AbstractInsnNode node : methodNode.instructions) {
                     if (!(node instanceof MethodInsnNode methodInsnNode)) continue;
-                    MethodNode nodeMethodNode = mixinClassNode.methods.stream().filter(m -> (m.name + m.desc).equals(methodInsnNode.name + methodInsnNode.desc)).findAny().orElse(null);
-                    if(nodeMethodNode == null || nodeMethodNode.invisibleAnnotations == null || nodeMethodNode.invisibleAnnotations.stream().noneMatch(a -> a.desc.equals(Type.getDescriptor(New.class)))) continue;
+                    if(!methodInsnNode.owner.equals(mixinClassNode.name) || !methodNode.name.equals("<init>")) {
+                        MethodNode nodeMethodNode = mixinClassNode.methods.stream().filter(m -> (m.name + m.desc).equals(methodInsnNode.name + methodInsnNode.desc)).findAny().orElse(null);
+                        if(nodeMethodNode == null || nodeMethodNode.invisibleAnnotations == null || nodeMethodNode.invisibleAnnotations.stream().noneMatch(a -> a.desc.equals(Type.getDescriptor(New.class)))) continue;
+                    }
 
                     foundCall = true;
                     break;
