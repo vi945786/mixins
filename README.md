@@ -548,6 +548,18 @@ Any JARs that are not on the main classpath must be registered this way to ensur
 
 ## Custom Transformers
 
+### Transformers 
+A transformer is code that alters a target method or field based on a matching annotated method or field defined in the mixin class.
+
+### Choosing The Mixin Class Type
+Pick the type based on what you want to do with the target.
+
+Built-in Mixin Class Types:
+- Mixin: use when you want to inject code into a target
+- Extender: use when you want to override or modify a method/field in the mixin subclass
+- Accessor: use when you want to add a method or add implementation to an abstract method in the target
+
+### Creating A Custom Transformer
 To define a custom transformer implement a `TransformerSupplier` with the single method `getBuiltTransformers` which returns a list of built transformers.\
 The TransformerSupplier must be registered in the mixin file.
 
