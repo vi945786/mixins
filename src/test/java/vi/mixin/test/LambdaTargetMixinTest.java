@@ -30,7 +30,7 @@ public class LambdaTargetMixinTest {
 @Mixin(LambdaTargetMixinTest.Target.class)
 class LambdaTargetMixin {
 
-    @Inject(value = "lambda$method$1", at = @At(value = At.Location.RETURN, printBytecode = true))
+    @Inject(value = "lambda$method$1", at = @At(value = At.Location.RETURN))
     private static void testOnAnon(ValueReturner<Integer> valueReturner) {
         valueReturner.setReturnValue(3);
     }
