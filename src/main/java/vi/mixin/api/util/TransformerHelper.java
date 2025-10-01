@@ -3,11 +3,13 @@ package vi.mixin.api.util;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.util.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.injection.At;
 import vi.mixin.bytecode.MixinClassHelper;
 import vi.mixin.bytecode.Mixiner;
 
+import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -128,6 +130,15 @@ public final class TransformerHelper implements Opcodes {
          String target = atAnnotation.target();
          int opcode = atAnnotation.opcode();
          int offset = atAnnotation.offset();
+
+         if(atAnnotation.printBytecode()) {
+             System.out.println(annotatedName);
+             PrintWriter pw = new PrintWriter(System.out);
+             Textifier textifier = new Textifier();
+             list.accept(new TraceMethodVisitor(textifier));
+             textifier.print(pw);
+             pw.flush();
+         }
 
          List<Integer> indexes = switch (location) {
              case HEAD -> {

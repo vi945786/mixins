@@ -38,4 +38,9 @@ public @interface At {
         CONSTANT,
         JUMP
     }
+
+    /**
+     * prints the target method's bytecode
+     */
+    boolean printBytecode() default false;
 }

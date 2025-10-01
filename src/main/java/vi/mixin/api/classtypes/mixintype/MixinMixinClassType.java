@@ -16,7 +16,6 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 import vi.mixin.bytecode.LambdaHandler;
 
-import java.lang.invoke.LambdaMetafactory;
 import java.util.Arrays;
 
 import static vi.mixin.api.util.TransformerHelper.*;
@@ -180,11 +179,16 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
 
         for (MethodNode methodNode : targetClassNode.methods) {
             for (int index : TransformerHelper.getInsnNodeIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
-                if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode) || !invokeDynamicInsnNode.bsm.getOwner().equals(Type.getInternalName(LambdaMetafactory.class))) continue;
+                if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode)) continue;
                 MixinClassTargetInsnListEditor insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
 
                 methodNode.instructions.remove(invokeDynamicInsnNode);
-                invokeDynamicInsnNode.bsm = new Handle(H_INVOKESTATIC, Type.getInternalName(LambdaHandler.class), invokeDynamicInsnNode.bsm.getName(), invokeDynamicInsnNode.bsm.getDesc(), false);
+                Object[] oldBsmArgs = invokeDynamicInsnNode.bsmArgs;
+                invokeDynamicInsnNode.bsmArgs = new Object[oldBsmArgs.length +1];
+                System.arraycopy(oldBsmArgs, 0, invokeDynamicInsnNode.bsmArgs, 1, oldBsmArgs.length);
+                invokeDynamicInsnNode.bsmArgs[0] = invokeDynamicInsnNode.bsm;
+
+                invokeDynamicInsnNode.bsm = new Handle(H_INVOKESTATIC, Type.getInternalName(LambdaHandler.class), "wrapper", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;[Ljava/lang/Object;)Ljava/lang/Object;", false);
                 insnListEditor.insertBefore(index, invokeDynamicInsnNode);
                 insnListEditor.remove(index);
             }

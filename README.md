@@ -359,6 +359,7 @@ The supported locations are:
 Other options:
 - `ordinals`: choose which occurrences to match (0-based). If empty, matches all.
 - `offset`: shift the injection points forward or backward by the given number of instructions (positive = forward, negative = backward). Fragile across versions, avoid if possible.
+- `printBytecode`: prints the bytecode of the target method before transformation, useful for finding injection points.
 
 ---
 

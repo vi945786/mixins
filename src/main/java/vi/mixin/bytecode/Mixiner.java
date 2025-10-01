@@ -41,7 +41,9 @@ public class Mixiner {
     private final Map<String, ClassNode> originalTargetClassNodes = new HashMap<>();
     private final Set<String> usedMixinClasses = new HashSet<>();
 
-    Mixiner() {}
+    Mixiner() {
+        mixinClassTypes.put(Type.getDescriptor(Mixin.class), null);
+    }
 
     public static Class<?> getTargetClass(ClassNode mixinClassNode) {
         for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
@@ -229,10 +231,10 @@ public class Mixiner {
         MixinClassType mixinClassType = null;
         String mixinClassTypeName;
         for (AnnotationNode annotationNode : originalMixinClassNode.invisibleAnnotations) {
-            mixinClassType = mixinClassTypes.get(annotationNode.desc);
-            if(mixinClassType == null) continue;
+            if(!mixinClassTypes.containsKey(annotationNode.desc)) continue;
             mixinClassAnnotation = TransformerHelper.getAnnotation(annotationNode);
-            break;
+            mixinClassType = mixinClassTypes.get(annotationNode.desc);
+            if(mixinClassType != null) break;
         }
         if(mixinClassType == null) {
             if((originalMixinClassNode.access & Opcodes.ACC_INTERFACE) == 0) mixinClassType = new MixinMixinClassType();

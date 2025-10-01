@@ -25,6 +25,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -44,6 +45,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -62,6 +64,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -81,6 +84,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return Opcodes.INVOKEVIRTUAL; }
             @Override public String target() { return "Owner.name(desc)"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -99,6 +103,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return Opcodes.GETFIELD; }
             @Override public String target() { return "Owner.name:I"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -119,6 +124,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return Opcodes.GOTO; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -141,6 +147,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -163,6 +170,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return Opcodes.ISTORE; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -183,6 +191,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return Opcodes.ILOAD; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, at, "");
@@ -206,6 +215,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return "int;3"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodesInt3 = TransformerHelper.getAtTargetNodes(list, atInt3, "");
@@ -217,6 +227,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return "int;123"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodesInt123 = TransformerHelper.getAtTargetNodes(list, atInt123, "");
@@ -228,6 +239,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return "string;hi"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodesString = TransformerHelper.getAtTargetNodes(list, atString, "");
@@ -239,6 +251,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return "null"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodesNull = TransformerHelper.getAtTargetNodes(list, atNull, "");
@@ -250,6 +263,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return "class;Ljava/lang/Object;"; }
             @Override public int offset() { return 0; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodesClass = TransformerHelper.getAtTargetNodes(list, atClass, "");
@@ -269,6 +283,7 @@ public class AtAnnotationTest {
             @Override public int opcode() { return -1; }
             @Override public String target() { return ""; }
             @Override public int offset() { return 1; }
+            @Override public boolean printBytecode() { return false; }
             @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return At.class; }
         };
         List<AbstractInsnNode> nodes = TransformerHelper.getAtTargetNodes(list, atOffset, "");

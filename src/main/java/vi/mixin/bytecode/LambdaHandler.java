@@ -1,16 +1,15 @@
 package vi.mixin.bytecode;
 
 import java.lang.invoke.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LambdaHandler {
 
     @SuppressWarnings("unused")
-    public static CallSite metafactory(MethodHandles.Lookup caller, String interfaceMethodName, MethodType factoryType, MethodType interfaceMethodType, MethodHandle implementation, MethodType dynamicMethodType) throws LambdaConversionException {
-        return LambdaMetafactory.metafactory(caller, interfaceMethodName, factoryType, interfaceMethodType, implementation, dynamicMethodType);
-    }
-
-    @SuppressWarnings("unused")
-    public static CallSite altMetafactory(MethodHandles.Lookup caller, String interfaceMethodName, MethodType factoryType, Object... args) throws LambdaConversionException {
-        return LambdaMetafactory.altMetafactory(caller, interfaceMethodName, factoryType, args);
+    public static Object wrapper(MethodHandles.Lookup caller, String interfaceMethodName, MethodType factoryType, MethodHandle original, Object... args) throws Throwable {
+        List<Object> originalArgs = new ArrayList<>(List.of(caller, interfaceMethodName, factoryType));
+        originalArgs.addAll(List.of(args));
+        return original.invokeWithArguments(originalArgs);
     }
 }
