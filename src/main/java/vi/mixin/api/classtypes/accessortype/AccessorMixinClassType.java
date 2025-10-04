@@ -4,7 +4,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
-import vi.mixin.api.classtypes.Editors;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.editors.AnnotatedFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
@@ -16,12 +15,12 @@ import java.lang.annotation.Annotation;
 public final class AccessorMixinClassType implements MixinClassType<Annotation, AccessorAnnotatedMethodEditor, AnnotatedFieldEditor, AccessorTargetMethodEditor, AccessorTargetFieldEditor> {
 
     @Override
-    public AccessorAnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditor) {
-        return new AccessorAnnotatedMethodEditor(mixinMethodNode, targetEditor);
+    public AccessorAnnotatedMethodEditor create(MethodNode annotatedMethodNode, Object targetEditor) {
+        return new AccessorAnnotatedMethodEditor(annotatedMethodNode, targetEditor);
     }
 
     @Override
-    public AnnotatedFieldEditor create(FieldNode mixinFieldNode, Object targetEditor) {
+    public AnnotatedFieldEditor create(FieldNode annotatedFieldNode, Object targetEditor) {
         throw new UnsupportedOperationException("Accessor classes cannot have annotation mixin fields");
     }
 
@@ -40,7 +39,7 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<AccessorAnnotatedMethodEditor, AnnotatedFieldEditor, AccessorTargetMethodEditor, AccessorTargetFieldEditor> editors, Annotation annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, MixinClassTargetClassEditor targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         targetClassEditor.addInterface(mixinClassNode.name);
         mixinClassNode.access |= ACC_PUBLIC;

@@ -15,8 +15,8 @@ import java.lang.annotation.Annotation;
 
 public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethodEditor, AF extends AnnotatedFieldEditor, TM extends TargetMethodEditor, TF extends TargetFieldEditor> extends Opcodes {
 
-    AM create(MethodNode mixinMethodNode, Object targetEditor);
-    AF create(FieldNode mixinFieldNode, Object targetEditor);
+    AM create(MethodNode annotatedMethodNode, Object targetEditor);
+    AF create(FieldNode annotatedFieldNode, Object targetEditor);
     TM create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors);
     TF create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors);
 
@@ -24,6 +24,6 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
         return true;
     }
 
-    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<AM, AF, TM, TF> editors, A annotation, MixinClassTargetClassEditor targetClassEditor);
+    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, MixinClassTargetClassEditor targetClassEditor);
 }
 

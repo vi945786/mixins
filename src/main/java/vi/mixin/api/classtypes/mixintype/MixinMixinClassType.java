@@ -7,7 +7,6 @@ import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
-import vi.mixin.api.classtypes.Editors;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.util.TransformerHelper;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
@@ -17,19 +16,28 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 import vi.mixin.bytecode.LambdaHandler;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import static vi.mixin.api.util.TransformerHelper.*;
 
 public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> {
 
+    private final Map<MethodNode, MixinAnnotatedMethodEditor> annotatedMethodEditors = new HashMap<>();
+    private final Map<FieldNode, MixinAnnotatedFieldEditor> annotatedFieldEditors = new HashMap<>();
+
     @Override
-    public MixinAnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditors) {
-        return new MixinAnnotatedMethodEditor(mixinMethodNode, targetEditors);
+    public MixinAnnotatedMethodEditor create(MethodNode annotatedMethodNode, Object targetEditors) {
+        MixinAnnotatedMethodEditor editor = new MixinAnnotatedMethodEditor(annotatedMethodNode, targetEditors);
+        annotatedMethodEditors.put(annotatedMethodNode, editor);
+        return editor;
     }
 
     @Override
-    public MixinAnnotatedFieldEditor create(FieldNode mixinFieldNode, Object targetEditors) {
-        return new MixinAnnotatedFieldEditor(mixinFieldNode, targetEditors);
+    public MixinAnnotatedFieldEditor create(FieldNode annotatedFieldNode, Object targetEditors) {
+        MixinAnnotatedFieldEditor editor = new MixinAnnotatedFieldEditor(annotatedFieldNode, targetEditors);
+        annotatedFieldEditors.put(annotatedFieldNode, editor);
+        return editor;
     }
 
     @Override
@@ -49,7 +57,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
     private String replaceName;
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> editors, Mixin annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Mixin annotation, MixinClassTargetClassEditor targetClassEditor) {
         this.mixinClassNode = mixinClassNodeHierarchy.classNode();
         this.targetClassEditor = targetClassEditor;
         this.targetClassNode = targetClassEditor.getClassNodeClone();
@@ -92,7 +100,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
                     if(insnNode instanceof MethodInsnNode methodInsnNode && methodInsnNode.owner.equals(mixinClassNode.name)) {
                         MethodNode nodeMethodNode = mixinClassNode.methods.stream().filter(m -> (m.name + m.desc).equals(methodInsnNode.name + methodInsnNode.desc)).findAny().orElse(null);
                         if(nodeMethodNode != null) {
-                            MethodInsnNode invoke = editors.mixinMethodEditors().get(nodeMethodNode).invoke;
+                            MethodInsnNode invoke = annotatedMethodEditors.get(nodeMethodNode).invoke;
                             if(invoke == null) invoke = new MethodInsnNode(methodInsnNode.getOpcode(), targetClassNode.name, replaceName + methodInsnNode.name, methodInsnNode.desc);
 
                             methodNode.instructions.insertBefore(insnNode, invoke);
@@ -117,8 +125,8 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
                         FieldNode nodeFieldNode = mixinClassNode.fields.stream().filter(m -> m.name.equals(fieldInsnNode.name)).findAny().orElse(null);
                         if(nodeFieldNode != null && (nodeFieldNode.access & ACC_SYNTHETIC) == 0) {
                             FieldInsnNode change;
-                            if (fieldInsnNode.getOpcode() == PUTFIELD || fieldInsnNode.getOpcode() == PUTSTATIC) change = editors.mixinFieldEditors().get(nodeFieldNode).set;
-                            else change = editors.mixinFieldEditors().get(nodeFieldNode).get;
+                            if (fieldInsnNode.getOpcode() == PUTFIELD || fieldInsnNode.getOpcode() == PUTSTATIC) change = annotatedFieldEditors.get(nodeFieldNode).set;
+                            else change = annotatedFieldEditors.get(nodeFieldNode).get;
                             if(change == null) change = new FieldInsnNode(fieldInsnNode.getOpcode(), targetClassNode.name, replaceName + fieldInsnNode.name, fieldInsnNode.desc);
                             methodNode.instructions.insertBefore(insnNode, change);
                             methodNode.instructions.remove(fieldInsnNode);
@@ -129,7 +137,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
         }
 
         //move fields to target class
-        editors.mixinFieldEditors().forEach((fieldNode, fieldEditor) -> {
+        annotatedFieldEditors.forEach((fieldNode, fieldEditor) -> {
             if(fieldNode == null) return;
 
             if(fieldEditor.copy) {
@@ -138,7 +146,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
             mixinClassNode.fields.remove(fieldNode);
         });
 
-        editors.mixinMethodEditors().forEach((methodNode, methodEditor) -> {
+        annotatedMethodEditors.forEach((methodNode, methodEditor) -> {
             if(methodNode == null || methodNode.name.startsWith("<")) return;
 
             if(methodEditor.delete) {

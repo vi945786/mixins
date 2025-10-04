@@ -261,15 +261,18 @@ public class RegisterJars {
         registerTransformers(List.of(transformer));
     }
 
-    private  void registerTransformers(List<String> transformers) {
+    @SuppressWarnings("unchecked")
+    private void registerTransformers(List<String> transformers) {
         transformers.forEach(mixinTransformer -> {
-            Class<?> transformer = MixinClassHelper.findClass(mixinTransformer);
+            Class<?> transformerClass = MixinClassHelper.findClass(mixinTransformer);
 
-            if(transformer == null) throw new MixinFormatException(mixinTransformer, "transformer supplier class not found");
-            if(!TransformerSupplier.class.isAssignableFrom(transformer)) throw new MixinFormatException(mixinTransformer, "transformer does not implement vi.mixin.api.transformers.TransformerSupplier");
+            if(transformerClass == null) throw new MixinFormatException(mixinTransformer, "transformer supplier class not found");
+            if(!TransformerSupplier.class.isAssignableFrom(transformerClass)) throw new MixinFormatException(mixinTransformer, "transformer does not implement vi.mixin.api.transformers.TransformerSupplier");
 
             try {
-                ((TransformerSupplier) transformer.getConstructor().newInstance()).getBuiltTransformers().forEach(mixiner::addBuiltTransformer);
+                Constructor<TransformerSupplier> c = (Constructor<TransformerSupplier>) transformerClass.getConstructor();
+                c.setAccessible(true);
+                c.newInstance().getBuiltTransformers().forEach(mixiner::addBuiltTransformer);
             } catch (NoSuchMethodException e) {
                 throw new MixinFormatException(mixinTransformer, "transformer does not have a public no-args constructor");
             } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
@@ -282,18 +285,20 @@ public class RegisterJars {
         registerTransformers(List.of(mixinClassType));
     }
 
+    @SuppressWarnings("unchecked")
     private void registerMixinClassTypes(List<String> mixinClassTypes) {
         mixinClassTypes.forEach(mixinClassTypeName -> {
-            Class<?> mixinClassType = MixinClassHelper.findClass(mixinClassTypeName);
+            Class<MixinClassType<?, ?, ?, ?, ?>> mixinClassTypeClass = (Class<MixinClassType<?, ?, ?, ?, ?>>) MixinClassHelper.findClass(mixinClassTypeName);
 
-            if(mixinClassType == null) throw new MixinFormatException(mixinClassTypeName, "mixin class type class not found");
-            if(!MixinClassType.class.isAssignableFrom(mixinClassType)) throw new MixinFormatException(mixinClassTypeName, "mixin class type does not implement vi.mixin.api.classtypes.MixinClassType");
+            if(mixinClassTypeClass == null) throw new MixinFormatException(mixinClassTypeName, "mixin class type class not found");
+            if(!MixinClassType.class.isAssignableFrom(mixinClassTypeClass)) throw new MixinFormatException(mixinClassTypeName, "mixin class type does not implement vi.mixin.api.classtypes.MixinClassType");
 
             try {
-                Constructor<?> c = mixinClassType.getDeclaredConstructor();
+                Constructor<?> c = mixinClassTypeClass.getConstructor();
                 c.setAccessible(true);
-                mixiner.addMixinClassType((MixinClassType<?, ?, ?, ?, ?>) c.newInstance());
+                c.newInstance();
 
+                mixiner.addMixinClassType(mixinClassTypeClass);
             } catch (NoSuchMethodException e) {
                 throw new MixinFormatException(mixinClassTypeName, "mixin class type does not have a public no-args constructor");
             } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {

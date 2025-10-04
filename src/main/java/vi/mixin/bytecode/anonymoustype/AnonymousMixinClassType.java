@@ -2,7 +2,6 @@ package vi.mixin.bytecode.anonymoustype;
 
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
-import vi.mixin.api.classtypes.Editors;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
@@ -21,13 +20,15 @@ class AnonymousMixinClassType implements MixinClassType<AnonymousMixinClassType.
     @Retention(RetentionPolicy.CLASS)
     @interface Anonymous {}
 
+    public AnonymousMixinClassType() {}
+
     @Override
-    public AnnotatedMethodEditor create(MethodNode mixinMethodNode, Object targetEditor) {
+    public AnnotatedMethodEditor create(MethodNode annotatedMethodNode, Object targetEditor) {
         return null;
     }
 
     @Override
-    public AnnotatedFieldEditor create(FieldNode mixinFieldNode, Object targetEditor) {
+    public AnnotatedFieldEditor create(FieldNode annotatedFieldNode, Object targetEditor) {
         return null;
     }
 
@@ -42,7 +43,7 @@ class AnonymousMixinClassType implements MixinClassType<AnonymousMixinClassType.
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Editors<AnnotatedMethodEditor, AnnotatedFieldEditor, TargetMethodEditor, TargetFieldEditor> editors, Anonymous annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Anonymous annotation, MixinClassTargetClassEditor targetClassEditor) {
         return null;
     }
 }
