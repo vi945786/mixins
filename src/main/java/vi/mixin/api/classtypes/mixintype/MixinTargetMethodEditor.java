@@ -14,8 +14,8 @@ import static vi.mixin.api.util.TransformerHelper.getLoadOpcode;
 
 public class MixinTargetMethodEditor extends TargetMethodEditor {
 
-    public MixinTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
-        super(targetMethodEditors, mixinEditor);
+    public MixinTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object annotatedEditor) {
+        super(targetMethodEditors, annotatedEditor);
     }
 
     @SuppressWarnings("unused")
@@ -33,7 +33,7 @@ public class MixinTargetMethodEditor extends TargetMethodEditor {
     }
 
     public InsnList getCaptureLocalsInsnList(int atIndex, String targetClassName) {
-        if (!(mixinEditor instanceof MixinAnnotatedMethodEditor))
+        if (!(annotatedEditor instanceof MixinAnnotatedMethodEditor))
             throw new UnsupportedOperationException("capture locals is only supported when the annotated element is a method");
 
         try {

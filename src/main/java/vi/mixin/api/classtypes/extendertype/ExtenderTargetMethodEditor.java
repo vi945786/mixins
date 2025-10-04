@@ -5,8 +5,8 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 
 public class ExtenderTargetMethodEditor extends TargetMethodEditor {
 
-    public ExtenderTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
-        super(targetMethodEditors, mixinEditor);
+    public ExtenderTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object annotatedEditor) {
+        super(targetMethodEditors, annotatedEditor);
     }
 
     public void makeNonFinal() {

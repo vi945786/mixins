@@ -3,13 +3,12 @@ package vi.mixin.api.editors;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
-public abstract class AnnotatedMethodEditor {
+public abstract class AnnotatedMethodEditor extends AnnotatedEditor {
     protected final MethodNode mixinMethodNode;
-    protected final Object targetEditors;
 
-    protected AnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditors) {
+    protected AnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditor) {
+        super(targetEditor);
         this.mixinMethodNode = mixinMethodNode;
-        this.targetEditors = targetEditors;
     }
 
     public final MethodNode getMethodNodeClone() {

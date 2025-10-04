@@ -8,8 +8,8 @@ public class ExtenderAnnotatedMethodEditor extends AnnotatedMethodEditor {
     MethodInsnNode invoke = null;
     boolean delete = false;
 
-    protected ExtenderAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditors) {
-        super(mixinMethodNode, targetEditors);
+    protected ExtenderAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditor) {
+        super(mixinMethodNode, targetEditor);
     }
 
     public void changeInvoke(MethodInsnNode methodInsnNode) {

@@ -121,7 +121,7 @@ public class InjectTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, Inject.class).withMethodTarget().setTransformer(InjectTransformer::transform).build()
+                TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(Inject.class).annotatedMethod().targetMethod().transformFunction(InjectTransformer::transform).build()
         );
     }
 }

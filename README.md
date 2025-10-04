@@ -566,11 +566,12 @@ The TransformerSupplier must be registered in the mixin file.
 
 To create a built transformer use the `TransformerBuilder`.\
 The usage is as follows:
-1. Start with calling the `annotatedMethodTransformerBuilder` or `annotatedFieldTransformerBuilder` method with the chosen MixinClassType and annotation to instantiate a builder.
-2. Use `withMethodTarget()` or `withFieldTarget()` to specify the target type.
-3. Set the transformation logic with the `setTransformer` method.
-4. Optionally Filter applicable targets using the `setTargetFilter` method.
-5. finally, call the `build()` method to return a BuiltTransformer which is ready for use.
+1. Start with calling `TransformerBuilder.getTransformerBuilder` method with the chosen MixinClassType instantiate a builder.
+2. Use `annotatedMethod()` or `annotatedField()` to specify which type of element needs to have the annotation.
+3. Use `targetMethod()` or `targetField()` to specify the target type.
+4. Set the transformation logic with the `transformFunction` method.
+5. Optionally Filter applicable targets using the `targetFilter` method.
+6. finally, call the `build()` method to return a BuiltTransformer which is ready for use.
 
 Many common helper functions related to ASM bytecode manipulation can be found in the `TransformerHelper` class.\
 For more advanced bytecode analysis, there is a type-aware version of the ASM `BasicInterpreter` called `TypeAwareBasicInterpreter`, useful when you need more type information during analysis.

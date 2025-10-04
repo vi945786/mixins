@@ -51,7 +51,7 @@ public class OverridableTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(ExtenderMixinClassType.class, Overridable.class).withMethodTarget().setTargetFilter(OverridableTransformer::targetFilter).setTransformer(OverridableTransformer::transform).build()
+                TransformerBuilder.getTransformerBuilder(ExtenderMixinClassType.class).annotation(Overridable.class).annotatedMethod().targetMethod().transformFunction(OverridableTransformer::transform).targetFilter(OverridableTransformer::targetFilter).build()
         );
     }
 }

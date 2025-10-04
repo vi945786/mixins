@@ -58,7 +58,7 @@ public class SetterTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(AccessorMixinClassType.class, Setter.class).withFieldTarget().setTargetFilter(SetterTransformer::targetFilter).setTransformer(SetterTransformer::transform).build()
+                TransformerBuilder.getTransformerBuilder(AccessorMixinClassType.class).annotation(Setter.class).annotatedMethod().targetField().transformFunction(SetterTransformer::transform).targetFilter(SetterTransformer::targetFilter).build()
         );
     }
 }

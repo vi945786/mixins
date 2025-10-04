@@ -4,8 +4,8 @@ import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 
 public class AccessorTargetFieldEditor extends TargetFieldEditor {
-    protected AccessorTargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
-        super(targetFieldEditors, mixinEditor);
+    protected AccessorTargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object annotatedEditor) {
+        super(targetFieldEditors, annotatedEditor);
     }
 
     public void makePublic() {

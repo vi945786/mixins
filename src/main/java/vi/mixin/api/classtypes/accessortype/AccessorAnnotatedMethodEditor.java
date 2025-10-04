@@ -6,8 +6,8 @@ import org.objectweb.asm.tree.MethodNode;
 import vi.mixin.api.editors.AnnotatedMethodEditor;
 
 public class AccessorAnnotatedMethodEditor extends AnnotatedMethodEditor {
-    protected AccessorAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditors) {
-        super(mixinMethodNode, targetEditors);
+    protected AccessorAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditor) {
+        super(mixinMethodNode, targetEditor);
     }
 
     public void setBytecode(InsnList insnList) {

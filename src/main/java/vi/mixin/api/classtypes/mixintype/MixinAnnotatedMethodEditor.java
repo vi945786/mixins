@@ -11,8 +11,8 @@ public class MixinAnnotatedMethodEditor extends AnnotatedMethodEditor {
     boolean copy = true;
     boolean delete = false;
 
-    protected MixinAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditors) {
-        super(mixinMethodNode, targetEditors);
+    protected MixinAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditor) {
+        super(mixinMethodNode, targetEditor);
     }
 
     public void changeInvoke(MethodInsnNode methodInsnNode) {

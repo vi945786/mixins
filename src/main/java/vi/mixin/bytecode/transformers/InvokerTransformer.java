@@ -69,7 +69,7 @@ public class InvokerTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(AccessorMixinClassType.class, Invoker.class).withMethodTarget().setTransformer(InvokerTransformer::transform).build()
+                TransformerBuilder.getTransformerBuilder(AccessorMixinClassType.class).annotation(Invoker.class).annotatedMethod().targetMethod().transformFunction(InvokerTransformer::transform).build()
         );
     }
 }

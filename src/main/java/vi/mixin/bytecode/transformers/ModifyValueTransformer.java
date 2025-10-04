@@ -136,10 +136,10 @@ public class ModifyValueTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, ModifyValue.class).withMethodTarget().setTransformer(
+                TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(ModifyValue.class).annotatedMethod().targetMethod().transformFunction(
                         (MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) ->
-                                new ModifyValueTransformer().transform(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone))
-                        .build()
+                                new ModifyValueTransformer().transform(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone)
+                ).build()
         );
     }
 }

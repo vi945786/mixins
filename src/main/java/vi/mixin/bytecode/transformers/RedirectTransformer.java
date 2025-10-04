@@ -145,7 +145,7 @@ public class RedirectTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, Redirect.class).withMethodTarget().setTransformer(RedirectTransformer::transform).build()
+                TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(Redirect.class).annotatedMethod().targetMethod().transformFunction(RedirectTransformer::transform).build()
         );
     }
 }

@@ -5,7 +5,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
-import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.util.TransformerHelper;
@@ -15,13 +14,14 @@ import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
 import vi.mixin.bytecode.LambdaHandler;
 
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import static vi.mixin.api.util.TransformerHelper.*;
 
-public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> {
+public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnnotatedMethodEditor, MixinAnnotatedFieldEditor, MixinTargetMethodEditor, MixinTargetFieldEditor> {
 
     private final Map<MethodNode, MixinAnnotatedMethodEditor> annotatedMethodEditors = new HashMap<>();
     private final Map<FieldNode, MixinAnnotatedFieldEditor> annotatedFieldEditors = new HashMap<>();
@@ -57,7 +57,7 @@ public class MixinMixinClassType implements MixinClassType<Mixin, MixinAnnotated
     private String replaceName;
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Mixin annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, MixinClassTargetClassEditor targetClassEditor) {
         this.mixinClassNode = mixinClassNodeHierarchy.classNode();
         this.targetClassEditor = targetClassEditor;
         this.targetClassNode = targetClassEditor.getClassNodeClone();

@@ -13,6 +13,7 @@ import vi.mixin.api.transformers.TransformerSupplier;
 import vi.mixin.util.TempFileDeleter;
 
 import java.io.*;
+import java.lang.annotation.Annotation;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -288,7 +289,7 @@ public class RegisterJars {
     @SuppressWarnings("unchecked")
     private void registerMixinClassTypes(List<String> mixinClassTypes) {
         mixinClassTypes.forEach(mixinClassTypeName -> {
-            Class<MixinClassType<?, ?, ?, ?, ?>> mixinClassTypeClass = (Class<MixinClassType<?, ?, ?, ?, ?>>) MixinClassHelper.findClass(mixinClassTypeName);
+            Class<MixinClassType<Annotation, ?, ?, ?, ?>> mixinClassTypeClass = (Class<MixinClassType<Annotation, ?, ?, ?, ?>>) MixinClassHelper.findClass(mixinClassTypeName);
 
             if(mixinClassTypeClass == null) throw new MixinFormatException(mixinClassTypeName, "mixin class type class not found");
             if(!MixinClassType.class.isAssignableFrom(mixinClassTypeClass)) throw new MixinFormatException(mixinClassTypeName, "mixin class type does not implement vi.mixin.api.classtypes.MixinClassType");

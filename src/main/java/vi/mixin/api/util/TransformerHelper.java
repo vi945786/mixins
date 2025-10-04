@@ -82,6 +82,7 @@ public final class TransformerHelper implements Opcodes {
         }
     }
 
+    @SuppressWarnings("unused")
     public static boolean doMethodDescsMatch(String search, String target) {
         Type[] searchArgumentTypes = Type.getArgumentTypes(search);
         Type[] targetArgumentTypes = Type.getArgumentTypes(target);
@@ -91,18 +92,6 @@ public final class TransformerHelper implements Opcodes {
         }
 
         return Type.getReturnType(search).equals(Type.getReturnType(target)) || Type.getReturnType(search).equals(Type.getType(Object.class));
-    }
-
-    @SuppressWarnings("unused")
-    public static MethodNode getTargetMethod(ClassNode classNode, String nameAndDesc) {
-        String name = nameAndDesc.split("\\(")[0];
-        String desc = "(" + nameAndDesc.split("\\(")[1];
-
-        return classNode.methods.stream().filter(methodNode -> {
-            if(!methodNode.name.equals(name)) return false;
-
-            return doMethodDescsMatch(desc, methodNode.desc);
-        }).findAny().orElse(null);
     }
 
     public static Class<?> getTargetClass(ClassNode mixinNode) {

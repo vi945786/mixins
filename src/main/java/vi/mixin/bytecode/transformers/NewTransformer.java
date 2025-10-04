@@ -112,9 +112,9 @@ public class NewTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, New.class).withMethodTarget().setTargetFilter(NewTransformer::targetFilter).setTransformer(NewTransformer::mixinTransform).build(),
-                TransformerBuilder.annotatedMethodTransformerBuilder(AccessorMixinClassType.class, New.class).withMethodTarget().setTargetFilter(NewTransformer::targetFilter).setTransformer(NewTransformer::accessorTransform).build(),
-                TransformerBuilder.annotatedMethodTransformerBuilder(ExtenderMixinClassType.class, New.class).withMethodTarget().setTargetFilter(NewTransformer::targetFilter).setTransformer(NewTransformer::extenderTransform).build()
+                TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(New.class).annotatedMethod().targetMethod().transformFunction(NewTransformer::mixinTransform).targetFilter(NewTransformer::targetFilter).build(),
+                TransformerBuilder.getTransformerBuilder(AccessorMixinClassType.class).annotation(New.class).annotatedMethod().targetMethod().transformFunction(NewTransformer::accessorTransform).targetFilter(NewTransformer::targetFilter).build(),
+                TransformerBuilder.getTransformerBuilder(ExtenderMixinClassType.class).annotation(New.class).annotatedMethod().targetMethod().transformFunction(NewTransformer::extenderTransform).targetFilter(NewTransformer::targetFilter).build()
         );
     }
 }

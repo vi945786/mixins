@@ -3,13 +3,12 @@ package vi.mixin.api.editors;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 
-public abstract class AnnotatedFieldEditor {
+public abstract class AnnotatedFieldEditor extends AnnotatedEditor {
     protected final FieldNode mixinFieldNode;
-    protected final Object targetEditors;
 
-    protected AnnotatedFieldEditor(FieldNode mixinFieldNode, Object targetEditors) {
+    protected AnnotatedFieldEditor(FieldNode mixinFieldNode, Object targetEditor) {
+        super(targetEditor);
         this.mixinFieldNode = mixinFieldNode;
-        this.targetEditors = targetEditors;
     }
 
     public final FieldNode getFieldNodeClone() {

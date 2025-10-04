@@ -113,10 +113,10 @@ public class ShadowTransformer implements TransformerSupplier {
     @Override
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
-                TransformerBuilder.annotatedFieldTransformerBuilder(MixinMixinClassType.class, Shadow.class).withFieldTarget().setTransformer(ShadowTransformer::mixinTransformField).build(),
-                TransformerBuilder.annotatedMethodTransformerBuilder(MixinMixinClassType.class, Shadow.class).withMethodTarget().setTransformer(ShadowTransformer::mixinTransformMethod).build(),
-                TransformerBuilder.annotatedFieldTransformerBuilder(ExtenderMixinClassType.class, Shadow.class).withFieldTarget().setTransformer(ShadowTransformer::extenderTransformField).build(),
-                TransformerBuilder.annotatedMethodTransformerBuilder(ExtenderMixinClassType.class, Shadow.class).withMethodTarget().setTransformer(ShadowTransformer::extenderTransformMethod).build()
+                TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(Shadow.class).annotatedField().targetField().transformFunction(ShadowTransformer::mixinTransformField).build(),
+                TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(Shadow.class).annotatedMethod().targetMethod().transformFunction(ShadowTransformer::mixinTransformMethod).build(),
+                TransformerBuilder.getTransformerBuilder(ExtenderMixinClassType.class).annotation(Shadow.class).annotatedField().targetField().transformFunction(ShadowTransformer::extenderTransformField).build(),
+                TransformerBuilder.getTransformerBuilder(ExtenderMixinClassType.class).annotation(Shadow.class).annotatedMethod().targetMethod().transformFunction(ShadowTransformer::extenderTransformMethod).build()
         );
     }
 

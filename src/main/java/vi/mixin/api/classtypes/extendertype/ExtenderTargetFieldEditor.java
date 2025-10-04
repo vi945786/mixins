@@ -4,8 +4,8 @@ import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
 
 public class ExtenderTargetFieldEditor extends TargetFieldEditor {
-    protected ExtenderTargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
-        super(targetFieldEditors, mixinEditor);
+    protected ExtenderTargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object annotatedEditor) {
+        super(targetFieldEditors, annotatedEditor);
     }
 
     public void makeNonFinal() {
