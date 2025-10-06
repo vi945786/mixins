@@ -7,6 +7,8 @@
     "vi.mixin.test.InjectTestMixin",
     "vi.mixin.test.LambdaShadowMixin",
     "vi.mixin.test.LambdaTargetMixin",
+    "vi.mixin.test.MixinTarget1",
+    "vi.mixin.test.MixinTarget2",
     "vi.mixin.test.ModifyValueMixin",
     "vi.mixin.test.NumberAccessor",
     "vi.mixin.test.OuterFieldMixin",

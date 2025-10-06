@@ -24,6 +24,7 @@ public class Agent {
         }
     }
 
+    @SuppressWarnings("CallToPrintStackTrace")
     public static void premain(String agentArgs, Instrumentation inst) throws IOException, NoSuchMethodException, IllegalAccessException {
         agent = inst;
         agent.appendToBootstrapClassLoaderSearch(new JarFile(Agent.class.getProtectionDomain().getCodeSource().getLocation().getPath()));
