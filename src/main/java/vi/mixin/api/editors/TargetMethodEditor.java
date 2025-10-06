@@ -1,12 +1,12 @@
 package vi.mixin.api.editors;
 
 import org.objectweb.asm.tree.MethodNode;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 
 public abstract class TargetMethodEditor extends TargetEditor {
-    protected final MixinClassTargetMethodEditor targetMethodEditor;
+    protected final TargetMethodManipulator targetMethodEditor;
 
-    protected TargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object annotatedEditor) {
+    protected TargetMethodEditor(TargetMethodManipulator targetMethodEditors, Object annotatedEditor) {
         super(annotatedEditor);
         this.targetMethodEditor = targetMethodEditors;
     }

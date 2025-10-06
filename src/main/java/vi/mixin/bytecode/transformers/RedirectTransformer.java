@@ -8,7 +8,7 @@ import vi.mixin.api.annotations.methods.Redirect;
 import vi.mixin.api.classtypes.mixintype.MixinAnnotatedMethodEditor;
 import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
 import vi.mixin.api.classtypes.mixintype.MixinTargetMethodEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetInsnListManipulator;
 import vi.mixin.api.injection.At;
 import vi.mixin.api.injection.Vars;
 import vi.mixin.api.transformers.BuiltTransformer;
@@ -99,7 +99,7 @@ public class RedirectTransformer implements TransformerSupplier {
 
         mixinEditor.makePublic();
 
-        MixinClassTargetInsnListEditor insnListEditor = targetEditor.getInsnListEditor();
+        TargetInsnListManipulator insnListEditor = targetEditor.getInsnListEditor();
         InsnList targetList = insnListEditor.getInsnListClone();
         List<Integer> atIndexes = TransformerHelper.getAtTargetIndexesThrows(targetList, annotation.at(), "@Redirect " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc);
 

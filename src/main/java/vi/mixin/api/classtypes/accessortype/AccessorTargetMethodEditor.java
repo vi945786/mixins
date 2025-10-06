@@ -1,10 +1,10 @@
 package vi.mixin.api.classtypes.accessortype;
 
 import vi.mixin.api.editors.TargetMethodEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 
 public class AccessorTargetMethodEditor extends TargetMethodEditor {
-    protected AccessorTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object annotatedEditor) {
+    protected AccessorTargetMethodEditor(TargetMethodManipulator targetMethodEditors, Object annotatedEditor) {
         super(targetMethodEditors, annotatedEditor);
     }
 

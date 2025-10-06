@@ -6,9 +6,9 @@ import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.editors.AnnotatedFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetClassManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 
 import java.lang.annotation.Annotation;
 
@@ -25,12 +25,12 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
     }
 
     @Override
-    public AccessorTargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
+    public AccessorTargetMethodEditor create(TargetMethodManipulator targetMethodEditors, Object mixinEditor) {
         return new AccessorTargetMethodEditor(targetMethodEditors, mixinEditor);
     }
 
     @Override
-    public AccessorTargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
+    public AccessorTargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditor) {
         return new AccessorTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
@@ -39,7 +39,7 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         targetClassEditor.addInterface(mixinClassNode.name);
         mixinClassNode.access |= ACC_PUBLIC;
@@ -66,7 +66,7 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
             ClassNode clone = new ClassNode();
             methodNode.accept(clone);
 
-            MixinClassTargetMethodEditor targetMethodEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc);
+            TargetMethodManipulator targetMethodEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc);
             if(targetMethodEditor == null) {
                 targetClassEditor.addMethod(clone.methods.getFirst());
             } else {

@@ -4,8 +4,8 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
 import vi.mixin.api.editors.TargetMethodEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetInsnListManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 import vi.mixin.api.injection.Vars;
 import vi.mixin.api.util.TransformerHelper;
 
@@ -14,7 +14,7 @@ import static vi.mixin.api.util.TransformerHelper.getLoadOpcode;
 
 public class MixinTargetMethodEditor extends TargetMethodEditor {
 
-    public MixinTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object annotatedEditor) {
+    public MixinTargetMethodEditor(TargetMethodManipulator targetMethodEditors, Object annotatedEditor) {
         super(targetMethodEditors, annotatedEditor);
     }
 
@@ -76,7 +76,7 @@ public class MixinTargetMethodEditor extends TargetMethodEditor {
         }
     }
 
-    public MixinClassTargetInsnListEditor getInsnListEditor() {
+    public TargetInsnListManipulator getInsnListEditor() {
         return targetMethodEditor.getInsnListEditor();
     }
 }

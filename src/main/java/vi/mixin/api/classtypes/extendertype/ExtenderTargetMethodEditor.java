@@ -1,11 +1,11 @@
 package vi.mixin.api.classtypes.extendertype;
 
 import vi.mixin.api.editors.TargetMethodEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 
 public class ExtenderTargetMethodEditor extends TargetMethodEditor {
 
-    public ExtenderTargetMethodEditor(MixinClassTargetMethodEditor targetMethodEditors, Object annotatedEditor) {
+    public ExtenderTargetMethodEditor(TargetMethodManipulator targetMethodEditors, Object annotatedEditor) {
         super(targetMethodEditors, annotatedEditor);
     }
 

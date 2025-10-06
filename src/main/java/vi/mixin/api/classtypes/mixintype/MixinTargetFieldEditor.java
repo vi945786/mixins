@@ -1,10 +1,10 @@
 package vi.mixin.api.classtypes.mixintype;
 
 import vi.mixin.api.editors.TargetFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
 
 public class MixinTargetFieldEditor extends TargetFieldEditor {
-    protected MixinTargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object annotatedEditor) {
+    protected MixinTargetFieldEditor(TargetFieldManipulator targetFieldEditors, Object annotatedEditor) {
         super(targetFieldEditors, annotatedEditor);
     }
 

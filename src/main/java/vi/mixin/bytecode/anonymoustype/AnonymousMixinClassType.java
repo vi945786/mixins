@@ -3,9 +3,9 @@ package vi.mixin.bytecode.anonymoustype;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.MixinClassType;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetClassManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 import vi.mixin.api.editors.AnnotatedFieldEditor;
 import vi.mixin.api.editors.AnnotatedMethodEditor;
 import vi.mixin.api.editors.TargetFieldEditor;
@@ -33,17 +33,17 @@ class AnonymousMixinClassType implements MixinClassType<AnonymousMixinClassType.
     }
 
     @Override
-    public TargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors) {
+    public TargetMethodEditor create(TargetMethodManipulator targetMethodEditors, Object mixinEditors) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public TargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors) {
+    public TargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditors) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Anonymous annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Anonymous annotation, TargetClassManipulator targetClassEditor) {
         return null;
     }
 }

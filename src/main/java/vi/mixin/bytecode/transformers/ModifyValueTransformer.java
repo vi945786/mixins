@@ -8,7 +8,7 @@ import vi.mixin.api.annotations.methods.ModifyValue;
 import vi.mixin.api.classtypes.mixintype.MixinAnnotatedMethodEditor;
 import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
 import vi.mixin.api.classtypes.mixintype.MixinTargetMethodEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetInsnListManipulator;
 import vi.mixin.api.injection.Vars;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.transformers.TransformerBuilder;
@@ -79,7 +79,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
 
         mixinEditor.makePublic();
 
-        MixinClassTargetInsnListEditor insnListEditor = targetEditor.getInsnListEditor();
+        TargetInsnListManipulator insnListEditor = targetEditor.getInsnListEditor();
         InsnList targetList = insnListEditor.getInsnListClone();
         List<Integer> atIndexes = TransformerHelper.getAtTargetIndexesThrows(targetList, annotation.at(), "@ModifyValue " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc);
 

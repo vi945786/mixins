@@ -1,12 +1,12 @@
 package vi.mixin.api.editors;
 
 import org.objectweb.asm.tree.FieldNode;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
 
 public abstract class TargetFieldEditor extends TargetEditor {
-    protected final MixinClassTargetFieldEditor targetFieldEditor;
+    protected final TargetFieldManipulator targetFieldEditor;
 
-    protected TargetFieldEditor(MixinClassTargetFieldEditor targetFieldEditors, Object annotatedEditor) {
+    protected TargetFieldEditor(TargetFieldManipulator targetFieldEditors, Object annotatedEditor) {
         super(annotatedEditor);
         this.targetFieldEditor = targetFieldEditors;
     }

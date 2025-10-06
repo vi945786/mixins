@@ -9,7 +9,7 @@ import vi.mixin.api.classtypes.mixintype.MixinMixinClassType;
 import vi.mixin.api.classtypes.mixintype.MixinTargetMethodEditor;
 import vi.mixin.api.injection.Returner;
 import vi.mixin.api.injection.ValueReturner;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetInsnListManipulator;
 import vi.mixin.api.injection.Vars;
 import vi.mixin.api.transformers.BuiltTransformer;
 import vi.mixin.api.transformers.TransformerBuilder;
@@ -56,7 +56,7 @@ public class InjectTransformer implements TransformerSupplier {
         boolean isStatic = (targetMethodNode.access & ACC_STATIC) != 0;
         String returner = returnType.getSort() == 0 ? Type.getInternalName(Returner.class) : Type.getInternalName(ValueReturner.class);
 
-        MixinClassTargetInsnListEditor insnListEditor = targetEditor.getInsnListEditor();
+        TargetInsnListManipulator insnListEditor = targetEditor.getInsnListEditor();
         for (int atIndex : TransformerHelper.getAtTargetIndexesThrows(insnListEditor.getInsnListClone(), annotation.at(), "@Inject " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc)) {
             InsnList insnList = new InsnList();
             insnList.add(new TypeInsnNode(NEW, returner));

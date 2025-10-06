@@ -7,9 +7,9 @@ import vi.mixin.api.editors.AnnotatedFieldEditor;
 import vi.mixin.api.editors.AnnotatedMethodEditor;
 import vi.mixin.api.editors.TargetFieldEditor;
 import vi.mixin.api.editors.TargetMethodEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetClassManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 
 import java.lang.annotation.Annotation;
 
@@ -17,13 +17,13 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
 
     AM create(MethodNode annotatedMethodNode, Object targetEditor);
     AF create(FieldNode annotatedFieldNode, Object targetEditor);
-    TM create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors);
-    TF create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors);
+    TM create(TargetMethodManipulator targetMethodEditors, Object mixinEditors);
+    TF create(TargetFieldManipulator targetFieldEditors, Object mixinEditors);
 
     default boolean redefineTargetFirst() {
         return true;
     }
 
-    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, MixinClassTargetClassEditor targetClassEditor);
+    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassEditor);
 }
 

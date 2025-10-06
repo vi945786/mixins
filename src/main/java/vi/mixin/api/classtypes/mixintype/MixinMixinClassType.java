@@ -8,10 +8,10 @@ import vi.mixin.api.MixinFormatException;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.util.TransformerHelper;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetInsnListEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetClassManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetInsnListManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 import vi.mixin.bytecode.LambdaHandler;
 
 import java.lang.annotation.Annotation;
@@ -41,23 +41,23 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
     }
 
     @Override
-    public MixinTargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditors) {
+    public MixinTargetMethodEditor create(TargetMethodManipulator targetMethodEditors, Object mixinEditors) {
         return new MixinTargetMethodEditor(targetMethodEditors, mixinEditors);
     }
 
     @Override
-    public MixinTargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditors) {
+    public MixinTargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditors) {
         return new MixinTargetFieldEditor(targetFieldEditors, mixinEditors);
     }
 
     private ClassNode mixinClassNode;
-    private MixinClassTargetClassEditor targetClassEditor;
+    private TargetClassManipulator targetClassEditor;
     private ClassNode targetClassNode;
     private Class<?> targetClass;
     private String replaceName;
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassEditor) {
         this.mixinClassNode = mixinClassNodeHierarchy.classNode();
         this.targetClassEditor = targetClassEditor;
         this.targetClassNode = targetClassEditor.getClassNodeClone();
@@ -188,7 +188,7 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         for (MethodNode methodNode : targetClassNode.methods) {
             for (int index : TransformerHelper.getInsnNodeIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
                 if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode)) continue;
-                MixinClassTargetInsnListEditor insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
+                TargetInsnListManipulator insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
 
                 methodNode.instructions.remove(invokeDynamicInsnNode);
                 Object[] oldBsmArgs = invokeDynamicInsnNode.bsmArgs;
@@ -256,9 +256,9 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         FieldNode outerClassInstanceField = mixinClassNode.fields.stream().filter(f -> f.name.equals(outerClassInstanceFieldName)).findAny().orElse(null);
         if(outerClassInstanceField != null) {
             mixinClassNode.fields.remove(outerClassInstanceField);
-            mixinInit.instructions.remove(mixinInit.instructions.get(2));
-            mixinInit.instructions.remove(mixinInit.instructions.get(2));
-            mixinInit.instructions.remove(mixinInit.instructions.get(2));
+            mixinInit.instructions.remove(mixinInit.instructions.get(0));
+            mixinInit.instructions.remove(mixinInit.instructions.get(0));
+            mixinInit.instructions.remove(mixinInit.instructions.get(0));
             mixinClassNode.access |= ACC_STATIC;
         }
 
@@ -279,7 +279,7 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         mixinInit.instructions.add(new InsnNode(RETURN));
 
         targetClassEditor.getMethodEditors().stream().filter(methodNode -> methodNode.getMethodNodeClone().name.equals("<init>")).forEach(methodEditor -> {
-            MixinClassTargetInsnListEditor insnListEditor = methodEditor.getInsnListEditor();
+            TargetInsnListManipulator insnListEditor = methodEditor.getInsnListEditor();
             for (int index : TransformerHelper.getInsnNodeIndexes(methodEditor.getInsnListEditor().getInsnListClone(), AbstractInsnNode.INSN, RETURN)) {
                 InsnList insnList = new InsnList();
                 insnList.add(new VarInsnNode(ALOAD, 0));

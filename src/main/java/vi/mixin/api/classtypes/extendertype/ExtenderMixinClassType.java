@@ -8,9 +8,9 @@ import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.MixinClassType;
 import vi.mixin.api.util.TransformerHelper;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetClassEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetFieldEditor;
-import vi.mixin.api.classtypes.targeteditors.MixinClassTargetMethodEditor;
+import vi.mixin.api.classtypes.targeteditors.TargetClassManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
+import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,16 +35,16 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
     }
 
     @Override
-    public ExtenderTargetMethodEditor create(MixinClassTargetMethodEditor targetMethodEditors, Object mixinEditor) {
+    public ExtenderTargetMethodEditor create(TargetMethodManipulator targetMethodEditors, Object mixinEditor) {
         return new ExtenderTargetMethodEditor(targetMethodEditors, mixinEditor);
     }
 
     @Override
-    public ExtenderTargetFieldEditor create(MixinClassTargetFieldEditor targetFieldEditors, Object mixinEditor) {
+    public ExtenderTargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditor) {
         return new ExtenderTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
-    private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, MixinClassTargetClassEditor targetClassEditor) {
+    private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         targetClassEditor.makePublic();
 
@@ -84,7 +84,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
 
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, MixinClassTargetClassEditor targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassEditor) {
         validate(mixinClassNodeHierarchy, targetClassEditor);
         ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
         ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
