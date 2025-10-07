@@ -43,7 +43,7 @@ class AnonymousMixinClassType implements MixinClassType<AnonymousMixinClassType.
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Anonymous annotation, TargetClassManipulator targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Anonymous annotation, TargetClassManipulator targetClassManipulator) {
         return null;
     }
 }

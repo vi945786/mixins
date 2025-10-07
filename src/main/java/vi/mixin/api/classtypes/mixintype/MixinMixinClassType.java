@@ -62,11 +62,11 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
     private String replaceName;
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassManipulator) {
         this.mixinClassNodeHierarchy = mixinClassNodeHierarchy;
         this.mixinClassNode = mixinClassNodeHierarchy.mixinNode();
-        this.targetClassEditor = targetClassEditor;
-        this.targetClassNode = targetClassEditor.getClassNodeClone();
+        this.targetClassEditor = targetClassManipulator;
+        this.targetClassNode = targetClassManipulator.getClassNodeClone();
         replaceName = mixinClassNode.name.replace("/", "$$") + "$$";
         validate();
 
@@ -142,7 +142,7 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
             if(fieldNode == null) return;
 
             if(fieldEditor.copy) {
-                targetClassEditor.addField(new FieldNode((fieldNode.access & ~(ACC_PRIVATE | ACC_PROTECTED)) | ACC_PUBLIC, replaceName + fieldNode.name, fieldNode.desc, fieldNode.signature, fieldNode.value));
+                targetClassManipulator.addField(new FieldNode((fieldNode.access & ~(ACC_PRIVATE | ACC_PROTECTED)) | ACC_PUBLIC, replaceName + fieldNode.name, fieldNode.desc, fieldNode.signature, fieldNode.value));
             }
             mixinClassNode.fields.remove(fieldNode);
         });
@@ -171,7 +171,7 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
 
                 //add invokers in target class
                 MethodNode addMethodNode = new MethodNode(oldAccess, replaceName + methodNode.name, oldDesc, methodNode.signature, methodNode.exceptions.toArray(String[]::new));
-                targetClassEditor.addMethod(addMethodNode);
+                targetClassManipulator.addMethod(addMethodNode);
                 boolean isStatic = (addMethodNode.access & ACC_STATIC) != 0;
 
                 addMethodNode.access &= ~ACC_PRIVATE;
@@ -189,7 +189,7 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         for (MethodNode methodNode : targetClassNode.methods) {
             for (int index : TransformerHelper.getInsnNodeIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
                 if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode)) continue;
-                TargetInsnListManipulator insnListEditor = targetClassEditor.getMethodManipulator(methodNode.name + methodNode.desc).getInsnListManipulator();
+                TargetInsnListManipulator insnListEditor = targetClassManipulator.getMethodManipulator(methodNode.name + methodNode.desc).getInsnListManipulator();
 
                 methodNode.instructions.remove(invokeDynamicInsnNode);
                 Object[] oldBsmArgs = invokeDynamicInsnNode.bsmArgs;

@@ -37,8 +37,8 @@ There are three built-in types of mixin classes:
 - Should not be referenced outside itself.
 
 **Extenders**:
-- Classes annotated with both `@Mixin` and `@Extends`.
-- These set the super class of the mixin class to the target class.
+- Classes or interfaces annotated with both `@Mixin` and `@Extends`.
+- This mixin class type make the mixin class extend the target class (or target interface).
 - You can cast an instance of the extender to the type of the target to use the superclass methods that aren't overridden in the mixin.
 
 **Accessors**:
@@ -580,5 +580,70 @@ For more advanced bytecode analysis, there is a type-aware version of the ASM `B
 ---
 
 ## Custom Mixin Class Types
-will be added soon.\
-for now check the java files under the sub paths of `vi.mixin.api.classtypes`
+Create a new `MixinClassType` when none of the existing ones do what you need (which realistically will never happen).
+Extender, Accessor, Mixin are all a built-in `MixinClassType`.
+
+A `MixinClassType` define what a mixin class can do.\
+MixinClassTypes are "Assigned" to the mixin classes via an annotation.\
+Each defined `MixinClassType` must be registered in the mixin.json file.
+
+For example, the class below has the @Extends annotation which signifies that it is of the Extender `MixinClassType`.
+```java
+@Mixin(Target.class) @Extends
+class TargetSubclass {
+
+    @Overridable
+    public int getValue(int x) {
+        return 15;
+    }
+}
+```
+
+the full interface is as follows:
+```java
+public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethodEditor, AF extends AnnotatedFieldEditor, TM extends TargetMethodEditor, TF extends TargetFieldEditor> extends Opcodes {
+
+    AM create(MethodNode annotatedMethodNode, Object targetEditor);
+    AF create(FieldNode annotatedFieldNode, Object targetEditor);
+    TM create(TargetMethodManipulator targetMethodEditors, Object mixinEditors);
+    TF create(TargetFieldManipulator targetFieldEditors, Object mixinEditors);
+
+    default boolean redefineTargetFirst() {
+        return true;
+    }
+
+    default void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassEditor) {}
+    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassEditor);
+}
+```
+
+`MixinClassType<A extends Annotation, AM extends AnnotatedMethodEditor, AF extends AnnotatedFieldEditor, TM extends TargetMethodEditor, TF extends TargetFieldEditor>`\
+`A` - the Annotation which is associated with this `MixinClassType`, such that a mixin class with that annotation will be of this `MixinClassType`.\
+`AM`, `AF`, `TM`, `TF` - the concrete types of the various editors which are used by transformers for this `MixinClassType`.
+
+Each of the four `Editor` types has a `create` method to instantiate the editor.
+
+`redefineTargetFirst` - whether to redefine the target class before redefining the mixin class. \
+useful for working with targets with limited access, for example `final` or `package-private`, 
+in which the mixin class will not be able to access the target without first redefining the target.
+
+### The `transform` Methods
+
+The `transformBeforeEditors` and `transform` methods contains the implementation of the transformation logic which is
+achieved using the helper classes passed into the method.
+
+`transformBeforeEditors` is called before any editors are created and should modify/set up whatever the editors might need.
+
+`transform` is called after all editors have been applied and should perform any additional processing or finalization required by them.\
+The return value is a `String` containing a method name in the mixin class which will be invoked immediately after the transform method. The method is expected to be `public`, `static`, take no parameters, and the return value is ignored.\
+This can be used for post-transform initialization (assigning values to static fields, etc.).\
+Return null or empty string if no post-transform initialization is needed.
+
+The `mixinClassNodeHierarchy` parameter of type `ClassNodeHierarchy` contains the current mixin class `ClassNode` 
+and it's target's `ClassNode` (clone), the outer class's `ClassNodeHierarchy`, and the inner classes' 
+`ClassNodeHierarchy`(ies). Note that the mixin class's `ClassNode` can be null, 
+for example when the target class has an outer class but the mixin class does not.
+The `annotation` parameter refers to the annotation applied to the mixin class and shares the same values.
+
+The `TargetClassManipulator`, `TargetMethodManipulator`, `TargetFieldManipulator`, and `TargetInsnListManipulator` types provide methods to view and modify the target class, its methods (including their bytecode), and its fields.\
+When using `TargetInsnListManipulator`, any changes you make won’t be visible to you or others, this ensures mixins don’t interfere with each other. You'll always see and modify the "original" instruction list.

@@ -39,14 +39,14 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassEditor) {
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassManipulator) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
-        targetClassEditor.addInterface(mixinClassNode.name);
+        targetClassManipulator.addInterface(mixinClassNode.name);
         mixinClassNode.access |= ACC_PUBLIC;
         mixinClassNode.access &= ~ACC_PRIVATE;
         mixinClassNode.access &= ~ACC_PROTECTED;
 
-        ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
+        ClassNode targetClassNode = targetClassManipulator.getClassNodeClone();
         mixinClassNode.methods.forEach(methodNode -> {
             if((methodNode.access & ACC_ABSTRACT) != 0 || (methodNode.access & ACC_STATIC) != 0) return;
 
@@ -66,9 +66,9 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
             ClassNode clone = new ClassNode();
             methodNode.accept(clone);
 
-            TargetMethodManipulator targetMethodEditor = targetClassEditor.getMethodManipulator(methodNode.name + methodNode.desc);
+            TargetMethodManipulator targetMethodEditor = targetClassManipulator.getMethodManipulator(methodNode.name + methodNode.desc);
             if(targetMethodEditor == null) {
-                targetClassEditor.addMethod(clone.methods.getFirst());
+                targetClassManipulator.addMethod(clone.methods.getFirst());
             } else {
                 targetMethodEditor.makeNonAbstract();
                 targetMethodEditor.makePublic();

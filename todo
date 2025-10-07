@@ -1,6 +1,4 @@
-add to the readme:
+test mixining mixins (currently only testing Extenders)
 
-    MixinClassType
-        ClassNodeHierarchy
-        Editors
-        Mixin Class Target Editors
+add to the readme:
+    mixining mixins

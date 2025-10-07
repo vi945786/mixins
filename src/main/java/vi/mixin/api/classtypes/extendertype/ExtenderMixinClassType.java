@@ -45,10 +45,11 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
 
     private static void validateClass(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
-        targetClassEditor.makePublic();
 
         String name = "@Extends " + mixinClassNode.name;
         if(mixinClassNode.superName != null && !mixinClassNode.superName.equals("java/lang/Object")) throw new MixinFormatException(name, "extends " + mixinClassNode.superName + ". @Extend classes must not extend any other class");
+
+        if((targetClassEditor.getClassNodeClone().access & ACC_INTERFACE) != 0) throw new MixinFormatException(name, "the target is an interface while the mixin is not.");
 
         if(targetClassEditor.getMethodManipulator("<init>()V") == null) {
             for (MethodNode methodNode : mixinClassNode.methods) {
@@ -80,19 +81,25 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
         }
     }
 
+    private static void validateInterface(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
 
-    @Override
-    public void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassEditor) {
-        if((mixinClassNodeHierarchy.mixinNode().access & ACC_INTERFACE) == 0) transformClass(mixinClassNodeHierarchy, targetClassEditor);
-        else transformInterface(mixinClassNodeHierarchy, targetClassEditor);
+        String name = "@Extends " + mixinClassNode.name;
+        if ((targetClassEditor.getClassNodeClone().access & ACC_INTERFACE) == 0) throw new MixinFormatException(name, "the mixin is an interface while the target is not.");
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassEditor) {
+    public void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassManipulator) {
+        if((mixinClassNodeHierarchy.mixinNode().access & ACC_INTERFACE) == 0) transformClass(mixinClassNodeHierarchy, targetClassManipulator);
+        else transformInterface(mixinClassNodeHierarchy, targetClassManipulator);
+    }
+
+    @Override
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassManipulator) {
         if((mixinClassNodeHierarchy.mixinNode().access & ACC_INTERFACE) != 0) return null;
 
         ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
-        ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
+        ClassNode targetClassNode = targetClassManipulator.getClassNodeClone();
 
         for (ClassNode classNode : mixinClassNodeHierarchy.getAllMixinClassesInHierarchy()) {
             for (MethodNode methodNode : classNode.methods) {
@@ -137,7 +144,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
                 switched = true;
             }
             for (AbstractInsnNode node : TransformerHelper.getInsnNodes(methodNode.instructions, AbstractInsnNode.METHOD_INSN, INVOKESPECIAL, null, null, "<init>", "()V")) {
-                if(targetClassEditor.getMethodManipulator("<init>()V") != null && !switched) methodNode.instructions.insertBefore(node, new MethodInsnNode(INVOKESPECIAL, targetClassNode.name, "<init>", "()V"));
+                if(targetClassManipulator.getMethodManipulator("<init>()V") != null && !switched) methodNode.instructions.insertBefore(node, new MethodInsnNode(INVOKESPECIAL, targetClassNode.name, "<init>", "()V"));
                 methodNode.instructions.remove(node);
             }
         }
@@ -173,6 +180,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
     }
 
     public void transformInterface(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
+        validateInterface(mixinClassNodeHierarchy, targetClassEditor);
         ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
 
