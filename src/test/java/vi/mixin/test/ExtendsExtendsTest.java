@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("all")
 public class ExtendsExtendsTest {
-    public static class Base {
+    public static final class Base {
         protected final int getValue1() {
             return 1;
         }
