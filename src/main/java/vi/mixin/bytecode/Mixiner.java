@@ -163,7 +163,7 @@ public class Mixiner {
             .sorted(Comparator.comparing(a -> a.mixinNode().name))
             .forEach(hierarchy -> mixinNameToPreMixinResult.put(hierarchy.mixinNode().name, preMixin(hierarchy))));
 
-        Map<ClassNode, MixinResult> nodeToResult = new HashMap<>();
+        Map<String, MixinResult> nodeNameToResult = new HashMap<>();
         orderedHierarchies.forEach(hierarchies -> hierarchies.stream()
                 .sorted(Comparator.comparing(a -> a.mixinNode().name))
                 .forEach(hierarchy -> {
@@ -172,12 +172,12 @@ public class Mixiner {
                     PreMixinResult targetPreMixinResult = mixinNameToPreMixinResult.get(hierarchy.targetNodeClone().name);
                     if(targetPreMixinResult != null && !targetPreMixinResult.mixinClassType.isAllowedAsTarget()) throw new MixinFormatException(mixinNode.name, "target class of type " + targetPreMixinResult.mixinClassType.getClass().getName() + " does not allow being a target");
 
-                    nodeToResult.put(mixinNode, addClass(hierarchy, mixinNameToPreMixinResult.get(mixinNode.name)));
+                    nodeNameToResult.put(mixinNode.name, addClass(hierarchy, mixinNameToPreMixinResult.get(mixinNode.name)));
                 }));
 
         Map<ClassNode, Class<?>> nodeToMixinClass = new HashMap<>();
         orderedHierarchies.reversed().forEach(hierarchies -> hierarchies.forEach(hierarchy -> {
-            MixinResult result = nodeToResult.get(hierarchy.mixinNode());
+            MixinResult result = nodeNameToResult.get(hierarchy.mixinNode().name);
             if (!result.redefineTargetFirst) {
                 Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
                 nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
@@ -188,7 +188,7 @@ public class Mixiner {
                 .filter(hierarchy -> nodeToMixinClass.containsKey(hierarchy.mixinNode()))
                 .map(hierarchy -> {
                     String targetName = hierarchy.targetNodeClone().name;
-                    if (usedMixinClasses.contains(targetName) && nodeToResult.get(hierarchy.mixinNode()).redefineTargetFirst)
+                    if (usedMixinClasses.contains(targetName) && nodeNameToResult.get(hierarchy.targetNodeClone().name).redefineTargetFirst)
                         return null;
 
                     Class<?> mixinClass = nodeToMixinClass.get(hierarchy.mixinNode());
@@ -200,25 +200,22 @@ public class Mixiner {
 
         redefineTargetClasses();
 
-        orderedHierarchies.reversed().forEach(hierarchies -> {
-            // redefine and load mixin classes after target redefinition and invoke setup method
-            hierarchies.forEach(hierarchy -> {
-                MixinResult result = nodeToResult.get(hierarchy.mixinNode());
+        orderedHierarchies.reversed().forEach(hierarchies -> hierarchies.forEach(hierarchy -> {
+            MixinResult result = nodeNameToResult.get(hierarchy.mixinNode().name);
 
-                if (result.redefineTargetFirst) {
-                    Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
-                    Class<?> targetClass = Objects.requireNonNull(MixinClassHelper.findClass(hierarchy.targetNodeClone().name));
-                    agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
-                    nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
-                    mixinToTarget.put(mixinClass, targetClass);
-                }
+            if (result.redefineTargetFirst) {
+                Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
+                Class<?> targetClass = Objects.requireNonNull(MixinClassHelper.findClass(hierarchy.targetNodeClone().name));
+                agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+                nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
+                mixinToTarget.put(mixinClass, targetClass);
+            }
 
-                invokeSetupMethod(hierarchy.mixinNode(), nodeToMixinClass.get(hierarchy.mixinNode()), result);
-            });
-        });
+            invokeSetupMethod(hierarchy.mixinNode(), nodeToMixinClass.get(hierarchy.mixinNode()), result);
+        }));
 
         nodeToMixinClass.clear();
-        nodeToResult.clear();
+        nodeNameToResult.clear();
         validateInnerMixins(mixinToTarget);
     }
 

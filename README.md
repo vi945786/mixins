@@ -40,7 +40,7 @@ There are three built-in types of mixin classes:
 - Classes or interfaces annotated with both `@Mixin` and `@Extends`.
 - This mixin class type make the mixin class extend the target class (or target interface).
 - You can cast an instance of the extender to the type of the target to use the superclass methods that aren't overridden in the mixin.
-- You can have extenders as target of other extenders. 
+- Extenders can be targets of other mixins. 
 
 **Accessors**:
 - Interfaces annotated with `@Mixin`.
