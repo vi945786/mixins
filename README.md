@@ -40,6 +40,7 @@ There are three built-in types of mixin classes:
 - Classes or interfaces annotated with both `@Mixin` and `@Extends`.
 - This mixin class type make the mixin class extend the target class (or target interface).
 - You can cast an instance of the extender to the type of the target to use the superclass methods that aren't overridden in the mixin.
+- You can have extenders as target of other extenders. 
 
 **Accessors**:
 - Interfaces annotated with `@Mixin`.
@@ -612,8 +613,12 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
         return true;
     }
 
-    default void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassEditor) {}
-    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassEditor);
+    default boolean isAllowedAsTarget() {
+        return false;
+    }
+
+    default void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator) {}
+    String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator);
 }
 ```
 
@@ -626,6 +631,8 @@ Each of the four `Editor` types has a `create` method to instantiate the editor.
 `redefineTargetFirst` - whether to redefine the target class before redefining the mixin class. \
 useful for working with targets with limited access, for example `final` or `package-private`, 
 in which the mixin class will not be able to access the target without first redefining the target.
+
+`isAllowedAsTarget` - whether a mixin class of this type is allowed to be a target.
 
 ### The `transform` Methods
 
@@ -647,3 +654,12 @@ The `annotation` parameter refers to the annotation applied to the mixin class a
 
 The `TargetClassManipulator`, `TargetMethodManipulator`, `TargetFieldManipulator`, and `TargetInsnListManipulator` types provide methods to view and modify the target class, its methods (including their bytecode), and its fields.\
 When using `TargetInsnListManipulator`, any changes you make won’t be visible to you or others, this ensures mixins don’t interfere with each other. You'll always see and modify the "original" instruction list.
+
+### Order Of Calls
+the mixin framework calls the method in your `MixinClassType`:
+1. `transformBeforeEditors`
+2. `isAllowedAsTarget`
+3. The `create` methods
+4. `redefineTargetFirst`
+5. `transform`
+

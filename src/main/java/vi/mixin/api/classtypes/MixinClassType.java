@@ -24,6 +24,10 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
         return true;
     }
 
+    default boolean isAllowedAsTarget() {
+        return false;
+    }
+
     default void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator) {}
     String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator);
 }

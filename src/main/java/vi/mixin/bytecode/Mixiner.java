@@ -125,7 +125,6 @@ public class Mixiner {
     public void addClasses(Collection<byte[]> mixins, Collection<byte[]> anonymousInners) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
 
-        //parse mixin classes
         for (byte[] bytecode : mixins) {
             ClassNode node = readClassNode(bytecode);
             String outerName = node.innerClasses.stream()
@@ -137,7 +136,6 @@ public class Mixiner {
             originalMixinClassNodes.put(node.name, cloneClassNode(node));
         }
 
-        //parse anonymous inner classes
         for (byte[] bytecode : anonymousInners) {
             ClassNode node = readClassNode(bytecode);
             node.invisibleAnnotations = new ArrayList<>();
@@ -157,35 +155,34 @@ public class Mixiner {
         mixins.clear();
         anonymousInners.clear();
 
-        //build class hierarchies
         List<List<ClassNodeHierarchy>> orderedHierarchies = buildHierarchies(outerClassMap);
         outerClassMap.clear();
 
-        //Map mixins and target classes
-        Map<ClassNodeHierarchy, PreMixinResult> hierarchyToPreMixinResult = new HashMap<>();
+        Map<String, PreMixinResult> mixinNameToPreMixinResult = new HashMap<>();
         orderedHierarchies.forEach(hierarchies -> hierarchies.stream()
             .sorted(Comparator.comparing(a -> a.mixinNode().name))
-            .forEach(hierarchy -> hierarchyToPreMixinResult.put(hierarchy, preMixin(hierarchy))));
+            .forEach(hierarchy -> mixinNameToPreMixinResult.put(hierarchy.mixinNode().name, preMixin(hierarchy))));
 
         Map<ClassNode, MixinResult> nodeToResult = new HashMap<>();
         orderedHierarchies.forEach(hierarchies -> hierarchies.stream()
                 .sorted(Comparator.comparing(a -> a.mixinNode().name))
                 .forEach(hierarchy -> {
                     ClassNode mixinNode = hierarchy.mixinNode();
-                    nodeToResult.put(mixinNode, addClass(hierarchy, hierarchyToPreMixinResult.get(hierarchy)));
+
+                    PreMixinResult targetPreMixinResult = mixinNameToPreMixinResult.get(hierarchy.targetNodeClone().name);
+                    if(targetPreMixinResult != null && !targetPreMixinResult.mixinClassType.isAllowedAsTarget()) throw new MixinFormatException(mixinNode.name, "target class of type " + targetPreMixinResult.mixinClassType.getClass().getName() + " does not allow being a target");
+
+                    nodeToResult.put(mixinNode, addClass(hierarchy, mixinNameToPreMixinResult.get(mixinNode.name)));
                 }));
 
         Map<ClassNode, Class<?>> nodeToMixinClass = new HashMap<>();
-        orderedHierarchies.forEach(hierarchies -> {
-            //redefine and load mixin classes before target redefinition
-            hierarchies.forEach(hierarchy -> {
-                MixinResult result = nodeToResult.get(hierarchy.mixinNode());
-                if (!result.redefineTargetFirst) {
-                    Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
-                    nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
-                }
-            });
-        });
+        orderedHierarchies.reversed().forEach(hierarchies -> hierarchies.forEach(hierarchy -> {
+            MixinResult result = nodeToResult.get(hierarchy.mixinNode());
+            if (!result.redefineTargetFirst) {
+                Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
+                nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
+            }
+        }));
 
         Map<Class<?>, Class<?>> mixinToTarget = orderedHierarchies.stream().flatMap(Collection::stream)
                 .filter(hierarchy -> nodeToMixinClass.containsKey(hierarchy.mixinNode()))
@@ -374,7 +371,7 @@ public class Mixiner {
     private static ClassNode readClassNode(byte[] bytecode) {
         ClassReader reader = new ClassReader(bytecode);
         ClassNode node = new ClassNode();
-        reader.accept(node, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
+        reader.accept(node, ClassReader.SKIP_FRAMES);
         return node;
     }
 

@@ -40,7 +40,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
 
         Type type = null;
         Frame<BasicValue>[] frames = analyzer.getFrames();
-        for(int atIndex : TransformerHelper.getAtTargetIndexes(targetMethodNode.instructions, annotation.at(), name)) {
+        for(int atIndex : TransformerHelper.getAtTargetIndexesThrows(targetMethodNode.instructions, annotation.at(), name)) {
             Frame<BasicValue> frame = frames[atIndex];
             Type t = frame.getStack(frame.getStackSize() -1).getType();
 

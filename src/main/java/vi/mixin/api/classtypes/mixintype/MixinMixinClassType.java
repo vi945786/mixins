@@ -262,9 +262,11 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         FieldNode outerClassInstanceField = mixinClassNode.fields.stream().filter(f -> f.name.equals(outerClassInstanceFieldName)).findAny().orElse(null);
         if(outerClassInstanceField != null) {
             mixinClassNode.fields.remove(outerClassInstanceField);
-            mixinInit.instructions.remove(mixinInit.instructions.get(0));
-            mixinInit.instructions.remove(mixinInit.instructions.get(0));
-            mixinInit.instructions.remove(mixinInit.instructions.get(0));
+            int remove = 0;
+            if(mixinInit.instructions.get(0).getType() == AbstractInsnNode.LABEL) remove = 2;
+            mixinInit.instructions.remove(mixinInit.instructions.get(remove));
+            mixinInit.instructions.remove(mixinInit.instructions.get(remove));
+            mixinInit.instructions.remove(mixinInit.instructions.get(remove));
         }
 
         boolean sawNew = false;

@@ -43,6 +43,11 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
         return new ExtenderTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
+    @Override
+    public boolean isAllowedAsTarget() {
+        return true;
+    }
+
     private static void validateClass(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
 
