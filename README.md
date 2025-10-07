@@ -570,8 +570,9 @@ The usage is as follows:
 2. Use `annotatedMethod()` or `annotatedField()` to specify which type of element needs to have the annotation.
 3. Use `targetMethod()` or `targetField()` to specify the target type.
 4. Set the transformation logic with the `transformFunction` method.
-5. Optionally Filter applicable targets using the `targetFilter` method.
-6. finally, call the `build()` method to return a BuiltTransformer which is ready for use.
+5. Optionally filter applicable targets by using the `targetFilter` method.
+6. Optionally allow targets to be from super classes by calling `allowTargetsInSuper()`.
+7. finally, call the `build()` method to return a BuiltTransformer which is ready for use.
 
 Many common helper functions related to ASM bytecode manipulation can be found in the `TransformerHelper` class.\
 For more advanced bytecode analysis, there is a type-aware version of the ASM `BasicInterpreter` called `TypeAwareBasicInterpreter`, useful when you need more type information during analysis.

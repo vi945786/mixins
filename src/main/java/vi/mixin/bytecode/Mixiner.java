@@ -521,7 +521,8 @@ public class Mixiner {
                 if (builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(m), annotation))
                     return new TargetMethodManipulator(originalTargetClassNode.name, modifyTargetMethodNodes.get(m.name + m.desc), m, opcodeStates);
             }
-            originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
+            if(builtTransformer.allowTargetInSuper()) originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
+            else originalTargetClassNode = null;
         } while(originalTargetClassNode != null);
 
         throw new MixinFormatException(name, "doesn't have a target");
@@ -539,7 +540,8 @@ public class Mixiner {
                 if(builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(f), annotation))
                     return new TargetFieldManipulator(modifyFieldNodes.get(f.name), f);
             }
-            originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
+            if(builtTransformer.allowTargetInSuper()) originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
+            else originalTargetClassNode = null;
         } while(originalTargetClassNode != null);
 
         throw new MixinFormatException(name, "doesn't have a target");

@@ -15,6 +15,7 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
     private Boolean isTargetMethod = null;
     private BuiltTransformer.TargetFilter<A, AN, TN> targetFilter = null;
     private BuiltTransformer.TransformFunction<A, AE, TE> transformFunction = null;
+    private boolean allowTargetInSuper = false;
 
     private TransformerBuilder(Class<? extends MixinClassType<?, AM, AF, TM, TF>> mixinClassType) {
         this.mixinClassType = mixinClassType;
@@ -85,11 +86,16 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
         return this;
     }
 
+    public TransformerBuilderLast<A, AN, TN> allowTargetsInSuper() {
+        this.allowTargetInSuper = true;
+        return this;
+    }
+
     @SuppressWarnings("unchecked")
     public BuiltTransformer build() {
         if(targetFilter == null) targetFilter = getDefaultTargetFilter(isAnnotatedMethod, isTargetMethod);
 
-        return new BuiltTransformer(mixinClassType, annotation, isAnnotatedMethod, isTargetMethod, (BuiltTransformer.TargetFilter<Annotation, Object, Object>) targetFilter, (BuiltTransformer.TransformFunction<Annotation, AnnotatedEditor, TargetEditor>) transformFunction);
+        return new BuiltTransformer(mixinClassType, annotation, isAnnotatedMethod, isTargetMethod, (BuiltTransformer.TargetFilter<Annotation, Object, Object>) targetFilter, (BuiltTransformer.TransformFunction<Annotation, AnnotatedEditor, TargetEditor>) transformFunction, allowTargetInSuper);
     }
 
     private static <A extends Annotation, AN, TN> BuiltTransformer.TargetFilter<A, AN, TN> getDefaultTargetFilter(boolean isAnnotatedMethod, boolean isTargetMethod) {
