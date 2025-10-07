@@ -77,6 +77,6 @@ public class MixinTargetMethodEditor extends TargetMethodEditor {
     }
 
     public TargetInsnListManipulator getInsnListEditor() {
-        return targetMethodEditor.getInsnListEditor();
+        return targetMethodEditor.getInsnListManipulator();
     }
 }

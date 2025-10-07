@@ -38,6 +38,8 @@ public class Mixiner {
     private final Map<String, List<BuiltTransformer>> transformers = new HashMap<>();
 
     private final Map<String, ClassNode> modifyTargetClassNodes = new HashMap<>();
+    private final Map<String, ClassNode> originalMixinClassNodes = new HashMap<>();
+    private final Map<String, ClassNode> targetSuperMap = new HashMap<>();
     private final Set<String> usedMixinClasses = new HashSet<>();
 
     Mixiner() {
@@ -56,23 +58,36 @@ public class Mixiner {
         }
     }
 
-    public static Class<?> getTargetClass(ClassNode mixinClassNode) {
+    public static String getTargetClass(ClassNode mixinClassNode) {
         for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
             if(annotationNode.desc.equals(Type.getType(Mixin.class).getDescriptor())) {
-                Mixin annotation = TransformerHelper.getAnnotation(annotationNode);
-                Class<?> targetClass = annotation.value();
-                if(targetClass == void.class) {
-                    targetClass = MixinClassHelper.findClass(annotation.name());
-                    if (targetClass == null) throw new MixinFormatException(mixinClassNode.name, "@Mixin target not found");
-                } else if (!annotation.name().isEmpty()) {
-                    throw new MixinFormatException(mixinClassNode.name, "@Mixin \"value\" and \"name\" set");
+                if(annotationNode.values.isEmpty()) throw new MixinFormatException(mixinClassNode.name, "@Mixin doesn't have a target");
+                if(annotationNode.values.size() == 4) throw new MixinFormatException(mixinClassNode.name, "@Mixin \"value\" and \"name\" set");
+
+                String target;
+                if(annotationNode.values.get(1) instanceof Type type) {
+                    target = type.getInternalName();
+                } else if (annotationNode.values.get(1) instanceof String s) {
+                    target = s;
+                } else {
+                    throw new MixinFormatException(mixinClassNode.name, "@Mixin has an illegal value");
                 }
-                if (targetClass == Object.class) throw new MixinFormatException(mixinClassNode.name, "@Mixin target cannot be Object");
-                return targetClass;
+
+                if(target.endsWith(Type.getInternalName(Object.class))) throw new MixinFormatException(mixinClassNode.name, "@Mixin target cannot be Object");
+                if(target.equals(mixinClassNode.name)) throw new MixinFormatException(mixinClassNode.name, "@Mixin cannot target itself");
+                return target;
             }
         }
 
         throw new MixinFormatException(mixinClassNode.name, "doesn't have a @Mixin annotation");
+    }
+
+    public void mapTargetSupers(ClassNode target) {
+        while(!target.superName.equals(Type.getInternalName(Object.class)) && !targetSuperMap.containsKey(target.name)) {
+            ClassNode targetSuper = readClassNode(MixinClassHelper.getBytecode(target.superName));
+            targetSuperMap.put(target.name, targetSuper);
+            target = targetSuper;
+        }
     }
 
     public void addMixinClassType(Class<MixinClassType<Annotation, ?, ?, ?, ?>> mixinClassType) {
@@ -96,19 +111,18 @@ public class Mixiner {
         transformers.computeIfAbsent(annotationDesc, (k) -> new ArrayList<>()).add(transformer);
     }
 
-    private static Class<?> loadMixinClass(ClassNode mixinClassNode, Class<?> targetClass) {
+    private static Class<?> loadMixinClass(ClassNode mixinClassNode) {
         ClassWriter mixinWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         mixinClassNode.accept(mixinWriter);
         new MixinerTransformer(mixinClassNode.name, mixinWriter.toByteArray());
 
         Class<?> mixinClass = MixinClassHelper.findClass(mixinClassNode.name);
         assert mixinClass != null;
-        agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
 
         return mixinClass;
     }
 
-        public void addClasses(Collection<byte[]> mixins, Collection<byte[]> anonymousInners) {
+    public void addClasses(Collection<byte[]> mixins, Collection<byte[]> anonymousInners) {
         Map<ClassNode, String> outerClassMap = new HashMap<>();
 
         //parse mixin classes
@@ -119,6 +133,8 @@ public class Mixiner {
                     .map(inner -> inner.outerName)
                     .findFirst().orElse(null);
             outerClassMap.put(node, outerName);
+
+            originalMixinClassNodes.put(node.name, cloneClassNode(node));
         }
 
         //parse anonymous inner classes
@@ -129,108 +145,191 @@ public class Mixiner {
             outerClassMap.put(node, outerName);
 
             AnnotationNode mixinAnno = new AnnotationNode(Type.getDescriptor(Mixin.class));
-            mixinAnno.values = List.of("value", Type.getType("L" + node.name + ";"));
+            mixinAnno.values = List.of("value", Type.getType("Lvi/mixin/bytecode/anonymoustype/AnonymousTarget;"));
             node.invisibleAnnotations.add(mixinAnno);
             node.invisibleAnnotations.add(
                     new AnnotationNode("Lvi/mixin/bytecode/anonymoustype/AnonymousMixinClassType$Anonymous;")
             );
+
+            originalMixinClassNodes.put(node.name, cloneClassNode(node));
         }
 
         mixins.clear();
         anonymousInners.clear();
 
         //build class hierarchies
-        Map<String, ClassNodeHierarchy> outerToHierarchy = new HashMap<>();
-        Map<ClassNodeHierarchy, List<ClassNodeHierarchy>> hierarchyChildren = new HashMap<>();
-        outerToHierarchy.put(null, null);
-        hierarchyChildren.put(null, new ArrayList<>());
-
-        buildHierarchy(outerClassMap, outerToHierarchy, hierarchyChildren);
-
-        outerToHierarchy.clear();
+        List<List<ClassNodeHierarchy>> orderedHierarchies = buildHierarchies(outerClassMap);
         outerClassMap.clear();
-        hierarchyChildren.remove(null);
 
-        //Map mixins to target classes
-        Map<Class<?>, List<ClassNodeHierarchy>> targetToHierarchies = new HashMap<>();
+        //Map mixins and target classes
+        Map<ClassNodeHierarchy, PreMixinResult> hierarchyToPreMixinResult = new HashMap<>();
+        orderedHierarchies.forEach(hierarchies -> hierarchies.stream()
+            .sorted(Comparator.comparing(a -> a.mixinNode().name))
+            .forEach(hierarchy -> hierarchyToPreMixinResult.put(hierarchy, preMixin(hierarchy))));
+
         Map<ClassNode, MixinResult> nodeToResult = new HashMap<>();
-
-        hierarchyChildren.keySet().stream()
-                .sorted(Comparator.comparing(a -> a.classNode().name))
+        orderedHierarchies.forEach(hierarchies -> hierarchies.stream()
+                .sorted(Comparator.comparing(a -> a.mixinNode().name))
                 .forEach(hierarchy -> {
-                    ClassNode mixinNode = hierarchy.classNode();
-                    Class<?> targetClass = getTargetClass(mixinNode);
-                    nodeToResult.put(mixinNode, addClass(targetClass, hierarchy));
-                    targetToHierarchies.computeIfAbsent(targetClass, k -> new ArrayList<>()).add(hierarchy);
-                });
+                    ClassNode mixinNode = hierarchy.mixinNode();
+                    nodeToResult.put(mixinNode, addClass(hierarchy, hierarchyToPreMixinResult.get(hierarchy)));
+                }));
 
-        hierarchyChildren.clear();
-
-        //mixin and redefine classes based on the target class
-        Map<Class<?>, Class<?>> mixinToTarget = new HashMap<>();
-        for (Map.Entry<Class<?>, List<ClassNodeHierarchy>> entry : targetToHierarchies.entrySet()) {
-            Class<?> targetClass = entry.getKey();
-            Map<ClassNode, Class<?>> nodeToMixinClass = new HashMap<>();
-
+        Map<ClassNode, Class<?>> nodeToMixinClass = new HashMap<>();
+        orderedHierarchies.forEach(hierarchies -> {
             //redefine and load mixin classes before target redefinition
-            entry.getValue().forEach(hierarchy -> {
-                ClassNode node = hierarchy.classNode();
-                MixinResult result = nodeToResult.get(node);
+            hierarchies.forEach(hierarchy -> {
+                MixinResult result = nodeToResult.get(hierarchy.mixinNode());
                 if (!result.redefineTargetFirst) {
-                    Class<?> mixin = loadMixinClass(node, targetClass);
-                    mixinToTarget.put(mixin, targetClass);
-                    nodeToMixinClass.put(node, mixin);
+                    Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
+                    nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
                 }
             });
+        });
 
-            redefineTargetClass(targetClass);
+        Map<Class<?>, Class<?>> mixinToTarget = orderedHierarchies.stream().flatMap(Collection::stream)
+                .filter(hierarchy -> nodeToMixinClass.containsKey(hierarchy.mixinNode()))
+                .map(hierarchy -> {
+                    String targetName = hierarchy.targetNodeClone().name;
+                    if (usedMixinClasses.contains(targetName) && nodeToResult.get(hierarchy.mixinNode()).redefineTargetFirst)
+                        return null;
 
+                    Class<?> mixinClass = nodeToMixinClass.get(hierarchy.mixinNode());
+                    Class<?> targetClass = Objects.requireNonNull(MixinClassHelper.findClass(targetName));
+                    agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+                    return Map.entry(mixinClass, targetClass);
+                }).filter(Objects::nonNull)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        redefineTargetClasses();
+
+        orderedHierarchies.reversed().forEach(hierarchies -> {
             // redefine and load mixin classes after target redefinition and invoke setup method
-            entry.getValue().forEach(hierarchy -> {
-                ClassNode node = hierarchy.classNode();
-                MixinResult result = nodeToResult.get(node);
+            hierarchies.forEach(hierarchy -> {
+                MixinResult result = nodeToResult.get(hierarchy.mixinNode());
 
                 if (result.redefineTargetFirst) {
-                    Class<?> mixin = loadMixinClass(node, targetClass);
-                    mixinToTarget.put(mixin, targetClass);
-                    nodeToMixinClass.put(node, mixin);
+                    Class<?> mixinClass = loadMixinClass(hierarchy.mixinNode());
+                    Class<?> targetClass = Objects.requireNonNull(MixinClassHelper.findClass(hierarchy.targetNodeClone().name));
+                    agent.redefineModule(targetClass.getModule(), Stream.of(mixinClass.getModule(), Mixiner.class.getModule()).collect(Collectors.toSet()), Map.of(targetClass.getPackageName(), Set.of(mixinClass.getModule())), new HashMap<>(), new HashSet<>(), new HashMap<>());
+                    nodeToMixinClass.put(hierarchy.mixinNode(), mixinClass);
+                    mixinToTarget.put(mixinClass, targetClass);
                 }
 
-                invokeSetupMethod(node, nodeToMixinClass.get(node), result);
+                invokeSetupMethod(hierarchy.mixinNode(), nodeToMixinClass.get(hierarchy.mixinNode()), result);
             });
-        }
+        });
 
+        nodeToMixinClass.clear();
         nodeToResult.clear();
-        targetToHierarchies.clear();
         validateInnerMixins(mixinToTarget);
     }
 
-    private void buildHierarchy(Map<ClassNode, String> outerClassMap, Map<String, ClassNodeHierarchy> outerToHierarchy, Map<ClassNodeHierarchy, List<ClassNodeHierarchy>> hierarchyChildren) {
+    private ClassNodeHierarchy getTargetParent(ClassNode child, ArrayList<ClassNodeHierarchy> children) {
+        if(child == null) return null;
+        ClassNode parentNode = child.innerClasses.stream().filter(inner -> inner.name.equals(child.name))
+                .map(inner -> inner.outerName)
+                .filter(Objects::nonNull)
+                .map(MixinClassHelper::getBytecode)
+                .map(Mixiner::readClassNode).findAny().orElse(null);
+        if(parentNode == null) return null;
+        ArrayList<ClassNodeHierarchy> nextParentChildren = new ArrayList<>();
+        ClassNodeHierarchy parent = new ClassNodeHierarchy(null, parentNode, getTargetParent(parentNode, nextParentChildren), children);
+        nextParentChildren.add(parent);
+        return parent;
+    }
+
+    private ArrayList<ClassNodeHierarchy> getTargetChildren(ClassNode parentNode, ClassNodeHierarchy parent) {
+        if(parentNode == null) return null;
+        Map<ClassNode, ArrayList<ClassNodeHierarchy>> nextChildrenMap = new HashMap<>();
+        Map<ClassNode, ClassNodeHierarchy> childrenMap = parentNode.innerClasses.stream().filter(inner -> inner.outerName != null && inner.outerName.equals(parentNode.name))
+                .map(inner -> inner.name)
+                .map(MixinClassHelper::getBytecode)
+                .map(Mixiner::readClassNode)
+                .map(child -> Map.entry(child, new ClassNodeHierarchy(null, child, parent, nextChildrenMap.put(child, new ArrayList<>()))))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        nextChildrenMap.forEach((child, nextChildren) -> nextChildren.addAll(getTargetChildren(child, childrenMap.get(child))));
+
+        return new ArrayList<>(childrenMap.values());
+    }
+
+    private List<List<ClassNodeHierarchy>> buildHierarchies(Map<ClassNode, String> outerClassMap) {
+        Map<String, ClassNodeHierarchy> outerToHierarchy = new HashMap<>();
+        outerToHierarchy.put(null, null);
+
+        Set<ClassNodeHierarchy> classNodeHierarchies = new HashSet<>();
+        Map<ClassNodeHierarchy, ArrayList<ClassNodeHierarchy>> hierarchyChildren = new HashMap<>();
+        hierarchyChildren.put(null, new ArrayList<>());
+
+        Map<String, ClassNode> targetNodes = new HashMap<>();
+        Map<String, ClassNode> mixinNodes = new HashMap<>();
+        Map<ClassNode, ClassNode> mixinToTarget = new HashMap<>();
+
+        outerClassMap.keySet().forEach(node -> mixinNodes.put(node.name, node));
+
         int prevSize;
         do {
             prevSize = outerClassMap.size();
             for (Map.Entry<ClassNode, String> entry : new HashSet<>(outerClassMap.entrySet())) {
                 String outer = entry.getValue();
+                ClassNode mixinNode = entry.getKey();
                 if (!outerToHierarchy.containsKey(outer)) continue;
 
-                List<ClassNodeHierarchy> children = new ArrayList<>();
-                ClassNodeHierarchy hierarchy = new ClassNodeHierarchy(entry.getKey(), outerToHierarchy.get(outer), children);
-                hierarchyChildren.get(outerToHierarchy.get(outer)).add(hierarchy);
+                ClassNode target = targetNodes.computeIfAbsent(getTargetClass(mixinNode), name -> readClassNode(MixinClassHelper.getBytecode(name)));
+                if(mixinNodes.containsKey(target.name)) target = mixinNodes.get(target.name);
+                modifyTargetClassNodes.putIfAbsent(target.name, target);
+
+                mixinToTarget.put(mixinNode, target);
+
+                ClassNodeHierarchy parent = outerToHierarchy.get(outer);
+                if(parent == null) {
+                    ArrayList<ClassNodeHierarchy> children = new ArrayList<>();
+                    parent = getTargetParent(target, children);
+                    hierarchyChildren.put(parent, children);
+                }
+
+                ArrayList<ClassNodeHierarchy> children = new ArrayList<>();
+                ClassNodeHierarchy hierarchy = new ClassNodeHierarchy(mixinNode, cloneClassNode(target), parent, children);
+                children.addAll(getTargetChildren(target, hierarchy));
+                classNodeHierarchies.add(hierarchy);
+                hierarchyChildren.get(parent).add(hierarchy);
                 hierarchyChildren.put(hierarchy, children);
-                outerToHierarchy.put(entry.getKey().name, hierarchy);
-                outerClassMap.remove(entry.getKey());
+                outerToHierarchy.put(mixinNode.name, hierarchy);
+                outerClassMap.remove(mixinNode);
             }
             if (prevSize == outerClassMap.size() && !outerClassMap.isEmpty())
                 throw new MixinFormatException(outerClassMap.keySet().iterator().next().name, "outer class is not a mixin class");
         } while (!outerClassMap.isEmpty());
+
+        hierarchyChildren.remove(null);
+
+        Map<ClassNodeHierarchy, Integer> hierarchyOrderMap = new HashMap<>();
+        classNodeHierarchies.forEach(hierarchy -> {
+            ClassNode current = hierarchy.mixinNode();
+            int i = 0;
+            for (; current != null; i++) {
+                current = mixinToTarget.get(current);
+            }
+            hierarchyOrderMap.put(hierarchy, i);
+        });
+
+        Map<Integer, List<ClassNodeHierarchy>> orderMap = new HashMap<>();
+        hierarchyOrderMap.values().stream().distinct().forEach(i -> orderMap.put(i, new ArrayList<>()));
+        hierarchyOrderMap.forEach((hierarchy, order) -> orderMap.get(order).add(hierarchy));
+
+        return orderMap.entrySet().stream().sorted(Comparator.comparingInt(Map.Entry::getKey)).map(Map.Entry::getValue).toList().reversed();
     }
 
-    private void redefineTargetClass(Class<?> targetClass) {
-        try {
-            ClassNode node = modifyTargetClassNodes.get(targetClass.getName());
+    private void redefineTargetClasses() {
+        ClassDefinition[] classDefinitions = modifyTargetClassNodes.values().stream().filter(node -> !usedMixinClasses.contains(node.name)).map(node -> {
             ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
             node.accept(writer);
-            agent.redefineClasses(new ClassDefinition(targetClass, writer.toByteArray()));
+            return new ClassDefinition(Objects.requireNonNull(MixinClassHelper.findClass(node.name)), writer.toByteArray());
+        }).toArray(ClassDefinition[]::new);
+
+        try {
+            agent.redefineClasses(classDefinitions);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -272,66 +371,84 @@ public class Mixiner {
         }
     }
 
-    private ClassNode readClassNode(byte[] bytecode) {
+    private static ClassNode readClassNode(byte[] bytecode) {
         ClassReader reader = new ClassReader(bytecode);
         ClassNode node = new ClassNode();
         reader.accept(node, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
         return node;
     }
 
-    private ClassNode cloneClassNode(ClassNode original) {
+    private static ClassNode cloneClassNode(ClassNode original) {
         ClassNode clone = new ClassNode();
         original.accept(clone);
         return clone;
     }
 
-    private MixinResult addClass(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
-        ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
+    private MixinResult addClass(ClassNodeHierarchy mixinClassNodeHierarchy, PreMixinResult preMixinResult) {
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         if(usedMixinClasses.contains(mixinClassNode.name)) throw new IllegalArgumentException("Mixin class " + mixinClassNode.name + " used twice");
         usedMixinClasses.add(mixinClassNode.name);
 
-        return mixin(targetClass, mixinClassNodeHierarchy);
+        return mixin(mixinClassNodeHierarchy, preMixinResult);
     }
 
-    private MixinResult mixin(Class<?> targetClass, ClassNodeHierarchy mixinClassNodeHierarchy) {
-        ClassNode originalTargetClassNode = readClassNode(Agent.getBytecode(targetClass));
-        modifyTargetClassNodes.computeIfAbsent(targetClass.getName(), k -> cloneClassNode(originalTargetClassNode));
-        ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(targetClass.getName());
+    private PreMixinResult preMixin(ClassNodeHierarchy mixinClassNodeHierarchy) {
+        ClassNode originalTargetClassNode = mixinClassNodeHierarchy.targetNodeClone();
+        ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originalTargetClassNode.name);
 
-        ClassNode modifyMixinClassNode = mixinClassNodeHierarchy.classNode();
-        ClassNode originalMixinClassNode = cloneClassNode(modifyMixinClassNode);
+        ClassNode modifyMixinClassNode = mixinClassNodeHierarchy.mixinNode();
+        ClassNode originalMixinClassNode = originalMixinClassNodes.get(modifyMixinClassNode.name);
 
         MixinTypeInfo mixinTypeInfo = determineMixinClassType(originalMixinClassNode);
         MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType = mixinTypeInfo.type();
         Annotation mixinAnnotation = mixinTypeInfo.annotation();
 
-        processMethodNodes(modifyMixinClassNode.methods, originalMixinClassNode, originalTargetClassNode, modifyTargetClassNode, mixinClassType);
-        processFieldNodes(modifyMixinClassNode.fields, originalMixinClassNode, originalTargetClassNode, modifyTargetClassNode, mixinClassType);
+        TargetClassManipulator manipulator = new TargetClassManipulator(modifyTargetClassNode, originalTargetClassNode, opcodeStates);
+        mixinClassType.transformBeforeEditors(mixinClassNodeHierarchy, mixinAnnotation, manipulator);
 
-        TargetClassManipulator manipulator = new TargetClassManipulator(modifyTargetClassNode, originalTargetClassNode, targetClass, opcodeStates);
+        return new PreMixinResult(originalTargetClassNode, modifyTargetClassNode, modifyMixinClassNode, originalMixinClassNode, mixinClassType, mixinAnnotation, manipulator);
+    }
+
+    private MixinResult mixin(ClassNodeHierarchy mixinClassNodeHierarchy, PreMixinResult preMixinResult) {
+        ClassNode originalTargetClassNode = preMixinResult.originalTargetClassNode;
+        ClassNode modifyTargetClassNode = preMixinResult.modifyTargetClassNode;
+
+        ClassNode modifyMixinClassNode = preMixinResult.modifyMixinClassNode;
+        ClassNode originalMixinClassNode = preMixinResult.originalMixinClassNode;
+
+        MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType = preMixinResult.mixinClassType;
+        Annotation mixinAnnotation = preMixinResult.mixinAnnotation;
+
+        TargetClassManipulator manipulator = preMixinResult.manipulator;
+
+        mapTargetSupers(modifyTargetClassNode);
+
+        processMethodNodes(modifyMixinClassNode.methods, originalMixinClassNode, originalTargetClassNode, mixinClassType);
+        processFieldNodes(modifyMixinClassNode.fields, originalMixinClassNode, originalTargetClassNode, mixinClassType);
+
         return new MixinResult(mixinClassType.redefineTargetFirst(), mixinClassType.transform(mixinClassNodeHierarchy, mixinAnnotation, manipulator));
     }
 
     private record MixinTypeInfo(MixinClassType<Annotation, ?, ?, ?, ?> type, Annotation annotation) {}
 
     private MixinTypeInfo determineMixinClassType(ClassNode mixinClassNode) {
-        Annotation annotation = null;
+        Annotation annotation;
         for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
             if (!mixinClassTypes.containsKey(annotationNode.desc)) continue;
 
-            annotation = TransformerHelper.getAnnotation(annotationNode);
             MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType = getMixinClassTypeInstance(annotationNode.desc);
             if (mixinClassType != null) {
+                annotation = TransformerHelper.getAnnotation(annotationNode);
                 return new MixinTypeInfo(mixinClassType, annotation);
             }
         }
 
         MixinClassType<Annotation, ?, ?, ?, ?> defaultType = (mixinClassNode.access & Opcodes.ACC_INTERFACE) == 0 ? new MixinMixinClassType() : new AccessorMixinClassType();
 
-        return new MixinTypeInfo(defaultType, annotation);
+        return new MixinTypeInfo(defaultType, null);
     }
 
-    private void processMethodNodes(List<MethodNode> methods, ClassNode originalMixin, ClassNode originalTarget, ClassNode modifyTarget, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType) {
+    private void processMethodNodes(List<MethodNode> methods, ClassNode originalMixin, ClassNode originalTarget, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType) {
         if (methods == null) return;
         for (MethodNode method : methods) {
             if (method.invisibleAnnotations == null) {
@@ -339,12 +456,12 @@ public class Mixiner {
                 continue;
             }
             for (AnnotationNode annotation : method.invisibleAnnotations) {
-                transformNode(annotation, method, originalMixin, originalTarget, modifyTarget, mixinClassType, true);
+                transformNode(annotation, method, originalMixin, originalTarget, mixinClassType, true);
             }
         }
     }
 
-    private void processFieldNodes(List<FieldNode> fields, ClassNode originalMixin, ClassNode originalTarget, ClassNode modifyTarget, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType) {
+    private void processFieldNodes(List<FieldNode> fields, ClassNode originalMixin, ClassNode originalTarget, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType) {
         if (fields == null) return;
         for (FieldNode field : fields) {
             if (field.invisibleAnnotations == null) {
@@ -352,12 +469,12 @@ public class Mixiner {
                 continue;
             }
             for (AnnotationNode annotation : field.invisibleAnnotations) {
-                transformNode(annotation, field, originalMixin, originalTarget, modifyTarget, mixinClassType, false);
+                transformNode(annotation, field, originalMixin, originalTarget, mixinClassType, false);
             }
         }
     }
 
-    private void transformNode(AnnotationNode annotationNode, Object node, ClassNode originalMixin, ClassNode originalTarget, ClassNode modifyTarget, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType, boolean isMethod) {
+    private void transformNode(AnnotationNode annotationNode, Object node, ClassNode originalMixin, ClassNode originalTarget, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType, boolean isMethod) {
         List<BuiltTransformer> transformers = this.transformers.getOrDefault(annotationNode.desc, List.of());
         BuiltTransformer builtTransformer = transformers.stream()
                 .filter(t -> t.mixinClassType().getName().equals(mixinClassType.getClass().getName()) && t.isAnnotatedMethod() == isMethod)
@@ -370,12 +487,12 @@ public class Mixiner {
         ClassNode targetClone = cloneClassNode(originalTarget);
 
         if (builtTransformer.isTargetMethod()) {
-            TargetMethodManipulator target = getTargetMethodEditor(builtTransformer, name, node, originalTarget, modifyTarget, annotation);
+            TargetMethodManipulator target = getTargetMethodEditor(builtTransformer, name, node, originalTarget, annotation);
             AnnotatedEditor annotatedEditor = createAnnotatedEditor(mixinClassType, node, target);
             TargetEditor targetEditor = mixinClassType.create(target, annotatedEditor);
             builtTransformer.transformFunction().transform(annotatedEditor, targetEditor, annotation, mixinClone, targetClone);
         } else {
-            TargetFieldManipulator target = getFieldTargetEditor(builtTransformer, name, node, originalTarget, modifyTarget, annotation);
+            TargetFieldManipulator target = getFieldTargetEditor(builtTransformer, name, node, originalTarget, annotation);
             AnnotatedEditor annotatedEditor = createAnnotatedEditor(mixinClassType, node, target);
             TargetFieldEditor targetEditor = mixinClassType.create(target, annotatedEditor);
             builtTransformer.transformFunction().transform(annotatedEditor, targetEditor, annotation, mixinClone, targetClone);
@@ -392,25 +509,39 @@ public class Mixiner {
         throw new UnsupportedOperationException();
     }
 
-    private <A extends Annotation> TargetMethodManipulator getTargetMethodEditor(BuiltTransformer builtTransformer, String name, Object node, ClassNode originalTargetClassNode, ClassNode modifyTargetClassNode, A annotation) {
-        Map<String, MethodNode> modifyTargetMethodNodes = new HashMap<>();
-        modifyTargetClassNode.methods.forEach(m -> modifyTargetMethodNodes.put(m.name + m.desc, m));
+    private <A extends Annotation> TargetMethodManipulator getTargetMethodEditor(BuiltTransformer builtTransformer, String name, Object node, ClassNode originalTargetClassNode, A annotation) {
+        do {
+            modifyTargetClassNodes.putIfAbsent(originalTargetClassNode.name, cloneClassNode(originalTargetClassNode));
+            ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originalTargetClassNode.name);
 
-        for(MethodNode m : originalTargetClassNode.methods) {
-            if(builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(m), annotation))
-                return new TargetMethodManipulator(originalTargetClassNode.name, modifyTargetMethodNodes.get(m.name + m.desc), m, opcodeStates);
-        }
+            Map<String, MethodNode> modifyTargetMethodNodes = new HashMap<>();
+            modifyTargetClassNode.methods.forEach(m -> modifyTargetMethodNodes.put(m.name + m.desc, m));
+
+            for (MethodNode m : originalTargetClassNode.methods) {
+                if (builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(m), annotation))
+                    return new TargetMethodManipulator(originalTargetClassNode.name, modifyTargetMethodNodes.get(m.name + m.desc), m, opcodeStates);
+            }
+            originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
+        } while(originalTargetClassNode != null);
+
         throw new MixinFormatException(name, "doesn't have a target");
     }
 
-    private <A extends Annotation> TargetFieldManipulator getFieldTargetEditor(BuiltTransformer builtTransformer, String name, Object node, ClassNode originalTargetClassNode, ClassNode modifyTargetClassNode, A annotation) {
-        Map<String, FieldNode> modifyFieldNodes = new HashMap<>();
-        modifyTargetClassNode.fields.forEach(f -> modifyFieldNodes.put(f.name, f));
+    private <A extends Annotation> TargetFieldManipulator getFieldTargetEditor(BuiltTransformer builtTransformer, String name, Object node, ClassNode originalTargetClassNode, A annotation) {
+        do {
+            modifyTargetClassNodes.putIfAbsent(originalTargetClassNode.name, cloneClassNode(originalTargetClassNode));
+            ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originalTargetClassNode.name);
 
-        for(FieldNode f : originalTargetClassNode.fields) {
-            if(builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(f), annotation))
-                return new TargetFieldManipulator(modifyFieldNodes.get(f.name), f);
-        }
+            Map<String, FieldNode> modifyFieldNodes = new HashMap<>();
+            modifyTargetClassNode.fields.forEach(f -> modifyFieldNodes.put(f.name, f));
+
+            for(FieldNode f : originalTargetClassNode.fields) {
+                if(builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(f), annotation))
+                    return new TargetFieldManipulator(modifyFieldNodes.get(f.name), f);
+            }
+            originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
+        } while(originalTargetClassNode != null);
+
         throw new MixinFormatException(name, "doesn't have a target");
     }
 
@@ -427,6 +558,7 @@ public class Mixiner {
         throw new UnsupportedOperationException();
     }
 
+    private record PreMixinResult(ClassNode originalTargetClassNode, ClassNode modifyTargetClassNode, ClassNode modifyMixinClassNode, ClassNode originalMixinClassNode, MixinClassType<Annotation, ?, ?, ?, ?> mixinClassType, Annotation mixinAnnotation, TargetClassManipulator manipulator) {}
     private record MixinResult(boolean redefineTargetFirst, String setUpMethodName) {}
 
     private record MixinerTransformer(String name, byte[] bytecode) implements ClassFileTransformer {

@@ -3,7 +3,6 @@ package vi.mixin.api.classtypes.extendertype;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import vi.mixin.api.MixinFormatException;
-import vi.mixin.api.annotations.classes.Extends;
 import vi.mixin.api.annotations.methods.New;
 import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.classtypes.MixinClassType;
@@ -44,15 +43,14 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
         return new ExtenderTargetFieldEditor(targetFieldEditors, mixinEditor);
     }
 
-    private static void validate(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
-        ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
+    private static void validateClass(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         targetClassEditor.makePublic();
 
         String name = "@Extends " + mixinClassNode.name;
         if(mixinClassNode.superName != null && !mixinClassNode.superName.equals("java/lang/Object")) throw new MixinFormatException(name, "extends " + mixinClassNode.superName + ". @Extend classes must not extend any other class");
-        if((mixinClassNode.access & ACC_INTERFACE) != 0) throw new MixinFormatException(name, "@Extends is not allowed on interfaces");
 
-        if(targetClassEditor.getMethodEditor("<init>()V") == null) {
+        if(targetClassEditor.getMethodManipulator("<init>()V") == null) {
             for (MethodNode methodNode : mixinClassNode.methods) {
                 if (!methodNode.name.equals("<init>")) continue;
                 boolean foundCall = false;
@@ -69,7 +67,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
                 if(!foundCall) throw new MixinFormatException(name, "constructor doesn't have call to super class constructor using @New");
             }
         }
-        for (ClassNode classNode : mixinClassNodeHierarchy.getAllClassesInHierarchy()) {
+        for (ClassNode classNode : mixinClassNodeHierarchy.getAllMixinClassesInHierarchy()) {
             for (MethodNode methodNode : classNode.methods) {
                 if (methodNode.name.equals("<init>")) continue;
                 for (AbstractInsnNode node : methodNode.instructions) {
@@ -84,17 +82,19 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
 
 
     @Override
+    public void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassEditor) {
+        if((mixinClassNodeHierarchy.mixinNode().access & ACC_INTERFACE) == 0) transformClass(mixinClassNodeHierarchy, targetClassEditor);
+        else transformInterface(mixinClassNodeHierarchy, targetClassEditor);
+    }
+
+    @Override
     public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Extends annotation, TargetClassManipulator targetClassEditor) {
-        validate(mixinClassNodeHierarchy, targetClassEditor);
-        ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
+        if((mixinClassNodeHierarchy.mixinNode().access & ACC_INTERFACE) != 0) return null;
+
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
 
-        targetClassEditor.makePublic();
-        targetClassEditor.makeNonFinalOrSealed();
-
-        mixinClassNode.superName = targetClassNode.name;
-
-        for (ClassNode classNode : mixinClassNodeHierarchy.getAllClassesInHierarchy()) {
+        for (ClassNode classNode : mixinClassNodeHierarchy.getAllMixinClassesInHierarchy()) {
             for (MethodNode methodNode : classNode.methods) {
                 for (AbstractInsnNode insnNode : methodNode.instructions) {
                     if(insnNode instanceof MethodInsnNode methodInsnNode && methodInsnNode.owner.equals(mixinClassNode.name)) {
@@ -137,7 +137,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
                 switched = true;
             }
             for (AbstractInsnNode node : TransformerHelper.getInsnNodes(methodNode.instructions, AbstractInsnNode.METHOD_INSN, INVOKESPECIAL, null, null, "<init>", "()V")) {
-                if(targetClassEditor.getMethodEditor("<init>()V") != null && !switched) methodNode.instructions.insertBefore(node, new MethodInsnNode(INVOKESPECIAL, targetClassNode.name, "<init>", "()V"));
+                if(targetClassEditor.getMethodManipulator("<init>()V") != null && !switched) methodNode.instructions.insertBefore(node, new MethodInsnNode(INVOKESPECIAL, targetClassNode.name, "<init>", "()V"));
                 methodNode.instructions.remove(node);
             }
         }
@@ -159,5 +159,26 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
         });
 
         return null;
+    }
+
+    public void transformClass(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
+        validateClass(mixinClassNodeHierarchy, targetClassEditor);
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
+        ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
+
+        targetClassEditor.makePublic();
+        targetClassEditor.makeNonFinalOrSealed();
+
+        mixinClassNode.superName = targetClassNode.name;
+    }
+
+    public void transformInterface(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
+        ClassNode targetClassNode = targetClassEditor.getClassNodeClone();
+
+        targetClassEditor.makePublic();
+        targetClassEditor.makeNonFinalOrSealed();
+
+        mixinClassNode.interfaces.add(targetClassNode.name);
     }
 }

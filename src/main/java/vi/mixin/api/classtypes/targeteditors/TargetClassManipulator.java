@@ -15,18 +15,16 @@ public class TargetClassManipulator {
 
     private final ClassNode modified;
     private final ClassNode original;
-    private final Class<?> c;
 
     Map<String, MethodNode> originalMethodNodes = new HashMap<>();
     Map<String, FieldNode> originalFieldNodes = new HashMap<>();
 
-    public TargetClassManipulator(ClassNode classNode, ClassNode original, Class<?> c, TargetInsnListManipulator.OpcodeStates opcodeStates) {
+    public TargetClassManipulator(ClassNode classNode, ClassNode original, TargetInsnListManipulator.OpcodeStates opcodeStates) {
         this.opcodeStates = opcodeStates;
 
         this.modified = classNode;
         this.original = new ClassNode();
         original.accept(this.original);
-        this.c = c;
 
         this.original.methods.forEach(methodNode -> originalMethodNodes.put(methodNode.name + methodNode.desc, methodNode));
         this.original.fields.forEach(fieldNode -> originalFieldNodes.put(fieldNode.name, fieldNode));
@@ -36,10 +34,6 @@ public class TargetClassManipulator {
         ClassNode clone = new ClassNode();
         original.accept(clone);
         return clone;
-    }
-
-    public Class<?> getRealClass() {
-        return c;
     }
 
     public void makePublic() {
@@ -74,16 +68,16 @@ public class TargetClassManipulator {
         originalMethodNodes.put(cloneMethodNode.name + cloneMethodNode.desc, cloneMethodNode);
     }
 
-    public List<TargetMethodManipulator> getMethodEditors() {
+    public List<TargetMethodManipulator> getMethodManipulators() {
         return modified.methods.stream().map(methodNode -> new TargetMethodManipulator(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc), opcodeStates)).toList();
     }
 
     @SuppressWarnings("unused")
-    public List<TargetMethodManipulator> getMethodEditors(String name) {
+    public List<TargetMethodManipulator> getMethodManipulators(String name) {
         return modified.methods.stream().filter(methodNode -> methodNode.name.equals(name)).map(methodNode -> new TargetMethodManipulator(original.name, methodNode, originalMethodNodes.get(methodNode.name + methodNode.desc), opcodeStates)).toList();
     }
 
-    public TargetMethodManipulator getMethodEditor(String nameAndDesc) {
+    public TargetMethodManipulator getMethodManipulator(String nameAndDesc) {
         String name = nameAndDesc.split("\\(")[0];
         String desc = "(" + nameAndDesc.split("\\(")[1];
 
@@ -110,11 +104,11 @@ public class TargetClassManipulator {
     }
 
     @SuppressWarnings("unused")
-    public List<TargetFieldManipulator> getFieldEditors() {
+    public List<TargetFieldManipulator> getFieldManipulators() {
         return modified.fields.stream().map(fieldNode -> new TargetFieldManipulator(fieldNode, originalFieldNodes.get(fieldNode.name))).toList();
     }
 
-    public TargetFieldManipulator getFieldEditor(String name) {
+    public TargetFieldManipulator getFieldManipulator(String name) {
         return modified.fields.stream().filter(fieldNode -> fieldNode.name.equals(name)).map(fieldNode -> new TargetFieldManipulator(fieldNode, originalFieldNodes.get(fieldNode.name))).findAny().orElse(null);
     }
 }

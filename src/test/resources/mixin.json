@@ -2,9 +2,13 @@
   "mixins": [
     "vi.mixin.test.AnonymousShadowMixin",
     "vi.mixin.test.AnonymousTargetMixin",
+    "vi.mixin.test.BaseExtender",
+    "vi.mixin.test.BaseExtenderExtender",
     "vi.mixin.test.BaseNewExtender",
+    "vi.mixin.test.Class2Mixin",
     "vi.mixin.test.FinalBaseExtender",
     "vi.mixin.test.InjectTestMixin",
+    "vi.mixin.test.InterfaceExtender",
     "vi.mixin.test.LambdaShadowMixin",
     "vi.mixin.test.LambdaTargetMixin",
     "vi.mixin.test.MixinTarget1",

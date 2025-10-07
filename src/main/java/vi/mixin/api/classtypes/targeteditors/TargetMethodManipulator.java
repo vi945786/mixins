@@ -47,7 +47,14 @@ public class TargetMethodManipulator {
         original.access &= ~Opcodes.ACC_ABSTRACT;
     }
 
-    public TargetInsnListManipulator getInsnListEditor() {
+    @SuppressWarnings("unused")
+    public void makeNonSynthetic() {
+        modified.access &= ~Opcodes.ACC_SYNTHETIC;
+
+        original.access &= ~Opcodes.ACC_SYNTHETIC;
+    }
+
+    public TargetInsnListManipulator getInsnListManipulator() {
         return new TargetInsnListManipulator(className + "." + original.name + original.desc, modified.instructions, original.instructions, opcodeStates);
     }
 }

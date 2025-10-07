@@ -21,7 +21,7 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
 
     @Override
     public AnnotatedFieldEditor create(FieldNode annotatedFieldNode, Object targetEditor) {
-        throw new UnsupportedOperationException("Accessor classes cannot have annotation mixin fields");
+        throw new UnsupportedOperationException("Accessor classes cannot have fields");
     }
 
     @Override
@@ -40,7 +40,7 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
 
     @Override
     public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassEditor) {
-        ClassNode mixinClassNode = mixinClassNodeHierarchy.classNode();
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         targetClassEditor.addInterface(mixinClassNode.name);
         mixinClassNode.access |= ACC_PUBLIC;
         mixinClassNode.access &= ~ACC_PRIVATE;
@@ -50,10 +50,10 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
         mixinClassNode.methods.forEach(methodNode -> {
             if((methodNode.access & ACC_ABSTRACT) != 0 || (methodNode.access & ACC_STATIC) != 0) return;
 
+            Type[] mixinArgumentTypes = Type.getArgumentTypes(methodNode.desc);
             if(targetClassNode.methods.stream().anyMatch(m -> {
                 if((methodNode.access & ACC_ABSTRACT) != 0 || !m.name.equals(methodNode.name)) return false;
 
-                Type[] mixinArgumentTypes = Type.getArgumentTypes(methodNode.desc);
                 Type[] targetArgumentTypes = Type.getArgumentTypes(m.desc);
                 if(mixinArgumentTypes.length != targetArgumentTypes.length) return false;
                 for (int i = 0; i < targetArgumentTypes.length; i++) {
@@ -66,13 +66,13 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
             ClassNode clone = new ClassNode();
             methodNode.accept(clone);
 
-            TargetMethodManipulator targetMethodEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc);
+            TargetMethodManipulator targetMethodEditor = targetClassEditor.getMethodManipulator(methodNode.name + methodNode.desc);
             if(targetMethodEditor == null) {
                 targetClassEditor.addMethod(clone.methods.getFirst());
             } else {
                 targetMethodEditor.makeNonAbstract();
                 targetMethodEditor.makePublic();
-                targetMethodEditor.getInsnListEditor().add(methodNode.instructions);
+                targetMethodEditor.getInsnListManipulator().add(methodNode.instructions);
             }
 
             methodNode.instructions = new InsnList();

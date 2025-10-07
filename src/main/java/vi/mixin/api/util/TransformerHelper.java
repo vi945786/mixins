@@ -5,6 +5,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.util.*;
 import vi.mixin.api.MixinFormatException;
+import vi.mixin.api.classtypes.ClassNodeHierarchy;
 import vi.mixin.api.injection.At;
 import vi.mixin.bytecode.MixinClassHelper;
 import vi.mixin.bytecode.Mixiner;
@@ -14,6 +15,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static org.objectweb.asm.tree.AbstractInsnNode.*;
 
@@ -94,7 +97,7 @@ public final class TransformerHelper implements Opcodes {
         return Type.getReturnType(search).equals(Type.getReturnType(target)) || Type.getReturnType(search).equals(Type.getType(Object.class));
     }
 
-    public static Class<?> getTargetClass(ClassNode mixinNode) {
+    public static String getTargetClassName(ClassNode mixinNode) {
         return Mixiner.getTargetClass(mixinNode);
     }
 
@@ -339,27 +342,39 @@ public final class TransformerHelper implements Opcodes {
 
     }
 
-    public static String getOuterClassInstanceFieldName(ClassNode classNode, Class<?> target) {
-        FieldNode fieldNode = classNode.fields.stream().filter(f -> f.name.startsWith("this$") && (f.access & ACC_SYNTHETIC) != 0).findFirst().orElse(null);
-        if(fieldNode != null) return fieldNode.name;
+    public static String getOuterClassInstanceFieldName(ClassNodeHierarchy classNodeHierarchy) {
+        return getOuterClassInstanceFieldName(classNodeHierarchy, false);
+    }
 
-        Class<?> c = target;
+    public static String getTargetOuterClassInstanceFieldName(ClassNodeHierarchy classNodeHierarchy) {
+        return getOuterClassInstanceFieldName(classNodeHierarchy, true);
+    }
 
-        int i = 0;
-        while(c != null) {
-            if((c.getModifiers() & ACC_STATIC) != 0) break;
-            c = c.getDeclaringClass();
-            i++;
+    private static String getOuterClassInstanceFieldName(ClassNodeHierarchy classNodeHierarchy, boolean target) {
+        Function<ClassNodeHierarchy, ClassNode> nodeGetter = target ? ClassNodeHierarchy::targetNodeClone : ClassNodeHierarchy::mixinNode;
+
+        FieldNode existingField = nodeGetter.apply(classNodeHierarchy).fields.stream()
+            .filter(f -> f.name.startsWith("this$") && (f.access & ACC_SYNTHETIC) != 0)
+            .findFirst()
+            .orElse(null);
+        if (existingField != null) return existingField.name;
+
+        ClassNodeHierarchy currentHierarchy = classNodeHierarchy;
+        int depth = 0;
+        while (currentHierarchy != null) {
+            ClassNode node = nodeGetter.apply(currentHierarchy);
+            if (node != null && (node.access & ACC_STATIC) != 0) break;
+            currentHierarchy = currentHierarchy.parent();
+            depth++;
         }
-        if(i == 0) return null;
-        int finalI = i;
-        var ref = new Object() {
-            String name = "this$" + (finalI -1);
-        };
+        if (depth == 0) return null;
 
-        while(classNode.fields.stream().anyMatch(f -> f.name.equals(ref.name))) ref.name += "$";
+        AtomicReference<String> fieldName = new AtomicReference<>("this$" + (depth - 1));
+        while (nodeGetter.apply(classNodeHierarchy).fields.stream().anyMatch(f -> f.name.equals(fieldName.get()))) {
+            fieldName.getAndUpdate(s -> s + "$");
+        }
 
-        return ref.name;
+        return fieldName.get();
     }
 
     private static boolean match(Object actual, Object[] values, int index) {

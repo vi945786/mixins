@@ -50,43 +50,44 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         return new MixinTargetFieldEditor(targetFieldEditors, mixinEditors);
     }
 
+    @Override
+    public boolean redefineTargetFirst() {
+        return false;
+    }
+
+    private ClassNodeHierarchy mixinClassNodeHierarchy;
     private ClassNode mixinClassNode;
     private TargetClassManipulator targetClassEditor;
     private ClassNode targetClassNode;
-    private Class<?> targetClass;
     private String replaceName;
 
     @Override
     public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassEditor) {
-        this.mixinClassNode = mixinClassNodeHierarchy.classNode();
+        this.mixinClassNodeHierarchy = mixinClassNodeHierarchy;
+        this.mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         this.targetClassEditor = targetClassEditor;
         this.targetClassNode = targetClassEditor.getClassNodeClone();
-        this.targetClass = targetClassEditor.getRealClass();
         replaceName = mixinClassNode.name.replace("/", "$$") + "$$";
         validate();
 
-        mixinClassNode.access |= ACC_PUBLIC;
-        mixinClassNode.access &= ~ACC_PRIVATE;
-        mixinClassNode.access &= ~ACC_PROTECTED;
-
-        String targetOuterInstanceFieldName = getOuterClassInstanceFieldName(targetClassNode, targetClass);
-        if(mixinClassNodeHierarchy.parent() != null) addOuterClassInstanceFieldToTarget(targetOuterInstanceFieldName);
+        String targetOuterInstanceFieldName = getTargetOuterClassInstanceFieldName(mixinClassNodeHierarchy);
+        if(mixinClassNodeHierarchy.hasMixinParent()) addOuterClassInstanceFieldToTarget(targetOuterInstanceFieldName);
 
         //add init to target class for default field values
         String clinitName = moveClinit();
         addAndMoveInit();
         addExceptionToConstructor();
 
-        for (ClassNode classNode : mixinClassNodeHierarchy.getAllClassesInHierarchy()) {
+        for (ClassNode classNode : mixinClassNodeHierarchy.getAllMixinClassesInHierarchy()) {
             for (MethodNode methodNode : classNode.methods) {
                 //replace mixin outer class instance field with the target outer class instance field
-                if (mixinClassNodeHierarchy.parent() != null && (methodNode.access & ACC_STATIC) == 0) {
-                    for (AbstractInsnNode node : TransformerHelper.getInsnNodes(methodNode.instructions, AbstractInsnNode.FIELD_INSN, GETFIELD, mixinClassNode.name, getOuterClassInstanceFieldName(mixinClassNode, targetClass), "L" + mixinClassNodeHierarchy.parent().classNode().name + ";")) {
+                if (mixinClassNodeHierarchy.hasMixinParent() && (methodNode.access & ACC_STATIC) == 0) {
+                    for (AbstractInsnNode node : TransformerHelper.getInsnNodes(methodNode.instructions, AbstractInsnNode.FIELD_INSN, GETFIELD, mixinClassNode.name, getOuterClassInstanceFieldName(mixinClassNodeHierarchy), "L" + mixinClassNodeHierarchy.parent().mixinNode().name + ";")) {
                         FieldInsnNode fieldInsnNode = (FieldInsnNode) node;
 
-                        String type = Type.getType(TransformerHelper.getTargetClass(mixinClassNode)).getInternalName();
-                        String outerType = Type.getType(TransformerHelper.getTargetClass(mixinClassNodeHierarchy.parent().classNode())).getDescriptor();
-                        methodNode.instructions.insertBefore(fieldInsnNode, new FieldInsnNode(GETFIELD, type, fieldInsnNode.name, outerType));
+                        String type = TransformerHelper.getTargetClassName(mixinClassNode);
+                        String outerType = "L" + TransformerHelper.getTargetClassName(mixinClassNodeHierarchy.parent().mixinNode()) + ";";
+                        methodNode.instructions.insertBefore(fieldInsnNode, new FieldInsnNode(GETFIELD, type, targetOuterInstanceFieldName, outerType));
                         methodNode.instructions.remove(fieldInsnNode);
                     }
                 }
@@ -188,7 +189,7 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         for (MethodNode methodNode : targetClassNode.methods) {
             for (int index : TransformerHelper.getInsnNodeIndexes(methodNode.instructions, AbstractInsnNode.INVOKE_DYNAMIC_INSN, INVOKEDYNAMIC)) {
                 if(!(methodNode.instructions.get(index) instanceof InvokeDynamicInsnNode invokeDynamicInsnNode)) continue;
-                TargetInsnListManipulator insnListEditor = targetClassEditor.getMethodEditor(methodNode.name + methodNode.desc).getInsnListEditor();
+                TargetInsnListManipulator insnListEditor = targetClassEditor.getMethodManipulator(methodNode.name + methodNode.desc).getInsnListManipulator();
 
                 methodNode.instructions.remove(invokeDynamicInsnNode);
                 Object[] oldBsmArgs = invokeDynamicInsnNode.bsmArgs;
@@ -202,6 +203,11 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
             }
         }
 
+        mixinClassNode.access |= ACC_PUBLIC;
+        mixinClassNode.access &= ~ACC_PRIVATE;
+        mixinClassNode.access &= ~ACC_PROTECTED;
+        mixinClassNode.access |= ACC_STATIC;
+
         return clinitName;
     }
 
@@ -214,22 +220,22 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
     }
 
     private void addOuterClassInstanceFieldToTarget(String targetOuterFieldName) {
-        Type outerType = Type.getType(targetClass.getDeclaringClass());
+        Type outerType = Type.getType("L" + mixinClassNodeHierarchy.parent().targetNodeClone().name + ";");
 
         FieldNode targetOuterFieldNode = targetClassNode.fields.stream().filter(f -> f.name.equals(targetOuterFieldName)).findAny().orElse(null);
         if(targetOuterFieldNode == null) {
             targetOuterFieldNode = new FieldNode(Opcodes.ACC_PUBLIC, targetOuterFieldName, outerType.getDescriptor(), null, null);
             targetClassEditor.addField(targetOuterFieldNode);
 
-            targetClassEditor.getMethodEditors().stream().filter(methodNode -> methodNode.getMethodNodeClone().name.equals("<init>")).forEach(methodEditor -> {
+            targetClassEditor.getMethodManipulators().stream().filter(methodNode -> methodNode.getMethodNodeClone().name.equals("<init>")).forEach(methodEditor -> {
                 InsnList insnList = new InsnList();
                 insnList.add(new VarInsnNode(ALOAD, 0));
                 insnList.add(new VarInsnNode(ALOAD, 1));
                 insnList.add(new FieldInsnNode(PUTFIELD, targetClassNode.name, targetOuterFieldName, outerType.getDescriptor()));
-                methodEditor.getInsnListEditor().insertBefore(0, insnList);
+                methodEditor.getInsnListManipulator().insertBefore(0, insnList);
             });
         } else {
-            targetClassEditor.getFieldEditor(targetOuterFieldNode.name).makeNonSynthetic();
+            targetClassEditor.getFieldManipulator(targetOuterFieldNode.name).makeNonSynthetic();
             targetOuterFieldNode.access = targetOuterFieldNode.access & ~Opcodes.ACC_SYNTHETIC & ~Opcodes.ACC_PRIVATE & ~Opcodes.ACC_PROTECTED | Opcodes.ACC_PUBLIC;
         }
     }
@@ -252,14 +258,13 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         MethodNode newInit = new MethodNode(ACC_PUBLIC | ACC_STATIC, replaceName + "init", "(L" + targetClassNode.name + ";)V", null, mixinInit.exceptions.toArray(String[]::new));
         mixinClassNode.methods.add(newInit);
 
-        String outerClassInstanceFieldName = getOuterClassInstanceFieldName(mixinClassNode, targetClass);
+        String outerClassInstanceFieldName = getOuterClassInstanceFieldName(mixinClassNodeHierarchy);
         FieldNode outerClassInstanceField = mixinClassNode.fields.stream().filter(f -> f.name.equals(outerClassInstanceFieldName)).findAny().orElse(null);
         if(outerClassInstanceField != null) {
             mixinClassNode.fields.remove(outerClassInstanceField);
             mixinInit.instructions.remove(mixinInit.instructions.get(0));
             mixinInit.instructions.remove(mixinInit.instructions.get(0));
             mixinInit.instructions.remove(mixinInit.instructions.get(0));
-            mixinClassNode.access |= ACC_STATIC;
         }
 
         boolean sawNew = false;
@@ -278,9 +283,9 @@ public class MixinMixinClassType implements MixinClassType<Annotation, MixinAnno
         }
         mixinInit.instructions.add(new InsnNode(RETURN));
 
-        targetClassEditor.getMethodEditors().stream().filter(methodNode -> methodNode.getMethodNodeClone().name.equals("<init>")).forEach(methodEditor -> {
-            TargetInsnListManipulator insnListEditor = methodEditor.getInsnListEditor();
-            for (int index : TransformerHelper.getInsnNodeIndexes(methodEditor.getInsnListEditor().getInsnListClone(), AbstractInsnNode.INSN, RETURN)) {
+        targetClassEditor.getMethodManipulators().stream().filter(methodNode -> methodNode.getMethodNodeClone().name.equals("<init>")).forEach(methodEditor -> {
+            TargetInsnListManipulator insnListEditor = methodEditor.getInsnListManipulator();
+            for (int index : TransformerHelper.getInsnNodeIndexes(methodEditor.getInsnListManipulator().getInsnListClone(), AbstractInsnNode.INSN, RETURN)) {
                 InsnList insnList = new InsnList();
                 insnList.add(new VarInsnNode(ALOAD, 0));
                 insnList.add(new MethodInsnNode(INVOKESTATIC, mixinClassNode.name, newInit.name, newInit.desc));

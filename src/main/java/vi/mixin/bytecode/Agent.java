@@ -4,9 +4,6 @@ import java.io.*;
 import java.lang.instrument.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.ProtectionDomain;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarFile;
 
 public class Agent {
@@ -38,30 +35,5 @@ public class Agent {
         }
 
         System.gc();
-    }
-
-    public static byte[] getBytecode(Class<?> c) {
-        AtomicReference<byte[]> bytes = new AtomicReference<>();
-        CountDownLatch latch = new CountDownLatch(1);
-
-        ClassFileTransformer transformer = new ClassFileTransformer() {
-            @Override
-            public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) {
-                if(classBeingRedefined == c) {
-                    bytes.set(classfileBuffer);
-                    latch.countDown();
-                }
-                return null;
-            }
-        };
-
-        try {
-            Agent.agent.addTransformer(transformer, true);
-            Agent.agent.retransformClasses(c);
-            latch.await();
-            Agent.agent.removeTransformer(transformer);
-        } catch (UnmodifiableClassException | InterruptedException ignored) {}
-
-        return bytes.get();
     }
 }

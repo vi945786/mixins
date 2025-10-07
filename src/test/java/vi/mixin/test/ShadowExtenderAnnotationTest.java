@@ -3,7 +3,7 @@ package vi.mixin.test;
 import org.junit.jupiter.api.Test;
 import vi.mixin.api.annotations.Mixin;
 import vi.mixin.api.annotations.Shadow;
-import vi.mixin.api.annotations.classes.Extends;
+import vi.mixin.api.classtypes.extendertype.Extends;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
