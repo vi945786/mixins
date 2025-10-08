@@ -277,9 +277,8 @@ class TargetMixinMixin { ... }
 ---
 
 ## Targeting An Element On A Super Class
-When you want to use `@Shadow` or `@Overridable` on an element in a super class of your target you can do so normally,
-unless an element with the same name exists in another super class of the target.\
-When that happens you can specify which super class or interface that element belongs to:
+When you want to use `@Shadow` or `@Overridable` on members defined in a superclass of your target as you normally would.\
+However, if multiple superclasses or interfaces define members with the same name, you can explicitly specify which one you mean:
 
 ```java
 @Mixin(Target.class)
@@ -288,6 +287,8 @@ class TargetMixin {
     @Shadow("package/subpackage/TargetSuper2.i") private int i2;
 }
 ```
+
+Note that applying this to an overridden method behaves the same as calling `super.method()`.
 
 ---
 

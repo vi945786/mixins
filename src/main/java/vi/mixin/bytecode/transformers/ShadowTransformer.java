@@ -83,7 +83,7 @@ public class ShadowTransformer implements TransformerSupplier {
         mixinEditor.doNotCopyToTargetClass();
         targetEditor.makePublic();
 
-        int invokeOpcode = INVOKEVIRTUAL;
+        int invokeOpcode = INVOKESPECIAL;
         if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
         String updatedDesc = targetMethodNode.desc;
 
@@ -116,7 +116,7 @@ public class ShadowTransformer implements TransformerSupplier {
         mixinEditor.delete();
         targetEditor.makePublic();
 
-        int invokeOpcode = INVOKEVIRTUAL;
+        int invokeOpcode = INVOKESPECIAL;
         if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
 
         mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));

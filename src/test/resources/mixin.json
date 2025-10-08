@@ -5,6 +5,7 @@
     "vi.mixin.test.BaseExtender",
     "vi.mixin.test.BaseExtenderExtender",
     "vi.mixin.test.BaseNewExtender",
+    "vi.mixin.test.CallSuperExtender",
     "vi.mixin.test.Class2Mixin",
     "vi.mixin.test.FinalBaseExtender",
     "vi.mixin.test.InjectBaseExtender",

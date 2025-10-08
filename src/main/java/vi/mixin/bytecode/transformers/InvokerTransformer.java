@@ -51,7 +51,7 @@ public class InvokerTransformer implements TransformerSupplier {
         if(!targetMethodNode.name.equals(mixinMethodNode.name) /*|| (targetMethodNode.access & ACC_STATIC) != 0*/) {
             boolean isStatic = (targetMethodNode.access & ACC_STATIC) != 0;
 
-            int invokeOpcode = INVOKEVIRTUAL;
+            int invokeOpcode = INVOKESPECIAL;
             if(isStatic) invokeOpcode = INVOKESTATIC;
             else if((targetOriginClassNodeClone.access & ACC_INTERFACE) != 0) invokeOpcode = INVOKEINTERFACE;
 

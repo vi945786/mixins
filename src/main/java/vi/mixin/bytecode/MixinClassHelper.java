@@ -12,6 +12,8 @@ public class MixinClassHelper {
             return is.readAllBytes();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (NullPointerException e) {
+            throw new RuntimeException(name + " not found");
         }
     }
 
