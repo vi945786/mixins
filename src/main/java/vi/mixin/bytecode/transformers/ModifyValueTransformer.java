@@ -71,8 +71,8 @@ public class ModifyValueTransformer implements TransformerSupplier {
         }
     }
 
-    private void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        setArg(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone);
+    private void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
+        setArg(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetOriginClassNodeClone);
         validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
@@ -83,6 +83,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
         InsnList targetList = insnListEditor.getInsnListClone();
         List<Integer> atIndexes = TransformerHelper.getAtTargetIndexesThrows(targetList, annotation.at(), "@ModifyValue " + mixinClassNodeClone.name + "." + mixinMethodNode.name + mixinMethodNode.desc);
 
+        boolean hasVars = args.length == 2;
         boolean isStatic = (mixinMethodNode.access & ACC_STATIC) != 0;
 
         Map<Integer, Type> types = new HashMap<>();
@@ -90,7 +91,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
 
         Analyzer<BasicValue> analyzer = new Analyzer<>(new BasicInterpreter());
         try {
-            analyzer.analyze(targetClassNodeClone.name, targetMethodNode);
+            analyzer.analyze(targetOriginClassNodeClone.name, targetMethodNode);
         } catch (AnalyzerException e) {
             throw new RuntimeException(e);
         }
@@ -106,7 +107,7 @@ public class ModifyValueTransformer implements TransformerSupplier {
                 Frame<BasicValue> cf = analyzer.getFrames()[targetList.indexOf(cursor) + 1];
                 if (cf != null && cf.getStackSize() == f.getStackSize() - remaining + 1) {
                     argLoads.addFirst(cursor);
-                    remaining -= cf.getStack(cf.getStackSize() - 1).getSize();
+                    remaining -= cf.getStack(cf.getStackSize() - 1).getSize() -1;
                 }
                 cursor = cursor.getPrevious();
             }
@@ -114,7 +115,6 @@ public class ModifyValueTransformer implements TransformerSupplier {
             if(!isStatic) insnListEditor.insertBefore(argLoads.isEmpty() ? atIndex : targetList.indexOf(argLoads.getFirst()), new VarInsnNode(ALOAD, 0));
         }
 
-        boolean hasVars = args.length == 2;
         boolean isArgObject = args[0].equals(Type.getType(Object.class));
         for (int atIndex : atIndexes) {
             Type type = types.get(atIndex);
@@ -123,8 +123,8 @@ public class ModifyValueTransformer implements TransformerSupplier {
                 Type boxed = TransformerHelper.getBoxedType(type);
                 insnListEditor.insertBefore(atIndex, new MethodInsnNode(INVOKESTATIC, boxed.getInternalName(), "valueOf", "(" + type.getDescriptor() + ")" + boxed.getDescriptor()));
             }
-            if(hasVars) insnListEditor.insertBefore(atIndex, targetEditor.getCaptureLocalsInsnList(atIndex, targetClassNodeClone.name));
-            insnListEditor.insertBefore(atIndex, new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc(targetClassNodeClone.name)));
+            if(hasVars) insnListEditor.insertBefore(atIndex, targetEditor.getCaptureLocalsInsnList(atIndex, targetOriginClassNodeClone.name));
+            insnListEditor.insertBefore(atIndex, new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc()));
             //unbox
             if(type.getSort() <= Type.DOUBLE)  {
                 Type boxed = TransformerHelper.getBoxedType(type);
@@ -137,8 +137,8 @@ public class ModifyValueTransformer implements TransformerSupplier {
     public List<BuiltTransformer> getBuiltTransformers() {
         return List.of(
                 TransformerBuilder.getTransformerBuilder(MixinMixinClassType.class).annotation(ModifyValue.class).annotatedMethod().targetMethod().transformFunction(
-                        (MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) ->
-                                new ModifyValueTransformer().transform(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetClassNodeClone)
+                        (MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, ModifyValue annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) ->
+                                new ModifyValueTransformer().transform(mixinEditor, targetEditor, annotation, mixinClassNodeClone, targetOriginClassNodeClone)
                 ).build()
         );
     }

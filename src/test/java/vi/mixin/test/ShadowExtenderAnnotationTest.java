@@ -31,7 +31,7 @@ public class ShadowExtenderAnnotationTest {
 
     @Test
     public void testShadowFieldInstance() throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        assertTrue(ShadowMixinAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
+        assertTrue(ShadowExtenderAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
         Method m = ShadowTestExtender.class.getDeclaredMethod("testShadowFieldInstance");
         m.setAccessible(true);
         m.invoke(new ShadowTestExtender());
@@ -39,7 +39,7 @@ public class ShadowExtenderAnnotationTest {
 
     @Test
     public void testShadowFieldStatic() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        assertTrue(ShadowMixinAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
+        assertTrue(ShadowExtenderAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
         Method m = ShadowTestExtender.class.getDeclaredMethod("testShadowFieldStatic");
         m.setAccessible(true);
         m.invoke(null);
@@ -47,7 +47,7 @@ public class ShadowExtenderAnnotationTest {
 
     @Test
     public void testShadowMethodInstance() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        assertTrue(ShadowMixinAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
+        assertTrue(ShadowExtenderAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
         Method m = ShadowTestExtender.class.getDeclaredMethod("testShadowMethodInstance");
         m.setAccessible(true);
         m.invoke(new ShadowTestExtender());
@@ -55,7 +55,7 @@ public class ShadowExtenderAnnotationTest {
 
     @Test
     public void testShadowMethodStatic() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        assertTrue(ShadowMixinAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
+        assertTrue(ShadowExtenderAnnotationTest.ShadowTest.class.isAssignableFrom(ShadowTestExtender.class));
         Method m = ShadowTestExtender.class.getDeclaredMethod("testShadowMethodStatic");
         m.setAccessible(true);
         m.invoke(null);
@@ -63,37 +63,30 @@ public class ShadowExtenderAnnotationTest {
 }
 
 @SuppressWarnings("all")
-@Mixin(ShadowMixinAnnotationTest.ShadowTest.class) @Extends
+@Mixin(ShadowExtenderAnnotationTest.ShadowTest.class) @Extends
 class ShadowTestExtender {
-    @Shadow
-    private int instanceField;
-
-    @Shadow("staticField;I")
-    private static int staticField;
-
-    @Shadow("instanceMethod(I)I")
-    private int instanceMethod(int x) { return 0; }
-
-    @Shadow("staticMethod(I)I")
-    private static int staticMethod(int x) { return 0; }
+    @Shadow private int instanceField;
+    @Shadow private static int staticField;
+    @Shadow private int instanceMethod(int x) { return 0; }
+    @Shadow private static int staticMethod(int x) { return 0; }
 
     private void testShadowFieldInstance() {
         assertEquals(13, this.instanceField);
         this.instanceField = 42;
-        assertEquals(42, ((ShadowMixinAnnotationTest.ShadowTest) (Object) this).getInstanceField());
+        assertEquals(42, ((ShadowExtenderAnnotationTest.ShadowTest) (Object) this).getInstanceField());
     }
 
     private static void testShadowFieldStatic() {
         assertEquals(54, staticField);
-        staticField = 99;
-        assertEquals(99, ShadowMixinAnnotationTest.ShadowTest.staticField);
+        staticField = 97;
+        assertEquals(97, ShadowExtenderAnnotationTest.ShadowTest.staticField);
     }
 
     private void testShadowMethodInstance() {
-        assertEquals(((ShadowMixinAnnotationTest.ShadowTest) (Object) this).invokeInstanceMethod(10), instanceMethod(10));
+        assertEquals(((ShadowExtenderAnnotationTest.ShadowTest) (Object) this).invokeInstanceMethod(10), instanceMethod(10));
     }
 
     private static void testShadowMethodStatic() {
-        assertEquals(ShadowMixinAnnotationTest.ShadowTest.staticMethod(10), staticMethod(10));
+        assertEquals(ShadowExtenderAnnotationTest.ShadowTest.staticMethod(10), staticMethod(10));
     }
 }

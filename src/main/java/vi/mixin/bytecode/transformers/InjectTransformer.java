@@ -43,7 +43,7 @@ public class InjectTransformer implements TransformerSupplier {
         if(mixinArgumentTypes.length == targetArgumentTypes.length+2 && !mixinArgumentTypes[targetArgumentTypes.length+1].equals(Type.getType(Vars.class))) throw new MixinFormatException(name, "non Vars parameter after Returner");
     }
 
-    private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Inject annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
         validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
@@ -90,9 +90,9 @@ public class InjectTransformer implements TransformerSupplier {
             }
 
             if (Type.getArgumentCount(mixinMethodNode.desc) == Type.getArgumentCount(targetMethodNode.desc) + 2)
-                insnList.add(targetEditor.getCaptureLocalsInsnList(atIndex, targetClassNodeClone.name));
+                insnList.add(targetEditor.getCaptureLocalsInsnList(atIndex, targetOriginClassNodeClone.name));
 
-            insnList.add(new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc(targetClassNodeClone.name)));
+            insnList.add(new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc()));
 
             LabelNode skipReturn = new LabelNode();
             if (returnType.getSort() != 0) insnList.add(new InsnNode(DUP));

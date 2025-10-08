@@ -17,7 +17,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class OverridableTransformer implements TransformerSupplier {
 
-    private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, Overridable annotation) {
+    private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, Overridable annotation, ClassNode origin) {
         if(!targetMethodNodeClone.name.equals(mixinMethodNodeClone.name)) return false;
         if(annotation.value().isEmpty()) return targetMethodNodeClone.desc.split("\\)")[0].equals(mixinMethodNodeClone.desc.split("\\)")[0]);
         if(annotation.value().startsWith("(")) return targetMethodNodeClone.desc.equals(annotation.value());
@@ -42,7 +42,7 @@ public class OverridableTransformer implements TransformerSupplier {
         }
     }
 
-    private static void transform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Overridable annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void transform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, Overridable annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
         validate(mixinEditor, targetEditor, mixinClassNodeClone);
         targetEditor.makeNonFinal();
         targetEditor.makePublic();

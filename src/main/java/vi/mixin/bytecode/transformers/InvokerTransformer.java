@@ -41,7 +41,7 @@ public class InvokerTransformer implements TransformerSupplier {
         }
     }
 
-    private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, Invoker annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
         validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
@@ -53,14 +53,14 @@ public class InvokerTransformer implements TransformerSupplier {
 
             int invokeOpcode = INVOKEVIRTUAL;
             if(isStatic) invokeOpcode = INVOKESTATIC;
-            else if((targetClassNodeClone.access & ACC_INTERFACE) != 0) invokeOpcode = INVOKEINTERFACE;
+            else if((targetOriginClassNodeClone.access & ACC_INTERFACE) != 0) invokeOpcode = INVOKEINTERFACE;
 
             int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(mixinMethodNode.desc));
 
             InsnList insnList = new InsnList();
             addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(mixinMethodNode.desc), isStatic);
 
-            insnList.add(new MethodInsnNode(invokeOpcode, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+            insnList.add(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
             insnList.add(new InsnNode(returnOpcode));
             mixinEditor.setBytecode(insnList);
         }

@@ -17,7 +17,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class GetterTransformer implements TransformerSupplier {
 
-    private static boolean targetFilter(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Getter annotation) {
+    private static boolean targetFilter(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Getter annotation, ClassNode origin) {
         if(annotation.value().isEmpty()) {
             if(!mixinMethodNodeClone.name.startsWith("get")) return false;
             return targetFieldNodeClone.name.equals(mixinMethodNodeClone.name.substring(3, 4).toLowerCase() + mixinMethodNodeClone.name.substring(4));

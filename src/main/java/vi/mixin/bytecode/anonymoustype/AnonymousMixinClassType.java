@@ -33,12 +33,12 @@ class AnonymousMixinClassType implements MixinClassType<AnonymousMixinClassType.
     }
 
     @Override
-    public TargetMethodEditor create(TargetMethodManipulator targetMethodEditors, Object mixinEditors) {
+    public TargetMethodEditor create(TargetMethodManipulator targetMethodEditors, Object mixinEditor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public TargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditors) {
+    public TargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditor) {
         throw new UnsupportedOperationException();
     }
 

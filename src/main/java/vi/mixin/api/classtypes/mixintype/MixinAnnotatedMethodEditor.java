@@ -7,12 +7,26 @@ import org.objectweb.asm.tree.MethodNode;
 import vi.mixin.api.editors.AnnotatedMethodEditor;
 
 public class MixinAnnotatedMethodEditor extends AnnotatedMethodEditor {
+    private final String realTargetClassName;
+    private final String replaceName;
+
     MethodInsnNode invoke = null;
     boolean copy = true;
     boolean delete = false;
 
-    protected MixinAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditor) {
+    protected MixinAnnotatedMethodEditor(MethodNode mixinMethodNode, Object targetEditor, String realTargetClassName, String replaceName) {
         super(mixinMethodNode, targetEditor);
+        this.realTargetClassName = realTargetClassName;
+        this.replaceName = replaceName;
+    }
+
+    public String getRealTargetClassName() {
+        return realTargetClassName;
+    }
+
+    @SuppressWarnings("unused")
+    public String getReplaceName() {
+        return replaceName;
     }
 
     public void changeInvoke(MethodInsnNode methodInsnNode) {
@@ -33,8 +47,8 @@ public class MixinAnnotatedMethodEditor extends AnnotatedMethodEditor {
         mixinMethodNode.access &= ~Opcodes.ACC_PROTECTED;
     }
 
-    public String getUpdatedDesc(String targetClassNodeName) {
-        if(!delete && (mixinMethodNode.access & Opcodes.ACC_STATIC) == 0) return MixinMixinClassType.getNewDesc(mixinMethodNode.desc, targetClassNodeName);
+    public String getUpdatedDesc() {
+        if(!delete && (mixinMethodNode.access & Opcodes.ACC_STATIC) == 0) return MixinMixinClassType.getNewDesc(mixinMethodNode.desc, realTargetClassName);
         return mixinMethodNode.desc;
     }
 

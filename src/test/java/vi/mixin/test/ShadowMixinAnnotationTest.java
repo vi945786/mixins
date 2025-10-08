@@ -59,17 +59,10 @@ public class ShadowMixinAnnotationTest {
 @SuppressWarnings("all")
 @Mixin(ShadowMixinAnnotationTest.ShadowTest.class)
 abstract class ShadowTestMixin {
-    @Shadow("instanceField")
-    private int instanceField;
-
-    @Shadow("staticField")
-    private static int staticField;
-
-    @Shadow("instanceMethod(I)I")
-    private int instanceMethod(int x) { return 0; }
-
-    @Shadow("staticMethod(I)I")
-    private static int staticMethod(int x) { return 0; }
+    @Shadow private int instanceField;
+    @Shadow private static int staticField;
+    @Shadow private int instanceMethod(int x) { return 0; }
+    @Shadow private static int staticMethod(int x) { return 0; }
 
     private void testShadowFieldInstance() {
         assertEquals(13, this.instanceField);
@@ -79,8 +72,8 @@ abstract class ShadowTestMixin {
 
     private static void testShadowFieldStatic() {
         assertEquals(54, staticField);
-        staticField = 99;
-        assertEquals(99, ShadowMixinAnnotationTest.ShadowTest.staticField);
+        staticField = 98;
+        assertEquals(98, ShadowMixinAnnotationTest.ShadowTest.staticField);
     }
 
     private void testShadowMethodInstance() {

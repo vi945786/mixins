@@ -22,7 +22,6 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.zip.Deflater;
@@ -32,9 +31,9 @@ import static vi.mixin.bytecode.Agent.agent;
 
 public class RegisterJars {
 
-    private final Map<String, Boolean> classEntries = new HashMap<>();
-    private final Map<String, Boolean> transformersEntries = new HashMap<>();
-    private final Map<String, Boolean> mixinClassTypesEntries = new HashMap<>();
+    private static final List<String> classEntries = new ArrayList<>();
+    private static final List<String> transformersEntries = new ArrayList<>();
+    private static final List<String> mixinClassTypesEntries = new ArrayList<>();
     private final List<byte[]> mixins = new ArrayList<>();
     private final Map<String, byte[]> inners = new HashMap<>();
     private final Mixiner mixiner = new Mixiner();
@@ -89,25 +88,34 @@ public class RegisterJars {
             throw new RuntimeException("unable to register jars", e);
         }
 
-        classEntries.entrySet().stream().filter(entry -> !entry.getValue()).map(Map.Entry::getKey).forEach(c -> { throw new MixinFormatException(c, "mixin class not found"); });
-        transformersEntries.entrySet().stream().filter(entry -> !entry.getValue()).map(Map.Entry::getKey).forEach(c -> { throw new MixinFormatException(c, "mixin class not found"); });
-        mixinClassTypesEntries.entrySet().stream().filter(entry -> !entry.getValue()).map(Map.Entry::getKey).forEach(c -> { throw new MixinFormatException(c, "mixin class not found"); });
-
+        getMixins();
         mixiner.addClasses(mixins, inners.values());
+
+        classEntries.clear();
+        transformersEntries.clear();
+        mixinClassTypesEntries.clear();
     }
 
     private void doRunArgs(String args) {
         if(args != null) {
             for (String file : args.split(File.pathSeparator)) {
                 try {
-                    MixinFile mixinFile = getMixinFile(Files.newBufferedReader(Path.of(file)));
-                    mixinClassTypesEntries.putAll(mixinFile.mixinClassTypes.stream().collect(Collectors.toMap(s -> s, s -> false)));
-                    transformersEntries.putAll(mixinFile.transformers.stream().collect(Collectors.toMap(s -> s, s -> false)));
-                    classEntries.putAll(mixinFile.mixinClasses.stream().collect(Collectors.toMap(s -> s, s -> false)));
+                    addJsonFile(Files.newBufferedReader(Path.of(file)), file);
                 } catch (IOException e) {
-                    throw new RuntimeException("failed to load mixin file " + file, e);
+                    throw new RuntimeException(e);
                 }
             }
+        }
+    }
+
+    public static void addJsonFile(Reader reader, String file) {
+        try {
+            MixinFile mixinFile = getMixinFile(reader);
+            mixinClassTypesEntries.addAll(mixinFile.mixinClassTypes);
+            transformersEntries.addAll(mixinFile.transformers);
+            classEntries.addAll(mixinFile.mixinClasses);
+        } catch (IOException e) {
+            throw new RuntimeException("failed to load mixin file " + file, e);
         }
     }
 
@@ -181,8 +189,6 @@ public class RegisterJars {
         try (JarFile jarFile = new JarFile(jar)) {
             agent.appendToBootstrapClassLoaderSearch(jarFile);
 
-            checkStartUpEntries(jarFile);
-
             Manifest manifest = jarFile.getManifest();
             if (manifest != null) {
                 String fileName = manifest.getMainAttributes().getValue("Mixin-File");
@@ -190,91 +196,46 @@ public class RegisterJars {
 
                     try (InputStream in = jarFile.getInputStream(jarFile.getEntry(fileName));
                          Reader reader = new InputStreamReader(in)) {
-                        MixinFile mixinFile = getMixinFile(reader);
-                        registerMixinClassTypes(mixinFile.mixinClassTypes);
-                        registerTransformers(mixinFile.transformers);
-
-                        for (String mixinClass : mixinFile.mixinClasses) {
-                            byte[] bytecode;
-                            try (InputStream inputStream = jarFile.getInputStream(jarFile.getEntry(nameToEntry(mixinClass)))) {
-                                bytecode = inputStream.readAllBytes();
-                                mixins.add(bytecode);
-                            } catch (NullPointerException e) {
-                                throw new MixinFormatException(mixinClass, "mixin class not found");
-                            }
-                            findAnonymousInnerClasses(jarFile, bytecode);
-                        }
+                        addJsonFile(reader, jar);
                     }
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load jar: " + jar, e);
+            throw new RuntimeException("Failed to load mixins from jar: " + jar, e);
         }
     }
 
-    private void findAnonymousInnerClasses(JarFile jarFile, byte[] bytecode) {
+    private void findAnonymousInnerClasses(byte[] bytecode) {
         ClassReader cr = new ClassReader(bytecode);
         cr.accept(new ClassVisitor(Opcodes.ASM9) {
             @Override
             public void visitInnerClass(String innerName, String outerName, String innerSimpleName, int access) {
                 if(innerSimpleName != null) return;
-
-                String innerPath = innerName + ".class";
-                JarEntry innerEntry = jarFile.getJarEntry(innerPath);
-                if (innerEntry != null) {
-                    try (InputStream is = jarFile.getInputStream(innerEntry)) {
-                        byte[] innerBytecode = is.readAllBytes();
-                        if(!inners.containsKey(innerName)) {
-                            inners.put(innerName, innerBytecode);
-                            findAnonymousInnerClasses(jarFile, innerBytecode);
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                byte[] innerBytecode = MixinClassHelper.getBytecode(innerName);
+                if(!inners.containsKey(innerName)) {
+                    inners.put(innerName, innerBytecode);
+                    findAnonymousInnerClasses(innerBytecode);
                 }
             }
 
         }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
-    private void checkStartUpEntries(JarFile jarFile) throws IOException {
-        for(String name : classEntries.keySet()) {
-            JarEntry entry = jarFile.getJarEntry(nameToEntry(name));
-            if(entry == null) continue;
-            classEntries.put(name, true);
-
-            byte[] bytecode;
-            try (InputStream inputStream = jarFile.getInputStream(entry)) {
-                bytecode = inputStream.readAllBytes();
-                mixins.add(bytecode);
-            }
-            findAnonymousInnerClasses(jarFile, bytecode);
+    private void getMixins() {
+        for(String name : classEntries) {
+            byte[] bytecode = MixinClassHelper.getBytecode(name);
+            mixins.add(bytecode);
+            findAnonymousInnerClasses(bytecode);
         }
-        for(String name : transformersEntries.keySet()) {
-            JarEntry entry = jarFile.getJarEntry(nameToEntry(name));
-            if(entry == null) continue;
-            transformersEntries.put(name, true);
-
-            registerTransformer(name);
-        }
-        for(String name : mixinClassTypesEntries.keySet()) {
-            JarEntry entry = jarFile.getJarEntry(nameToEntry(name));
-            if(entry == null) continue;
-            mixinClassTypesEntries.put(name, true);
-
-            registerMixinClassType(name);
-        }
+        registerTransformers();
+        registerMixinClassTypes();
     }
 
     private record MixinFile(List<String> mixinClasses, List<String> transformers, List<String> mixinClassTypes) {}
 
-    private void registerTransformer(String transformer) {
-        registerTransformers(List.of(transformer));
-    }
-
     @SuppressWarnings("unchecked")
-    private void registerTransformers(List<String> transformers) {
-        transformers.forEach(mixinTransformer -> {
+    private void registerTransformers() {
+        RegisterJars.transformersEntries.forEach(mixinTransformer -> {
             Class<?> transformerClass = MixinClassHelper.findClass(mixinTransformer);
 
             if(transformerClass == null) throw new MixinFormatException(mixinTransformer, "transformer supplier class not found");
@@ -292,13 +253,9 @@ public class RegisterJars {
         });
     }
 
-    private void registerMixinClassType(String mixinClassType) {
-        registerTransformers(List.of(mixinClassType));
-    }
-
     @SuppressWarnings("unchecked")
-    private void registerMixinClassTypes(List<String> mixinClassTypes) {
-        mixinClassTypes.forEach(mixinClassTypeName -> {
+    private void registerMixinClassTypes() {
+        RegisterJars.mixinClassTypesEntries.forEach(mixinClassTypeName -> {
             Class<MixinClassType<Annotation, ?, ?, ?, ?>> mixinClassTypeClass = (Class<MixinClassType<Annotation, ?, ?, ?, ?>>) MixinClassHelper.findClass(mixinClassTypeName);
 
             if(mixinClassTypeClass == null) throw new MixinFormatException(mixinClassTypeName, "mixin class type class not found");
@@ -344,9 +301,5 @@ public class RegisterJars {
         }
 
         return new MixinFile(mixins, transformers, mixinClassTypes);
-    }
-
-    private static String nameToEntry(String name) {
-        return name.replace(".", "/") + ".class";
     }
 }

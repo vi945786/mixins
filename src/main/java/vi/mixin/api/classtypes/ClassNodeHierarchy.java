@@ -17,7 +17,7 @@ public record ClassNodeHierarchy(ClassNode mixinNode, ClassNode targetNodeClone,
         return new ArrayList<>(children);
     }
 
-    public boolean hasMixinParent() {
+    public boolean hasParentMixin() {
         return parent != null && parent.mixinNode != null;
     }
 

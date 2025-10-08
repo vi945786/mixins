@@ -17,15 +17,11 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
 
     AM create(MethodNode annotatedMethodNode, Object targetEditor);
     AF create(FieldNode annotatedFieldNode, Object targetEditor);
-    TM create(TargetMethodManipulator targetMethodEditors, Object mixinEditors);
-    TF create(TargetFieldManipulator targetFieldEditors, Object mixinEditors);
+    TM create(TargetMethodManipulator targetMethodEditors, Object mixinEditor);
+    TF create(TargetFieldManipulator targetFieldEditors, Object mixinEditor);
 
     default boolean redefineTargetFirst() {
         return true;
-    }
-
-    default boolean isAllowedAsTarget() {
-        return false;
     }
 
     default void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator) {}

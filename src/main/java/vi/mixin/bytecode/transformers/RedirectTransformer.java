@@ -92,7 +92,7 @@ public class RedirectTransformer implements TransformerSupplier {
         }
     }
 
-    private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void transform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, Redirect annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
         validate(mixinEditor, targetEditor, annotation, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
@@ -110,7 +110,7 @@ public class RedirectTransformer implements TransformerSupplier {
 
             Analyzer<BasicValue> analyzer = new Analyzer<>(new BasicInterpreter());
             try {
-                analyzer.analyze(targetClassNodeClone.name, targetMethodNode);
+                analyzer.analyze(targetOriginClassNodeClone.name, targetMethodNode);
             } catch (AnalyzerException e) {
                 throw new RuntimeException(e);
             }
@@ -136,8 +136,8 @@ public class RedirectTransformer implements TransformerSupplier {
 
         boolean hasVars = !mixinMethodNode.desc.startsWith("()") && List.of(Type.getArgumentTypes(mixinMethodNode.desc)).getLast().equals(Type.getType(Vars.class));
         for (int atIndex : atIndexes) {
-            if(hasVars) insnListEditor.insertBefore(atIndex, targetEditor.getCaptureLocalsInsnList(atIndex, targetClassNodeClone.name));
-            insnListEditor.insertBefore(atIndex, new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc(targetClassNodeClone.name)));
+            if(hasVars) insnListEditor.insertBefore(atIndex, targetEditor.getCaptureLocalsInsnList(atIndex, targetOriginClassNodeClone.name));
+            insnListEditor.insertBefore(atIndex, new MethodInsnNode(INVOKESTATIC, mixinClassNodeClone.name, mixinMethodNode.name, mixinEditor.getUpdatedDesc()));
             insnListEditor.remove(atIndex);
         }
     }

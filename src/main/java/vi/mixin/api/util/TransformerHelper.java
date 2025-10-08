@@ -85,6 +85,18 @@ public final class TransformerHelper implements Opcodes {
         }
     }
 
+    public static ClassNode getClassNodeClone(String className) {
+        return Mixiner.readClassNode(MixinClassHelper.getBytecode(className));
+    }
+
+    public static ClassNode getDefiningClassNodeClone(ClassNode child) {
+        return child.innerClasses.stream().filter(inner -> inner.name.equals(child.name))
+                .map(inner -> inner.outerName)
+                .filter(Objects::nonNull)
+                .map(MixinClassHelper::getBytecode)
+                .map(Mixiner::readClassNode).findAny().orElse(null);
+    }
+
     @SuppressWarnings("unused")
     public static boolean doMethodDescsMatch(String search, String target) {
         Type[] searchArgumentTypes = Type.getArgumentTypes(search);
@@ -98,7 +110,11 @@ public final class TransformerHelper implements Opcodes {
     }
 
     public static String getTargetClassName(ClassNode mixinNode) {
-        return Mixiner.getTargetClass(mixinNode);
+        try {
+            return Mixiner.getTargetClass(mixinNode);
+        } catch (MixinFormatException e) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unused")
@@ -346,6 +362,7 @@ public final class TransformerHelper implements Opcodes {
         return getOuterClassInstanceFieldName(classNodeHierarchy, false);
     }
 
+    @SuppressWarnings("unused")
     public static String getTargetOuterClassInstanceFieldName(ClassNodeHierarchy classNodeHierarchy) {
         return getOuterClassInstanceFieldName(classNodeHierarchy, true);
     }

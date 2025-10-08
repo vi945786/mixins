@@ -17,7 +17,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class SetterTransformer implements TransformerSupplier {
 
-    private static boolean targetFilter(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Setter annotation) {
+    private static boolean targetFilter(MethodNode mixinMethodNodeClone, FieldNode targetFieldNodeClone, Setter annotation, ClassNode origin) {
         if(annotation.value().isEmpty()) {
             if(!mixinMethodNodeClone.name.startsWith("set")) return false;
             return targetFieldNodeClone.name.equals(mixinMethodNodeClone.name.substring(3, 4).toLowerCase() + mixinMethodNodeClone.name.substring(4));
@@ -37,7 +37,7 @@ public class SetterTransformer implements TransformerSupplier {
                 throw new MixinFormatException(name, "valid types for argument number " + 1 + " are: " + targetFieldNode.desc + (targetFieldNode.desc.equals(Type.getDescriptor(Object.class)) || argumentTypes[0].getSort() <= Type.DOUBLE ? "" : ", " + Type.getType(Object.class)));
     }
 
-    private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void transform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetFieldEditor targetEditor, Setter annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
         validate(mixinEditor, targetEditor, mixinClassNodeClone);
         MethodNode mixinMethodNode = mixinEditor.getMethodNodeClone();
         FieldNode targetFieldNode = targetEditor.getFieldNodeClone();
@@ -49,7 +49,7 @@ public class SetterTransformer implements TransformerSupplier {
 
         InsnList insnList = new InsnList();
         TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(mixinMethodNode.desc), isStatic);
-        insnList.add(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
+        insnList.add(new FieldInsnNode(isStatic ? PUTSTATIC : PUTFIELD, targetOriginClassNodeClone.name, targetFieldNode.name, targetFieldNode.desc));
         insnList.add(new InsnNode(RETURN));
 
         mixinEditor.setBytecode(insnList);

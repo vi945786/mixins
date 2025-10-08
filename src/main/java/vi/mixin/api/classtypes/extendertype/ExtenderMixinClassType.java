@@ -20,15 +20,15 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
     private final Map<FieldNode, ExtenderAnnotatedFieldEditor> annotatedFieldEditors = new HashMap<>();
 
     @Override
-    public ExtenderAnnotatedMethodEditor create(MethodNode annotatedMethodNode, Object targetEditors) {
-        ExtenderAnnotatedMethodEditor editor = new ExtenderAnnotatedMethodEditor(annotatedMethodNode, targetEditors);
+    public ExtenderAnnotatedMethodEditor create(MethodNode annotatedMethodNode, Object targetEditor) {
+        ExtenderAnnotatedMethodEditor editor = new ExtenderAnnotatedMethodEditor(annotatedMethodNode, targetEditor);
         annotatedMethodEditors.put(annotatedMethodNode, editor);
         return editor;
     }
 
     @Override
-    public ExtenderAnnotatedFieldEditor create(FieldNode annotatedFieldNode, Object targetEditors) {
-        ExtenderAnnotatedFieldEditor editor = new ExtenderAnnotatedFieldEditor(annotatedFieldNode, targetEditors);
+    public ExtenderAnnotatedFieldEditor create(FieldNode annotatedFieldNode, Object targetEditor) {
+        ExtenderAnnotatedFieldEditor editor = new ExtenderAnnotatedFieldEditor(annotatedFieldNode, targetEditor);
         annotatedFieldEditors.put(annotatedFieldNode, editor);
         return editor;
     }
@@ -41,11 +41,6 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
     @Override
     public ExtenderTargetFieldEditor create(TargetFieldManipulator targetFieldEditors, Object mixinEditor) {
         return new ExtenderTargetFieldEditor(targetFieldEditors, mixinEditor);
-    }
-
-    @Override
-    public boolean isAllowedAsTarget() {
-        return true;
     }
 
     private static void validateClass(ClassNodeHierarchy mixinClassNodeHierarchy, TargetClassManipulator targetClassEditor) {
@@ -112,7 +107,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
                     if(insnNode instanceof MethodInsnNode methodInsnNode && methodInsnNode.owner.equals(mixinClassNode.name)) {
                         MethodNode nodeMethodNode = mixinClassNode.methods.stream().filter(m -> (m.name + m.desc).equals(methodInsnNode.name + methodInsnNode.desc)).findAny().orElse(null);
                         if(nodeMethodNode != null && annotatedMethodEditors.get(nodeMethodNode) != null && annotatedMethodEditors.get(nodeMethodNode).invoke != null) {
-                            methodNode.instructions.insertBefore(insnNode, annotatedMethodEditors.get(nodeMethodNode).invoke);
+                            methodNode.instructions.insertBefore(insnNode, annotatedMethodEditors.get(nodeMethodNode).invoke.clone(null));
                             methodNode.instructions.remove(methodInsnNode);
                         }
                     }
@@ -124,7 +119,7 @@ public class ExtenderMixinClassType implements MixinClassType<Extends, ExtenderA
                             else change = annotatedFieldEditors.get(nodeFieldNode).get;
 
                             if(change == null) continue;
-                            methodNode.instructions.insertBefore(insnNode, change);
+                            methodNode.instructions.insertBefore(insnNode, change.clone(null));
                             methodNode.instructions.remove(fieldInsnNode);
                         }
                     }

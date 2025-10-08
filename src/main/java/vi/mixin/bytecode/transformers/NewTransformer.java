@@ -25,7 +25,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class NewTransformer implements TransformerSupplier {
 
-     private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation) {
+     private static boolean targetFilter(MethodNode mixinMethodNodeClone, MethodNode targetMethodNodeClone, New annotation, ClassNode origin) {
         if(annotation.value().isEmpty()) {
             return targetMethodNodeClone.name.equals("<init>") && targetMethodNodeClone.desc.split("\\)")[0].equals(mixinMethodNodeClone.desc.split("\\)")[0]);
         }
@@ -66,44 +66,44 @@ public class NewTransformer implements TransformerSupplier {
         if(!returnType.equals(Type.VOID_TYPE)) throw new MixinFormatException(name, "valid return types are: void");
     }
 
-    private static void mixinTransform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, mixinClassNodeClone, targetClassNodeClone);
+    private static void mixinTransform(MixinAnnotatedMethodEditor mixinEditor, MixinTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
+        validate(mixinEditor, targetEditor, mixinClassNodeClone, targetOriginClassNodeClone);
         mixinEditor.doNotCopyToTargetClass();
         MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         targetEditor.makePublic();
 
         InsnList insnList = new InsnList();
-        insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
+        insnList.add(new TypeInsnNode(NEW, targetOriginClassNodeClone.name));
         insnList.add(new InsnNode(DUP));
 
         TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(targetMethodNode.desc), true);
 
-        insnList.add(new MethodInsnNode(INVOKESPECIAL, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+        insnList.add(new MethodInsnNode(INVOKESPECIAL, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
         insnList.add(new InsnNode(ARETURN));
 
         mixinEditor.setBytecode(insnList);
     }
 
-    private static void accessorTransform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
-        validate(mixinEditor, targetEditor, mixinClassNodeClone, targetClassNodeClone);
+    private static void accessorTransform(AccessorAnnotatedMethodEditor mixinEditor, AccessorTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
+        validate(mixinEditor, targetEditor, mixinClassNodeClone, targetOriginClassNodeClone);
          MethodNode targetMethodNode = targetEditor.getMethodNodeClone();
 
         targetEditor.makePublic();
 
         InsnList insnList = new InsnList();
-        insnList.add(new TypeInsnNode(NEW, targetClassNodeClone.name));
+        insnList.add(new TypeInsnNode(NEW, targetOriginClassNodeClone.name));
         insnList.add(new InsnNode(DUP));
 
         TransformerHelper.addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(targetMethodNode.desc), true);
 
-        insnList.add(new MethodInsnNode(INVOKESPECIAL, targetClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+        insnList.add(new MethodInsnNode(INVOKESPECIAL, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
         insnList.add(new InsnNode(ARETURN));
 
         mixinEditor.setBytecode(insnList);
     }
 
-    private static void extenderTransform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetClassNodeClone) {
+    private static void extenderTransform(ExtenderAnnotatedMethodEditor mixinEditor, ExtenderTargetMethodEditor targetEditor, New annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
         extenderValidate(mixinEditor, targetEditor, mixinClassNodeClone);
         targetEditor.makePublic();
         mixinEditor.delete();

@@ -59,6 +59,7 @@ public class Mixiner {
     }
 
     public static String getTargetClass(ClassNode mixinClassNode) {
+        if(mixinClassNode.invisibleAnnotations == null) return null;
         for (AnnotationNode annotationNode : mixinClassNode.invisibleAnnotations) {
             if(annotationNode.desc.equals(Type.getType(Mixin.class).getDescriptor())) {
                 if(annotationNode.values.isEmpty()) throw new MixinFormatException(mixinClassNode.name, "@Mixin doesn't have a target");
@@ -168,10 +169,6 @@ public class Mixiner {
                 .sorted(Comparator.comparing(a -> a.mixinNode().name))
                 .forEach(hierarchy -> {
                     ClassNode mixinNode = hierarchy.mixinNode();
-
-                    PreMixinResult targetPreMixinResult = mixinNameToPreMixinResult.get(hierarchy.targetNodeClone().name);
-                    if(targetPreMixinResult != null && !targetPreMixinResult.mixinClassType.isAllowedAsTarget()) throw new MixinFormatException(mixinNode.name, "target class of type " + targetPreMixinResult.mixinClassType.getClass().getName() + " does not allow being a target");
-
                     nodeNameToResult.put(mixinNode.name, addClass(hierarchy, mixinNameToPreMixinResult.get(mixinNode.name)));
                 }));
 
@@ -365,7 +362,7 @@ public class Mixiner {
         }
     }
 
-    private static ClassNode readClassNode(byte[] bytecode) {
+    public static ClassNode readClassNode(byte[] bytecode) {
         ClassReader reader = new ClassReader(bytecode);
         ClassNode node = new ClassNode();
         reader.accept(node, ClassReader.SKIP_FRAMES);
@@ -481,15 +478,15 @@ public class Mixiner {
         ClassNode targetClone = cloneClassNode(originalTarget);
 
         if (builtTransformer.isTargetMethod()) {
-            TargetMethodManipulator target = getTargetMethodEditor(builtTransformer, name, node, originalTarget, annotation);
-            AnnotatedEditor annotatedEditor = createAnnotatedEditor(mixinClassType, node, target);
-            TargetEditor targetEditor = mixinClassType.create(target, annotatedEditor);
-            builtTransformer.transformFunction().transform(annotatedEditor, targetEditor, annotation, mixinClone, targetClone);
+            TargetMethodManipulatorResult targetMethodManipulatorResult = getTargetMethodManipulator(builtTransformer, name, node, targetClone, annotation);
+            AnnotatedEditor annotatedEditor = createAnnotatedEditor(mixinClassType, node, targetMethodManipulatorResult.targetMethodManipulator);
+            TargetEditor targetEditor = mixinClassType.create(targetMethodManipulatorResult.targetMethodManipulator, annotatedEditor);
+            builtTransformer.transformFunction().transform(annotatedEditor, targetEditor, annotation, mixinClone, targetMethodManipulatorResult.classNode);
         } else {
-            TargetFieldManipulator target = getFieldTargetEditor(builtTransformer, name, node, originalTarget, annotation);
-            AnnotatedEditor annotatedEditor = createAnnotatedEditor(mixinClassType, node, target);
-            TargetFieldEditor targetEditor = mixinClassType.create(target, annotatedEditor);
-            builtTransformer.transformFunction().transform(annotatedEditor, targetEditor, annotation, mixinClone, targetClone);
+            TargetFieldManipulatorResult targetFieldManipulatorResult = getFieldTargetManipulator(builtTransformer, name, node, targetClone, annotation);
+            AnnotatedEditor annotatedEditor = createAnnotatedEditor(mixinClassType, node, targetFieldManipulatorResult.targetMethodManipulator);
+            TargetFieldEditor targetEditor = mixinClassType.create(targetFieldManipulatorResult.targetMethodManipulator, annotatedEditor);
+            builtTransformer.transformFunction().transform(annotatedEditor, targetEditor, annotation, mixinClone, targetFieldManipulatorResult.classNode);
         }
     }
 
@@ -503,40 +500,43 @@ public class Mixiner {
         throw new UnsupportedOperationException();
     }
 
-    private <A extends Annotation> TargetMethodManipulator getTargetMethodEditor(BuiltTransformer builtTransformer, String name, Object node, ClassNode originalTargetClassNode, A annotation) {
+    private record TargetMethodManipulatorResult(TargetMethodManipulator targetMethodManipulator, ClassNode classNode) {}
+    private record TargetFieldManipulatorResult(TargetFieldManipulator targetMethodManipulator, ClassNode classNode) {}
+
+    private <A extends Annotation> TargetMethodManipulatorResult getTargetMethodManipulator(BuiltTransformer builtTransformer, String name, Object node, ClassNode originTargetClassNode, A annotation) {
         do {
-            modifyTargetClassNodes.putIfAbsent(originalTargetClassNode.name, cloneClassNode(originalTargetClassNode));
-            ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originalTargetClassNode.name);
+            modifyTargetClassNodes.putIfAbsent(originTargetClassNode.name, cloneClassNode(originTargetClassNode));
+            ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originTargetClassNode.name);
 
             Map<String, MethodNode> modifyTargetMethodNodes = new HashMap<>();
             modifyTargetClassNode.methods.forEach(m -> modifyTargetMethodNodes.put(m.name + m.desc, m));
 
-            for (MethodNode m : originalTargetClassNode.methods) {
-                if (builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(m), annotation))
-                    return new TargetMethodManipulator(originalTargetClassNode.name, modifyTargetMethodNodes.get(m.name + m.desc), m, opcodeStates);
+            for (MethodNode m : originTargetClassNode.methods) {
+                if (builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(m), annotation, cloneClassNode(originTargetClassNode)))
+                    return new TargetMethodManipulatorResult(new TargetMethodManipulator(originTargetClassNode.name, modifyTargetMethodNodes.get(m.name + m.desc), m, opcodeStates), originTargetClassNode);
             }
-            if(builtTransformer.allowTargetInSuper()) originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
-            else originalTargetClassNode = null;
-        } while(originalTargetClassNode != null);
+            if(builtTransformer.allowTargetInSuper()) originTargetClassNode = targetSuperMap.get(originTargetClassNode.name);
+            else originTargetClassNode = null;
+        } while(originTargetClassNode != null);
 
         throw new MixinFormatException(name, "doesn't have a target");
     }
 
-    private <A extends Annotation> TargetFieldManipulator getFieldTargetEditor(BuiltTransformer builtTransformer, String name, Object node, ClassNode originalTargetClassNode, A annotation) {
+    private <A extends Annotation> TargetFieldManipulatorResult getFieldTargetManipulator(BuiltTransformer builtTransformer, String name, Object node, ClassNode originTargetClassNode, A annotation) {
         do {
-            modifyTargetClassNodes.putIfAbsent(originalTargetClassNode.name, cloneClassNode(originalTargetClassNode));
-            ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originalTargetClassNode.name);
+            modifyTargetClassNodes.putIfAbsent(originTargetClassNode.name, cloneClassNode(originTargetClassNode));
+            ClassNode modifyTargetClassNode = modifyTargetClassNodes.get(originTargetClassNode.name);
 
             Map<String, FieldNode> modifyFieldNodes = new HashMap<>();
             modifyTargetClassNode.fields.forEach(f -> modifyFieldNodes.put(f.name, f));
 
-            for(FieldNode f : originalTargetClassNode.fields) {
-                if(builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(f), annotation))
-                    return new TargetFieldManipulator(modifyFieldNodes.get(f.name), f);
+            for(FieldNode f : originTargetClassNode.fields) {
+                if(builtTransformer.targetFilter().isTarget(cloneNode(node), cloneNode(f), annotation, cloneClassNode(originTargetClassNode)))
+                    return new TargetFieldManipulatorResult(new TargetFieldManipulator(modifyFieldNodes.get(f.name), f), originTargetClassNode);
             }
-            if(builtTransformer.allowTargetInSuper()) originalTargetClassNode = targetSuperMap.get(originalTargetClassNode.name);
-            else originalTargetClassNode = null;
-        } while(originalTargetClassNode != null);
+            if(builtTransformer.allowTargetInSuper()) originTargetClassNode = targetSuperMap.get(originTargetClassNode.name);
+            else originTargetClassNode = null;
+        } while(originTargetClassNode != null);
 
         throw new MixinFormatException(name, "doesn't have a target");
     }

@@ -17,11 +17,11 @@ public record BuiltTransformer
 
     @FunctionalInterface
     public interface TargetFilter<A extends Annotation, AN, TN> {
-        boolean isTarget(AN annotatedNodeClone, TN targetNodeClone, A annotation);
+        boolean isTarget(AN annotatedNodeClone, TN targetNodeClone, A annotation, ClassNode origin);
     }
 
     @FunctionalInterface
     public interface TransformFunction<A extends Annotation, AE extends AnnotatedEditor, TE extends TargetEditor> {
-        void transform(AE annotatedEditor, TE targetEditor, A annotation, ClassNode annotatedClassNodeClone, ClassNode targetClassNodeClone);
+        void transform(AE annotatedEditor, TE targetEditor, A annotation, ClassNode annotatedClassNodeClone, ClassNode targetOriginClassNodeClone);
     }
 }

@@ -93,14 +93,14 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
 
     @SuppressWarnings("unchecked")
     public BuiltTransformer build() {
-        if(targetFilter == null) targetFilter = getDefaultTargetFilter(isAnnotatedMethod, isTargetMethod);
+        if(targetFilter == null) targetFilter = getDefaultTargetFilter(isAnnotatedMethod, isTargetMethod, allowTargetInSuper);
 
         return new BuiltTransformer(mixinClassType, annotation, isAnnotatedMethod, isTargetMethod, (BuiltTransformer.TargetFilter<Annotation, Object, Object>) targetFilter, (BuiltTransformer.TransformFunction<Annotation, AnnotatedEditor, TargetEditor>) transformFunction, allowTargetInSuper);
     }
 
-    private static <A extends Annotation, AN, TN> BuiltTransformer.TargetFilter<A, AN, TN> getDefaultTargetFilter(boolean isAnnotatedMethod, boolean isTargetMethod) {
+    private static <A extends Annotation, AN, TN> BuiltTransformer.TargetFilter<A, AN, TN> getDefaultTargetFilter(boolean isAnnotatedMethod, boolean isTargetMethod, boolean allowTargetInSuper) {
         if(isAnnotatedMethod && isTargetMethod) {
-            return (annotatedNodeClone, targetNodeClone, annotation) -> {
+            return (annotatedNodeClone, targetNodeClone, annotation, origin) -> {
                 MethodNode annotatedMethodNodeClone = (MethodNode) annotatedNodeClone;
                 MethodNode targetMethodNodeClone = (MethodNode) targetNodeClone;
                 try {
@@ -108,15 +108,21 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
                     if (value.isEmpty()) {
                         return targetMethodNodeClone.name.equals(annotatedMethodNodeClone.name) && annotatedMethodNodeClone.desc.equals(targetMethodNodeClone.desc);
                     } else {
+                        String className = origin.name;
+                        if (allowTargetInSuper && value.contains(".")) {
+                            int index = value.indexOf(".");
+                            className = value.substring(0, index);
+                            value = value.substring(index + 1);
+                        }
                         boolean onlyName = !value.contains("(");
-                        return (targetMethodNodeClone.name + (onlyName ? "" : targetMethodNodeClone.desc)).equals(value);
+                        return (targetMethodNodeClone.name + (onlyName ? "" : targetMethodNodeClone.desc)).equals(value) && className.equals(origin.name);
                     }
                 } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassCastException e) {
                     return targetMethodNodeClone.name.equals(annotatedMethodNodeClone.name) && annotatedMethodNodeClone.desc.equals(targetMethodNodeClone.desc);
                 }
             };
         } else if(isAnnotatedMethod) {
-            return (annotatedNodeClone, targetNodeClone, annotation) -> {
+            return (annotatedNodeClone, targetNodeClone, annotation, origin) -> {
                 MethodNode annotatedMethodNodeClone = (MethodNode) annotatedNodeClone;
                 FieldNode targetFieldNodeClone = (FieldNode) targetNodeClone;
                 try {
@@ -124,14 +130,20 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
                     if (value.isEmpty()) {
                         return annotatedMethodNodeClone.name.equals(targetFieldNodeClone.name);
                     } else {
-                        return (targetFieldNodeClone.name + (value.contains(";") ? ";" + targetFieldNodeClone.desc : "")).equals(value);
+                        String className = origin.name;
+                        if(allowTargetInSuper && value.contains(".")) {
+                            int index = value.indexOf(".");
+                            className = value.substring(0, index);
+                            value = value.substring(index+1);
+                        }
+                        return (targetFieldNodeClone.name + (value.contains(":") ? ":" + targetFieldNodeClone.desc : "")).equals(value) && className.equals(origin.name);
                     }
                 } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassCastException e) {
                     return annotatedMethodNodeClone.name.equals(targetFieldNodeClone.name);
                 }
             };
         } else if(isTargetMethod) {
-            return (annotatedNodeClone, targetNodeClone, annotation) -> {
+            return (annotatedNodeClone, targetNodeClone, annotation, origin) -> {
                 FieldNode annotatedFieldNodeClone = (FieldNode) annotatedNodeClone;
                 MethodNode targetMethodNodeClone = (MethodNode) targetNodeClone;
                 try {
@@ -139,14 +151,20 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
                     if (value.isEmpty()) {
                         return annotatedFieldNodeClone.name.equals(targetMethodNodeClone.name);
                     } else {
-                        return (targetMethodNodeClone.name + (value.contains(";") ? ";" + targetMethodNodeClone.desc : "")).equals(value);
+                        String className = origin.name;
+                        if(allowTargetInSuper && value.contains(".")) {
+                            int index = value.indexOf(".");
+                            className = value.substring(0, index);
+                            value = value.substring(index+1);
+                        }
+                        return (targetMethodNodeClone.name + (value.contains(":") ? ":" + targetMethodNodeClone.desc : "")).equals(value) && className.equals(origin.name);
                     }
                 } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassCastException e) {
                     return annotatedFieldNodeClone.name.equals(targetMethodNodeClone.name);
                 }
             };
         } else {
-            return (annotatedNodeClone, targetNodeClone, annotation) -> {
+            return (annotatedNodeClone, targetNodeClone, annotation, origin) -> {
                 FieldNode annotatedFieldNodeClone = (FieldNode) annotatedNodeClone;
                 FieldNode targetFieldNodeClone = (FieldNode) targetNodeClone;
                 try {
@@ -154,7 +172,13 @@ public class TransformerBuilder<A extends Annotation, AE extends AnnotatedEditor
                     if (value.isEmpty()) {
                         return annotatedFieldNodeClone.name.equals(targetFieldNodeClone.name);
                     } else {
-                        return (targetFieldNodeClone.name + (value.contains(";") ? ";" + targetFieldNodeClone.desc : "")).equals(value);
+                        String className = origin.name;
+                        if(allowTargetInSuper && value.contains(".")) {
+                            int index = value.indexOf(".");
+                            className = value.substring(0, index);
+                            value = value.substring(index+1);
+                        }
+                        return (targetFieldNodeClone.name + (value.contains(":") ? ":" + targetFieldNodeClone.desc : "")).equals(value) && className.equals(origin.name);
                     }
                 } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassCastException e) {
                     return annotatedFieldNodeClone.name.equals(targetFieldNodeClone.name);

@@ -262,6 +262,35 @@ the instance which the method is called on. This parameter is of the type that d
 
 ---
 
+## Mixining Mixins
+You can apply a mixin to any mixin class type just as you would use a regular class.\
+You can also use `@Extends` on an extender class.
+
+```java
+@Mixin(Target.class)
+class TargetMixin { ... }
+
+@Mixin(TargetMixin.class)
+class TargetMixinMixin { ... }
+```
+
+---
+
+## Targeting An Element On A Super Class
+When you want to use `@Shadow` or `@Overridable` on an element in a super class of your target you can do so normally,
+unless an element with the same name exists in another super class of the target.\
+When that happens you can specify which super class or interface that element belongs to:
+
+```java
+@Mixin(Target.class)
+class TargetMixin { 
+    @Shadow("package/subpackage/TargetSuper1.i") private int i1;
+    @Shadow("package/subpackage/TargetSuper2.i") private int i2;
+}
+```
+
+---
+
 ## Using Object as a type fallback
 
 If the real type of a parameter, return value, or field is not accessible from your mixin (for example it's package-private), you may use `Object` as a fallback in your mixin signatures. The mixin system will still match by the provided descriptor.
@@ -613,10 +642,6 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
         return true;
     }
 
-    default boolean isAllowedAsTarget() {
-        return false;
-    }
-
     default void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator) {}
     String transform(ClassNodeHierarchy mixinClassNodeHierarchy, A annotation, TargetClassManipulator targetClassManipulator);
 }
@@ -631,8 +656,6 @@ Each of the four `Editor` types has a `create` method to instantiate the editor.
 `redefineTargetFirst` - whether to redefine the target class before redefining the mixin class. \
 useful for working with targets with limited access, for example `final` or `package-private`, 
 in which the mixin class will not be able to access the target without first redefining the target.
-
-`isAllowedAsTarget` - whether a mixin class of this type is allowed to be a target.
 
 ### The `transform` Methods
 
