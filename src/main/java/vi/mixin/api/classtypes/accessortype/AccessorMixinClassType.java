@@ -9,8 +9,11 @@ import vi.mixin.api.editors.AnnotatedFieldEditor;
 import vi.mixin.api.classtypes.targeteditors.TargetClassManipulator;
 import vi.mixin.api.classtypes.targeteditors.TargetFieldManipulator;
 import vi.mixin.api.classtypes.targeteditors.TargetMethodManipulator;
+import vi.mixin.api.util.TransformerHelper;
 
 import java.lang.annotation.Annotation;
+
+import static vi.mixin.api.util.TransformerHelper.addLoadOpcodesOfMethod;
 
 public final class AccessorMixinClassType implements MixinClassType<Annotation, AccessorAnnotatedMethodEditor, AnnotatedFieldEditor, AccessorTargetMethodEditor, AccessorTargetFieldEditor> {
 
@@ -39,44 +42,36 @@ public final class AccessorMixinClassType implements MixinClassType<Annotation, 
     }
 
     @Override
-    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassManipulator) {
+    public void transformBeforeEditors(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassManipulator) {
         ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
         targetClassManipulator.addInterface(mixinClassNode.name);
         mixinClassNode.access |= ACC_PUBLIC;
         mixinClassNode.access &= ~ACC_PRIVATE;
         mixinClassNode.access &= ~ACC_PROTECTED;
+    }
+
+    @Override
+    public String transform(ClassNodeHierarchy mixinClassNodeHierarchy, Annotation annotation, TargetClassManipulator targetClassManipulator) {
+        ClassNode mixinClassNode = mixinClassNodeHierarchy.mixinNode();
 
         ClassNode targetClassNode = targetClassManipulator.getClassNodeClone();
         mixinClassNode.methods.forEach(methodNode -> {
-            if((methodNode.access & ACC_ABSTRACT) != 0 || (methodNode.access & ACC_STATIC) != 0) return;
+            if((methodNode.access & ACC_STATIC) != 0 || (methodNode.access & ACC_ABSTRACT) != 0) return;
 
-            Type[] mixinArgumentTypes = Type.getArgumentTypes(methodNode.desc);
-            if(targetClassNode.methods.stream().anyMatch(m -> {
-                if((methodNode.access & ACC_ABSTRACT) != 0 || !m.name.equals(methodNode.name)) return false;
+            if(targetClassNode.methods.stream().anyMatch(m -> m.name.equals(methodNode.name) && m.desc.equals(methodNode.desc)))
+                throw new MixinFormatException(mixinClassNode.name + "." + methodNode.name + methodNode.desc, "method with this name and desc already exists in the target class.");
 
-                Type[] targetArgumentTypes = Type.getArgumentTypes(m.desc);
-                if(mixinArgumentTypes.length != targetArgumentTypes.length) return false;
-                for (int i = 0; i < targetArgumentTypes.length; i++) {
-                    if (!mixinArgumentTypes[i].equals(targetArgumentTypes[i]) && !mixinArgumentTypes[i].equals(Type.getType(Object.class))) return false;
-                }
+            MethodNode target = new MethodNode(methodNode.access, methodNode.name, methodNode.desc, methodNode.signature, methodNode.exceptions.toArray(String[]::new));
+            targetClassManipulator.addMethod(target);
 
-                return true;
-            })) throw new MixinFormatException(mixinClassNode.name + "." + methodNode.name + methodNode.desc, "concrete method with this name and desc already exists in the target class.");
-
-            ClassNode clone = new ClassNode();
-            methodNode.accept(clone);
-
-            TargetMethodManipulator targetMethodEditor = targetClassManipulator.getMethodManipulator(methodNode.name + methodNode.desc);
-            if(targetMethodEditor == null) {
-                targetClassManipulator.addMethod(clone.methods.getFirst());
-            } else {
-                targetMethodEditor.makeNonAbstract();
-                targetMethodEditor.makePublic();
-                targetMethodEditor.getInsnListManipulator().add(methodNode.instructions);
+            if((target.access & ACC_ABSTRACT) == 0) {
+                int returnOpcode = TransformerHelper.getReturnOpcode(Type.getReturnType(target.desc));
+                InsnList insnList = new InsnList();
+                addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(target.desc), false);
+                target.instructions.add(insnList);
+                target.instructions.add(new MethodInsnNode(INVOKESPECIAL, mixinClassNode.name, methodNode.name, methodNode.desc, true));
+                target.instructions.add(new InsnNode(returnOpcode));
             }
-
-            methodNode.instructions = new InsnList();
-            methodNode.access |= ACC_ABSTRACT;
         });
 
         return null;

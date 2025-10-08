@@ -1,52 +1,25 @@
 # Mixin
 
-**mixin** is an annotation-based runtime bytecode manipulation library for Java. It enables powerful and safe(?) modifications to existing classes at runtime.
+**Mixin** is an annotation-based runtime bytecode manipulation library for Java. It enables powerful and safe(?) modifications to existing classes at runtime.
 
 ## Requirements
 
 - **Java:** JetBrains Runtime (required for enhanced class redefinition)
 - **JVM Options:**  
-  ```
-  -XX:+AllowEnhancedClassRedefinition -Xshare:off -javaagent:<mixin jar location>
-  ```
-- **Manifest:**  
-  Specify the mixin file in your JAR manifest using the `Mixin-Classes-File` attribute.
+  `-XX:+AllowEnhancedClassRedefinition -Xshare:off -javaagent:<mixin jar location>`
 
 ## Getting Started
 
 1. **Add the Agent:**  
-   Add the mixin JAR as a Java agent in your JVM options.
+    - Add the mixin JAR as a Java agent in your JVM options.
 
 2. **Configure Mixin Classes:**  
-	- Create a JSON file listing all your mixin classes and transformers.
-   - Reference this file in your JAR manifest.
+    - Create a mixin JSON file listing all your mixin classes
+    - Specify the mixin file in your JAR manifest using the `Mixin-Classes-File` attribute. 
 
 3. **Write Mixin Classes:**  
    - Annotate your mixin classes with `@Mixin(TargetClass.class)`.
    - Use the provided annotations to inject, shadow, override, or extend target class members.
-
----
-
-## Types of Mixin Classes
-
-There are three built-in types of mixin classes:
-
-**Mixins**:
-- Abstract, concrete, or static classes annotated with `@Mixin`.
-- Used to inject logic into the target class.
-- Should not be referenced outside itself.
-
-**Extenders**:
-- Classes or interfaces annotated with both `@Mixin` and `@Extends`.
-- This mixin class type make the mixin class extend the target class (or target interface).
-- You can cast an instance of the extender to the type of the target to use the superclass methods that aren't overridden in the mixin.
-- Extenders can be targets of other mixins. 
-
-**Accessors**:
-- Interfaces annotated with `@Mixin`.
-- To use accessors, cast an instance of the target class to the accessor interface.
-- When a mixin class is an interface (accessor), that interface and all its parent interfaces are injected into the target class, including any default methods you define in the accessor
-- Abstract methods in the target class will be replaced with the matching accessor method if one exists
 
 ---
 
@@ -56,167 +29,253 @@ The mixin file is a JSON file that specifies the mixin class types, transformers
 
 ```json
 {
-	"mixinClassTypes": [
-		"package.ExampleMixinClassType"
-  	],
-	"transformers": [
-		"package.ExampleTransformer"
-	],
-	"mixins": [
-		"package.ExampleMixin1",
-		"package.ExampleMixin2"
-	]
+    "mixinClassTypes": [
+        "package.ExampleMixinClassType"
+    ],
+    "transformers": [
+        "package.ExampleTransformer"
+    ],
+    "mixins": [
+        "package.ExampleMixin1",
+        "package.ExampleMixin2"
+    ]
 }
 ```
 
 ---
 
-## Annotations
+# Mixin Classes
 
-### `@Mixin`
+Mixin classes are a part of the api the Mixin framework exposes for modifying and extending existing code. \
+A mixin class is defined by adding the `@Mixin` annotation to a class.
 
-Declares a class as a mixin for the specified target class.
-- Can take a string instead of the class in case the class is reachable (for example: `package1/package2/TargetClass`)
+There are three built-in types of mixin classes, each one provides different capabilities.
 
+## 1. The "Mixin" Mixin Class Type  
+
+Abstract, concrete, or static classes annotated with `@Mixin`.\
+Used to inject logic into the target class.
+
+Mixin classes allow bytecode injection using the provided annotations.
+
+example of defining a mixin class:
 ```java
 @Mixin(TargetClass.class)
 public class TargetMixin { ... }
 ```
 
----
+Supported built-in annotations:
+- `@Inject`
+- `@ModifyValue`
+- `@New`
+- `@Redirect`
+- `@Shadow`
 
-### `@Extends`
+## 2. The "Extender" Mixin Class Type  
 
+Used to make extend final or private classes/interfaces.
+
+Classes or interfaces annotated with both `@Mixin` and `@Extends` are of this type.\
 Makes the mixin class extend the target class.
+
+example of defining an extender class for a class:
+```java
+@Mixin(TargetClass.class) @Extends
+public class TargetClassSubclass { ... }
+```
+
+example of defining an extender class for an interface:
+```java
+@Mixin(TargetInterface.class) @Extends
+public interface TargetClassSubclass { ... }
+```
+
+You can cast an instance of an extender to it's target and back to access methods or fields that exist in one but not the other:
+```java
+((TargetInterface) (Object) targetClassSubclass).method();
+//or
+((TargetClassSubclass) (Object) targetInterface).method();
+```
+
+Supported built-in annotations:
+- `@New`
+- `@Overridable`
+- `@Shadow`
+
+### Using `@Extends` with `@New` for Super Constructor Calls
+
+You can use `@Extends` together with `@New` to inject a super constructor call into the constructor.\
+This allows you to control how the target class is initialized when extending a new superclass.
+
+Mandatory when the target of the extender doesn't have a reachable no-args constructor.
+
+Example:
 
 ```java
 @Mixin(Base.class) @Extends
-public class BaseSubclass { ... }
-```
+class BaseExtender {
+    @New
+    public static void create(int a, int b) {}
 
----
-
-### `@Shadow`
-
-Accesses (shadows) fields or methods from the target class.  
-- Defined for the "Mixin" and "Extender" mixin class types 
-- Must be `private`.
-- Only valid inside the mixin class or its inner/outer mixin classes.
-- Specifying the target is only needed when the name/descriptor doesn't match the target
-
-```java
-@Mixin(Target.class)
-abstract class TargetMixin {
-	@Shadow
-	private int shadowedField;
-
-	@Shadow("methodName(I)I")
-	private int shadowedMethod(int x) { return 0; }
+    public BaseNewExtender() {
+        create(4, 2); // This will be replaced with super(4, 2)
+    }
 }
 ```
 
+
+
+## 3. The "Accessor" Mixin Class Type  
+
+Used to inject interfaces, add methods, or implement abstract methods in the target.
+
+Interfaces annotated with the `@Mixin` annotation are of this type.
+
+example of defining an accessor class:
+```java
+@Mixin(TargetClass.class)
+public interface TargetAccessor { ... }
+```
+
+When an accessor interface is defined, it gets added to the list of interfaces of the target.\
+Every default method in an accessor is added to the target, if the method already exists in the target an error is thrown.
+
+Supported built-in annotations:
+- `@Getter`
+- `@Invoker`
+- `@New`
+- `@Setter`
+
 ---
 
-### `@Getter` / `@Setter`
+# Built-in Annotations
 
-Generates getter/setter methods for fields in the target class.
-- Defined for the "Accessor" mixin class type
-- Valid everywhere
-- Specifying the target is only needed when the name/descriptor doesn't match the target
+## `@Shadow`
+
+Accesses (shadows) fields or methods from the target class.\
+Defined for the "mixin" and "extender" mixin class types.\
+Only valid inside the mixin class or its inner/outer classes.\
+Specifying the target is only needed when the mixin name/descriptor doesn't match the target or when specifying the (super)class.
+
+```java
+@Mixin(Target.class)
+class TargetMixin {
+    @Shadow 
+    private int methodName(int x) { return 0; }
+
+    @Shadow("methodName(I)I") 
+    private int shadowedMethod(int x) { return 0; }
+  
+    @Shadow("methodName(I)I") 
+    private int shadowedMethod(int x) { return 0; }
+  
+    @Shadow("package/subpackage/Target.methodName(I)I") 
+    private int shadowedMethod(int x) { return 0; }
+}
+```
+
+Note that shadowing a method that has been overridden behaves the same as calling `super.method()`.
+
+## `@Getter` / `@Setter`
+
+Generates getter/setter methods for fields in the target class.\
+Defined for the "accessor" mixin class type.\
+Specifying the target is only needed when the mixin name/descriptor doesn't match the target.
 
 ```java
 @Mixin(Target.class)
 interface TargetAccessor {
-	@Getter
-	int getField();
+    @Getter
+    int getField();
 
-	@Setter("fieldName")
-	void setField(int value);
+    @Setter("fieldName")
+    void setField(int value);
 }
 ```
 
----
+## `@Invoker`
 
-### `@Invoker`
-
-Allows calling private or otherwise inaccessible methods in the target class.
-- Defined the for "Accessor" mixin class type
-- Valid everywhere
-- Specifying the target is only needed when the name/descriptor doesn't match the target
+Allows calling private or otherwise inaccessible methods in the target class.\
+Defined the for "accessor" mixin class type.\
+Specifying the target is only needed when the mixin name/descriptor doesn't match the target.
 
 ```java
 @Mixin(Target.class)
 interface TargetAccessor {
-	@Invoker("methodName(I)I")
-	int callMethod(int arg);
+    @Invoker("methodName(I)I")
+    int callMethod(int arg);
 }
 ```
 
----
+## `@New`
 
-### `@New`
-
-Allows construction of new instances of the target class using a specific constructor signature.
-- Defined for the "Mixin", "Accessor", and "Extender" mixin class type
-- Specifying the target is only needed when the name/descriptor doesn't match the target
+Allows construction of new instances of the target class using a specific constructor signature.\
+Defined for the "mixin", "extender", and "accessor" mixin class type.\
+Specifying the target is only needed when the mixin name/descriptor doesn't match the target.
 
 ```java
 @Mixin(Target.class)
 interface TargetAccessor {
-	@New("I") // parameter types only, e.g. "I" for int
-	Target create(int value);
+    @New("I") // parameter types only, e.g. "I" for int
+    Target create(int value);
 }
 ```
 
----
+## `@Overridable`
 
-### `@Overridable`
-
-Marks a method in the target class as non-final, allowing it to be overridden in a mixin.
-- Defined for the "Extender" mixin class type
-- Specifying the target descriptor is only needed when the descriptor doesn't match the target
+Marks a method in the target class as non-final, allowing it to be overridden in a mixin.\
+Defined for the "extender" mixin class type.\
+Specifying the target descriptor is only needed when the mixin descriptor doesn't match the target.
 
 ```java
 @Mixin(Target.class) @Extends
 class TargetSubclass {
-	@Overridable("I")
-	public int methodName(int x) { ... }
+    @Overridable("I")
+    public int methodName(int x) { ... }
 }
 ```
 
----
+## `@Inject`
 
-### `@Inject`
-
-Injects the bytecode of the annotated method into the target method at the location specified by `@At`.
-- Defined for the "Mixin" mixin class type
-- Specifying the target descriptor is only needed when the descriptor doesn't match the target
-- Supports local variable captures 
+Injects the bytecode of the annotated method into the target method at the location specified by `@At`.\
+Defined for the "mixin" mixin class type.\
+Specifying the target descriptor is only needed when the mixin descriptor doesn't match the target.\
+Supports local variable captures.
 
 ```java
 @Mixin(Target.class)
-class MyMixin {
-	@Inject(method = "foo", at = @At(At.Location.HEAD))
-	public void injectFoo(Target self, Returner ret) {
-		// code to inject at the start of foo()
-	}
+class TargetMixin {
+    @Inject(method = "foo", at = @At(At.Location.HEAD))
+    public void injectFoo(Target self, Returner ret) {
+        // code to inject at the start of foo()
+    }
 }
 ```
 
 The inject method must take all target method arguments plus a `Returner` if the target returns void or `ValueReturner` otherwise as the last argument and must return void.
 
----
+### Using Returner and ValueReturner
 
-### `@ModifyValue`
+You can use this special parameter to control the return value of the target method:
 
-Modifies the value at the top of the stack at the location specified by `@At`.
-- Defined for the "Mixin" mixin class type
-- Specifying the target descriptor is only needed when the descriptor doesn't match the target
-- Supports local variable captures 
+- Use `Returner` if the target method returns `void`.
+- Use `ValueReturner<T>` if the target method returns a value of type `T`.
+
+#### How to use:
+
+- To exit the target method early, call `doReturn()` (for `Returner`) or `setReturnValue(value)` (for `ValueReturner`).
+- When injecting to `RETURN` or `TAIL` you can use `ValueReturner.getReturnValue()` to get the return value of the method.
+
+## `@ModifyValue`
+
+Modifies the value at the top of the stack at the location specified by `@At`.\
+Defined for the "mixin" mixin class type.\
+Specifying the target descriptor is only needed when the mixin descriptor doesn't match the target.\
+Supports local variable captures.
 
 ```java
 @Mixin(Target.class)
-class MyMixin {
+class TargetMixin {
     @ModifyValue(value = "getX", at = @At(At.Location.RETURN))
     private Object modifyGetX(int original) {
         return original + 2;
@@ -227,27 +286,25 @@ class MyMixin {
 The annotated method takes a single value (typed according to the value from the top of the stack) and returns Object. 
 The returned type is not enforced but should usually be the same type as was received.
 
----
+## `@Redirect`
 
-### `@Redirect`
-
-Redirects a method call or field access in the target method at the location specified by `@At`.
-- Defined for the "Mixin" mixin class type
-- The full target descriptor and the opcode is always required
-- Valid locations are `INVOKE`, `FIELD`
-- Supports local variable captures
+Redirects a method call or field access in the target method at the location specified by `@At`.\
+Defined for the "mixin" mixin class type.\
+The full target descriptor and the opcode in the `@At` is always required.\
+Valid `@At` locations are `INVOKE`, `FIELD`.\
+Supports local variable captures.
 
 ```java
 @Mixin(Target.class)
 class MyMixin {
-	@Redirect(value = "method", at = @At(value = At.Location.INVOKE, target = "example/Helper.helper(Ljava/lang/String;)Ljava/lang/String;", opcode = Opcodes.INVOKEVIRTUAL))
+    @Redirect(value = "method", at = @At(value = At.Location.INVOKE, target = "example/Helper.helper(Ljava/lang/String;)Ljava/lang/String;", opcode = Opcodes.INVOKEVIRTUAL))
     private String redirectHelper(Helper helper, String s) {
         return "redirected:" + s;
     }
 }
 ```
 
-#### Signatures:
+### Signatures:
 > The redirect method signature differs between static or instance redirect methods or fields.
 
 - Static Method Redirects:
@@ -257,61 +314,12 @@ class MyMixin {
 - Static Field Set Redirects: 
   - the value which the field will be set to. 
 
-Redirecting instance methods/fields is identical to static methods/fields, just add an additional parameter (always the first in the signature) containing 
-the instance which the method is called on. This parameter is of the type that declared the redirected method. 
+For instance methods or fields, the same rules apply as for static ones, but add one extra first parameter representing the instance the call is made on.\
+This parameter must be of the type that declared the redirected member.
 
 ---
 
-## Mixining Mixins
-You can apply a mixin to any mixin class type just as you would use a regular class.\
-You can also use `@Extends` on an extender class.
-
-```java
-@Mixin(Target.class)
-class TargetMixin { ... }
-
-@Mixin(TargetMixin.class)
-class TargetMixinMixin { ... }
-```
-
----
-
-## Targeting An Element On A Super Class
-When you want to use `@Shadow` or `@Overridable` on members defined in a superclass of your target as you normally would.\
-However, if multiple superclasses or interfaces define members with the same name, you can explicitly specify which one you mean:
-
-```java
-@Mixin(Target.class)
-class TargetMixin { 
-    @Shadow("package/subpackage/TargetSuper1.i") private int i1;
-    @Shadow("package/subpackage/TargetSuper2.i") private int i2;
-}
-```
-
-Note that applying this to an overridden method behaves the same as calling `super.method()`.
-
----
-
-## Using Object as a type fallback
-
-If the real type of a parameter, return value, or field is not accessible from your mixin (for example it's package-private), you may use `Object` as a fallback in your mixin signatures. The mixin system will still match by the provided descriptor.
-
-Example:
-
-```java
-@Mixin(Target.class)
-interface TargetAccessor { 
-	// real signature: private PrivateType clone(PrivateType t)
-	@Invoker("clone(Lcom/example/PrivateType;)Lcom/example/PrivateType;") 
-	static Object clone(Object t); // use Object when PrivateType isn't visible
-}
-```
-
-Note that this it will not work for primitives.
-
----
-
-## Bytecode Injection Points: `@At`
+# Bytecode Injection Points: `@At`
 
 The `@At` annotation is used to specify precise bytecode injection points for `@Inject`, `@Redirect`, and `@ModifyValue`.\
 The supported locations are:
@@ -394,62 +402,7 @@ Other options:
 
 ---
 
-## Using `@Extends` with `@New` for Super Constructor Calls
-
-You can use `@Extends` together with `@New` to inject a super constructor call into the constructor.
-This allows you to control how the target class is initialized when extending a new superclass.
-
-- Mandatory when the target of the extender doesn't have a no-args constructor
-
-Example:
-
-```java
-@Mixin(Base.class) @Extends
-class BaseExtender {
-	@New
-	public static void create(int a, int b) {}
-
-	public BaseNewExtender() {
-		create(4, 2); // This will be replaced with super(4, 2)
-	}
-}
-```
-
----
-
-## Using Returner and ValueReturner
-
-When writing methods that use the `Returner`, you can use this special parameter to control the return value of the target method:
-
-- Use `Returner` if the target method returns `void`.
-- Use `ValueReturner<T>` if the target method returns a value of type `T`.
-
-**How to use:**
-
-- To exit the target method early, call `doReturn()` (for `Returner`) or `setReturnValue(value)` (for `ValueReturner`).
-- When injecting to `RETURN` or `TAIL` you can use `ValueReturner.getReturnValue()` to get the return value of the method.
-
-**Example:**
-
-```java
-@Inject(method = "foo", at = @At(At.Location.HEAD))
-public void injectFoo(Target self, Returner ret) {
-	if (someCondition) {
-		ret.doReturn(); // skips the rest of foo()
-	}
-}
-
-@Inject(method = "bar", at = @At(At.Location.HEAD))
-public void injectBar(Target self, ValueReturner<String> ret) {
-	if (shouldOverride) {
-		ret.setReturnValue("custom"); // returns "custom" from bar()
-	}
-}
-```
-
----
-
-## Capturing Local Variables
+# Capturing Local Variables
     
 Capturing Local Variables is done by adding an extra parameter of type `Vars` at the end of method signature. 
 
@@ -463,12 +416,31 @@ int i = vars.get(1); // implicit type casting
 int i = vars.<Integer>get(1); // explicit type casting
 ```
 
-Capturing Local Variables is supported on methods annotated with any of the following:
-`@Inject`, `@Redirect`, `@ModifyValue`
+Capturing Local Variables is supported on methods annotated with any of the following: `@Inject`, `@Redirect`, `@ModifyValue`
 
 ---
 
-## Nested Mixins
+# Using Object as a type fallback
+
+If the real type of a parameter, return value, or field is not accessible from your mixin (for example it's package-private), you may use `Object` as a fallback in your mixin signatures. The mixin system will still match by the provided descriptor.
+
+Example:
+
+```java
+@Mixin(Target.class)
+interface TargetAccessor { 
+
+    // real method: private PrivateType clone(PrivateType t)
+    @Invoker("clone(Lcom/example/PrivateType;)Lcom/example/PrivateType;") 
+    static Object clone(Object t); // use Object when PrivateType isn't visible
+}
+```
+
+Note that this it will not work for primitives.
+
+---
+
+# Nested Mixins
 
 Mixins can be nested (inner/outer classes), and shadows can be used between them.  
 Example:
@@ -476,51 +448,51 @@ Example:
 ```java
 @Mixin(Outer.class)
 public class OuterMixin {
-	@Shadow("outerField")
-	private int shadowOuterField;
+    @Shadow("outerField")
+    private int shadowOuterField;
 
-	@Mixin(Outer.Inner.class)
-	class InnerMixin {
-		@Shadow("innerField")
-		private int shadowInnerField;
+    @Mixin(Outer.Inner.class)
+    class InnerMixin {
+        @Shadow("innerField")
+        private int shadowInnerField;
 
-		private void printOuterField() {
-			System.out.println(shadowOuterField);
-		}
-	}
+        private void printOuterField() {
+            System.out.println(shadowOuterField);
+        }
+    }
 }
 ```
 
 ---
 
-## Anonymous classes as targets
+# Anonymous classes as targets
 
 Anonymous classes compile to names like `full.package.Outer$1`, `full.package.Outer$2` (order-based). \
-Target them with `@Mixin(name = "full/package/Outer$N")`.
+Target them with `@Mixin(name = "full/package/Outer$N")`.\
 This is fragile, avoid if possible. 
 
 ---
 
-## Lambda functions as target
+# Lambda functions as target
 
-Lambdas compile to methods named like `lambda$enclosingMethod$0`, `lambda$enclosingMethod$1` (order-based) in the same class.\
+Lambdas compile to methods named like `lambda$enclosingMethod$0`, `lambda$enclosingMethod$1` (order-based) in the same class.
 
 Example of injecting a lambda:
-  ```java
-  @Mixin(Target.class)
-  class TargetMixin {
+```java
+@Mixin(Target.class)
+class TargetMixin {
     @Inject(value = "lambda$method$1", at = @At(At.Location.RETURN))
     private static void swapReturn(ValueReturner<Integer> v) {
-        v.setReturnValue(3);
+        v.setReturnValue(1);
     }
-  }
-  ```
+}
+```
 
-This is fragile, avoid if possible. 
+This is fragile, avoid if possible.
 
 ---
 
-## Using the mixin agent arguments
+# Using the mixin agent arguments
 
 You can specify additional mixin configuration files at runtime using the mixin agent arguments:
 
@@ -532,7 +504,20 @@ Separate multiple files with your platform's path separator (`;` on Windows, `:`
 
 ---
 
-## Gradle Test Configuration for Mixins
+# MixinManager
+
+The `MixinManager` class provides a utility for registering JARs at runtime:
+
+```java
+MixinManager.addJarToClasspath("/path/to/your.jar");
+```
+
+Use this if you load classes instead of reflection or custom class loaders (such as `URLClassLoader`).\
+Any JARs that are not on the main classpath must be registered this way to ensure they don't interfere with the mixin system.
+
+---
+
+# Gradle Test Configuration for Mixins
 
 To run tests with mixins in a Gradle project using JUnit, add the following block to your `build.gradle`:
 
@@ -551,7 +536,10 @@ test {
 }
 ```
 
-To debug the mixin Java agent or a custom transformer, start your tests with the `-Pdebug` flag:
+## Debugging The Mixin Framework Or A Custom Transformer
+
+To debug the mixin java agent or a custom transformer, run your tests with the `-Pdebug` flag: `./gradlew test -Pdebug`.\
+Make sure not to run the test in intellij's debug mode since that won't work.
 
 ```
 ./gradlew test -Pdebug
@@ -565,25 +553,14 @@ Listening for transport dt_socket at address: <port>
 
 IntelliJ will offer an "Attach debugger" option. You must click it to start debugging and step through the mixin agent or transformer code.
 
-## MixinManager
-
-The `MixinManager` class provides a utility for registering JARs at runtime:
-
-```java
-MixinManager.addJarToClasspath("/path/to/your.jar");
-```
-
-Use this if you load classes instead of reflection or custom class loaders (such as `URLClassLoader`).\
-Any JARs that are not on the main classpath must be registered this way to ensure they don't interfere with the mixin system.
-
 ---
 
-## Custom Transformers
+# Custom Transformers
 
-### Transformers 
-A transformer is code that alters a target method or field based on a matching annotated method or field defined in the mixin class.
+## Transformers 
+A transformer is the code that alters a target method/field based on a matching annotated method/field from the mixin class.
 
-### Choosing The Mixin Class Type
+## Choosing The Mixin Class Type
 Pick the type based on what you want to do with the target.
 
 Built-in Mixin Class Types:
@@ -591,7 +568,7 @@ Built-in Mixin Class Types:
 - Extender: use when you want to override or modify a method/field in the mixin subclass
 - Accessor: use when you want to add a method or add implementation to an abstract method in the target
 
-### Creating A Custom Transformer
+## Creating A Custom Transformer
 To define a custom transformer implement a `TransformerSupplier` with the single method `getBuiltTransformers` which returns a list of built transformers.\
 The TransformerSupplier must be registered in the mixin file.
 
@@ -608,11 +585,13 @@ The usage is as follows:
 Many common helper functions related to ASM bytecode manipulation can be found in the `TransformerHelper` class.\
 For more advanced bytecode analysis, there is a type-aware version of the ASM `BasicInterpreter` called `TypeAwareBasicInterpreter`, useful when you need more type information during analysis.
 
+Check out the classes in `vi/mixin/bytecode/transformers` for examples.
+
 ---
 
-## Custom Mixin Class Types
+# Custom Mixin Class Types
 Create a new `MixinClassType` when none of the existing ones do what you need (which realistically will never happen).
-Extender, Accessor, Mixin are all a built-in `MixinClassType`.
+
 
 A `MixinClassType` define what a mixin class can do.\
 MixinClassTypes are "Assigned" to the mixin classes via an annotation.\
@@ -636,8 +615,8 @@ public interface MixinClassType<A extends Annotation, AM extends AnnotatedMethod
 
     AM create(MethodNode annotatedMethodNode, Object targetEditor);
     AF create(FieldNode annotatedFieldNode, Object targetEditor);
-    TM create(TargetMethodManipulator targetMethodEditors, Object mixinEditors);
-    TF create(TargetFieldManipulator targetFieldEditors, Object mixinEditors);
+    TM create(TargetMethodManipulator targetMethodEditors, Object mixinEditor);
+    TF create(TargetFieldManipulator targetFieldEditors, Object mixinEditor);
 
     default boolean redefineTargetFirst() {
         return true;
@@ -658,7 +637,7 @@ Each of the four `Editor` types has a `create` method to instantiate the editor.
 useful for working with targets with limited access, for example `final` or `package-private`, 
 in which the mixin class will not be able to access the target without first redefining the target.
 
-### The `transform` Methods
+## The `transform` Methods
 
 The `transformBeforeEditors` and `transform` methods contains the implementation of the transformation logic which is
 achieved using the helper classes passed into the method.
@@ -679,11 +658,12 @@ The `annotation` parameter refers to the annotation applied to the mixin class a
 The `TargetClassManipulator`, `TargetMethodManipulator`, `TargetFieldManipulator`, and `TargetInsnListManipulator` types provide methods to view and modify the target class, its methods (including their bytecode), and its fields.\
 When using `TargetInsnListManipulator`, any changes you make won’t be visible to you or others, this ensures mixins don’t interfere with each other. You'll always see and modify the "original" instruction list.
 
-### Order Of Calls
+Check out the packages in `vi/mixin/api/classtypes` for examples.
+
+## Order Of Calls
 the mixin framework calls the method in your `MixinClassType`:
 1. `transformBeforeEditors`
-2. `isAllowedAsTarget`
-3. The `create` methods
-4. `redefineTargetFirst`
-5. `transform`
+2. The `create` methods
+3. `redefineTargetFirst`
+4. `transform`
 

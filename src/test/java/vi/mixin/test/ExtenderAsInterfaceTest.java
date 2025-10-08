@@ -7,7 +7,7 @@ import vi.mixin.api.classtypes.extendertype.Extends;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings("all")
-public class AccessorAsInterfaceTest {
+public class ExtenderAsInterfaceTest {
 
     private static interface Interface {
         default int getValue1() {
@@ -25,7 +25,7 @@ public class AccessorAsInterfaceTest {
 }
 
 @SuppressWarnings("all")
-@Mixin(name = "vi/mixin/test/AccessorAsInterfaceTest$Interface") @Extends
+@Mixin(name = "vi/mixin/test/ExtenderAsInterfaceTest$Interface") @Extends
 interface InterfaceExtender {
 
     default int getValue1() {

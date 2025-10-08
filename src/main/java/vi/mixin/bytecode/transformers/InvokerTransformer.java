@@ -48,7 +48,7 @@ public class InvokerTransformer implements TransformerSupplier {
 
         targetEditor.makePublic();
 
-        if(!targetMethodNode.name.equals(mixinMethodNode.name) /*|| (targetMethodNode.access & ACC_STATIC) != 0*/) {
+        if(!targetMethodNode.name.equals(mixinMethodNode.name)) {
             boolean isStatic = (targetMethodNode.access & ACC_STATIC) != 0;
 
             int invokeOpcode = INVOKESPECIAL;

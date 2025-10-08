@@ -1,5 +1,6 @@
 {
   "mixins": [
+    "vi.mixin.test.AddMethodAccessor",
     "vi.mixin.test.AnonymousShadowMixin",
     "vi.mixin.test.AnonymousTargetMixin",
     "vi.mixin.test.BaseExtender",
