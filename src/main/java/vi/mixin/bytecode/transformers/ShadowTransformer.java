@@ -91,7 +91,7 @@ public class ShadowTransformer implements TransformerSupplier {
             if(invokeOpcode != INVOKESTATIC) updatedDesc = MixinMixinClassType.getNewDesc(mixinMethodNode.desc, mixinEditor.getRealTargetClassName());
             invokeOpcode = INVOKESTATIC;
         }
-        mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, updatedDesc));
+        mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, updatedDesc, (targetOriginClassNodeClone.access & ACC_INTERFACE) != 0));
     }
 
     private static void extenderTransformField(ExtenderAnnotatedFieldEditor mixinEditor, ExtenderTargetFieldEditor targetEditor, Shadow annotation, ClassNode mixinClassNodeClone, ClassNode targetOriginClassNodeClone) {
@@ -119,7 +119,7 @@ public class ShadowTransformer implements TransformerSupplier {
         int invokeOpcode = INVOKESPECIAL;
         if ((targetMethodNode.access & ACC_STATIC) != 0) invokeOpcode = INVOKESTATIC;
 
-        mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+        mixinEditor.changeInvoke(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc, (targetOriginClassNodeClone.access & ACC_INTERFACE) != 0));
     }
 
     @Override

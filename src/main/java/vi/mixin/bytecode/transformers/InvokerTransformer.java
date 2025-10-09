@@ -60,7 +60,7 @@ public class InvokerTransformer implements TransformerSupplier {
             InsnList insnList = new InsnList();
             addLoadOpcodesOfMethod(insnList, Type.getArgumentTypes(mixinMethodNode.desc), isStatic);
 
-            insnList.add(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc));
+            insnList.add(new MethodInsnNode(invokeOpcode, targetOriginClassNodeClone.name, targetMethodNode.name, targetMethodNode.desc, (targetOriginClassNodeClone.access & ACC_INTERFACE) != 0));
             insnList.add(new InsnNode(returnOpcode));
             mixinEditor.setBytecode(insnList);
         }
