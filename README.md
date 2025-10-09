@@ -49,6 +49,14 @@ The mixin file is a JSON file that specifies the mixin class types, transformers
 Mixin classes are a part of the api the Mixin framework exposes for modifying and extending existing code. \
 A mixin class is defined by adding the `@Mixin` annotation to a class.
 
+The `@Mixin` annotation takes either a class reference as the target class (the class to modify) or the internal name of the target class:
+
+```java
+@Mixin(TargetClass.class)
+//or
+@Mixin(name = "package1/package2/Class$TargetClass")
+```
+
 There are three built-in types of mixin classes, each one provides different capabilities.
 
 ## 1. The "Mixin" Mixin Class Type  
